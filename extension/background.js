@@ -1,6 +1,10 @@
 // 팝업은 닫히면 죽는다. 녹음은 offscreen 문서가 들고 있고, 여기는 중계만 한다.
 const OFFSCREEN = "offscreen.html";
 
+// storage.session은 기본이 확장 내부 컨텍스트 전용이다.
+// PiP 컨트롤러(콘텐츠 스크립트)도 상태를 읽어야 하므로 열어준다.
+chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" });
+
 async function ensureOffscreen() {
   const has = await chrome.offscreen.hasDocument();
   if (!has) {

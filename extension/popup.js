@@ -20,6 +20,12 @@ async function render() {
   if (state === "error") $("errmsg").textContent = error || "알 수 없는 오류";
 }
 
+$("pip").onclick = async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+  window.close(); // 팝업은 비켜준다. 이제부터는 PiP 창이 컨트롤러다.
+};
+
 $("rec").onclick = async () => { await send("start"); render(); };
 $("stop").onclick = async () => { await send("stop"); render(); };
 for (const b of document.querySelectorAll("[data-t]")) {

@@ -7,6 +7,7 @@
            background: #f6f6f7; font: inherit; cursor: pointer; }
   button:hover { background: #ececee; }
   #rec { background: #e03131; border-color: #c92a2a; color: #fff; }
+  #pip { background: #364fc7; border-color: #2b3f9e; color: #fff; }
   #stop { background: #212529; border-color: #000; color: #fff; }
   #timer { font-variant-numeric: tabular-nums; font-size: 22px; margin: 4px 0 10px; }
   .hint { color: #888; font-size: 11px; margin: 8px 0 4px; }
@@ -18,6 +19,7 @@
   }
 </style>
 <h1>meetnote</h1>
+<button id="pip">🖥 데스크탑에 띄우기</button>
 <div id="idle">
   <button id="rec">● 이 탭 녹음 시작</button>
   <p class="hint">회의 중인 탭(Meet/Zoom 웹)에서 눌러야 소리가 잡힙니다.<br>mp3 파일 테스트는 CLI로: <code>python meetnote.py x.mp3</code></p>

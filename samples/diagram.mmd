@@ -1,0 +1,26 @@
+flowchart TD
+  START(["프로젝트 킥오프 회의"])
+  T0["<b>출시 일정</b><br/>추천 기능을 2차로 미루는 조건으로 출시일을 3월 31일로 확정했다."]
+  START ==> T0
+  T0p0("경쟁사 대응 위해 2주 당기자 <i>(김대리)</i>"):::opi
+  T0 -.-> T0p0
+  T0p1("QA 기간이 통째로 날아감"):::opi
+  T0 -.-> T0p1
+  T0p2{{"추천 기능을 2차로 분리 <i>(김대리)</i>"}}:::dec
+  T0 -.-> T0p2
+  T0p3{{"출시일 3월 31일 확정"}}:::dec
+  T0 -.-> T0p3
+  T1["<b>예산</b><br/>서버비 견적이 없어 결론을 내지 못했고, 다음 주 재논의로 넘겼다."]
+  T0 ==> T1
+  T1p0{"서버비 견적 얼마나 나오나? <i>(박팀장)</i>"}:::que
+  T1 -.-> T1p0
+  T1p1("트래픽 예상치 편차가 커 미확정 <i>(박팀장)</i>"):::opi
+  T1 -.-> T1p1
+  T1p2[/"3/10까지 견적 취합 <i>(이팀장)</i>"/]:::act
+  T1 -.-> T1p2
+  T1p3{{"마케팅 예산은 다음 회의로 이월"}}:::dec
+  T1 -.-> T1p3
+  classDef dec fill:#d4f4dd,stroke:#2b8a3e
+  classDef act fill:#ffe8cc,stroke:#e8590c
+  classDef que fill:#ffe3e3,stroke:#c92a2a
+  classDef opi fill:#e7f5ff,stroke:#1971c2

@@ -38,6 +38,8 @@ ffmpeg -y -i samples/sample.aiff samples/sample.mp3
 python meetnote.py samples/sample.mp3
 ```
 
+예시 결과물은 `samples/summary.md`, `samples/diagram.mmd` 참고.
+
 변환 로직만 확인: `python test_meetnote.py`
 
 ## FigJam으로 내보내기

@@ -20,12 +20,15 @@ async function setState(state, extra = {}) {
   await chrome.storage.session.set({ state, ...extra });
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
+chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg.to !== "bg") return;
   (async () => {
     try {
       if (msg.cmd === "start") {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        // PiP 컨트롤러(콘텐츠 스크립트)에서 온 거면 그 탭이 곧 회의 탭이다.
+        // 활성 탭을 쓰면, 딴 탭 보는 동안 엉뚱한 탭을 녹음하게 된다.
+        let tab = sender.tab;
+        if (!tab) [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab || tab.url?.startsWith("chrome://")) throw new Error("이 탭은 녹음할 수 없습니다 (chrome:// 페이지)");
         await ensureOffscreen();
         // 사용자 제스처(팝업 클릭) 직후에만 발급된다.

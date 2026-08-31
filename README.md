@@ -27,6 +27,9 @@ python server.py     # 먼저 로컬 서버를 띄운다
 
 `chrome://extensions` → 우측 상단 **개발자 모드** 켜기 → **압축해제된 확장 프로그램을 로드** → 이 레포의 `extension/` 폴더 선택.
 
+툴바 퍼즐 아이콘 → meetnote 옆 **핀**을 누르면 툴바에 고정된다.
+웹스토어에서 받은 게 아니라 크롬이 "출처를 확인할 수 없습니다" 경고를 띄우는데, 정상이다.
+
 회의 중인 탭(Google Meet, Zoom 웹 등)에서 툴바의 meetnote 아이콘 클릭 →
 **🖥 데스크탑에 띄우기**를 누르면 모든 앱 위에 뜨는 작은 창(Document Picture-in-Picture)이 나온다.
 

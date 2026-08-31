@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "meetnote",
+  "version": "0.1.0",
+  "description": "회의 탭 오디오를 녹음해 위계·핵심 중심 문서(FigJam/PPT/Word)로 정리",
+  "permissions": ["tabCapture", "offscreen", "storage"],
+  "host_permissions": ["http://127.0.0.1:8787/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "meetnote" }
+}

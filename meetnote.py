@@ -1,5 +1,5 @@
 """mp3 -> 전사 -> 위계 요약 -> FigJam 도식(mermaid). CLI 한 방."""
-import argparse, json, os, subprocess, sys, tempfile
+import argparse, base64, json, subprocess, sys, tempfile, zlib
 from pathlib import Path
 
 MODEL = "claude-opus-5"
@@ -153,11 +153,100 @@ def to_markdown(s: dict) -> str:
     return "\n".join(md) + "\n"
 
 
+# ---------- export ----------
+
+LABEL = {"decision": "[결정]", "action": "[할일]", "question": "[질문]", "opinion": "[의견]"}
+
+
+def mermaid_live_url(mmd: str) -> str:
+    """mermaid.live는 pako(zlib) 압축 + base64url을 fragment로 받는다."""
+    raw = json.dumps({"code": mmd, "mermaid": {"theme": "default"}}).encode()
+    return "https://mermaid.live/edit#pako:" + base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode()
+
+
+def _docx(s: dict, path: Path):
+    from docx import Document
+    d = Document()
+    d.add_heading(s["title"], 0)
+    for i, t in enumerate(s["topics"], 1):
+        d.add_heading(f"{i}. {t['title']}", 1)
+        d.add_paragraph(t["summary"])
+        for pt in t["points"]:
+            who = f" — {pt['speaker']}" if pt.get("speaker") else ""
+            d.add_paragraph(f"{LABEL[pt['kind']]} {pt['text']}{who}", style="List Bullet")
+    if s["decisions"]:
+        d.add_heading("결정사항", 1)
+        for x in s["decisions"]:
+            d.add_paragraph(x, style="List Bullet")
+    if s["action_items"]:
+        d.add_heading("액션 아이템", 1)
+        tbl = d.add_table(rows=1, cols=3)
+        tbl.style = "Table Grid"
+        for c, h in zip(tbl.rows[0].cells, ("할 일", "담당", "기한")):
+            c.text = h
+        for a in s["action_items"]:
+            r = tbl.add_row().cells
+            r[0].text, r[1].text, r[2].text = a["task"], a["owner"] or "-", a["due"] or "-"
+    d.save(path)
+
+
+def _pptx(s: dict, path: Path):
+    from pptx import Presentation
+    pr = Presentation()
+    cover = pr.slides.add_slide(pr.slide_layouts[0])
+    cover.shapes.title.text = s["title"]
+    cover.placeholders[1].text = " · ".join(t["title"] for t in s["topics"])
+    for i, t in enumerate(s["topics"], 1):
+        sl = pr.slides.add_slide(pr.slide_layouts[1])
+        sl.shapes.title.text = f"{i}. {t['title']}"
+        tf = sl.placeholders[1].text_frame
+        tf.text = t["summary"]
+        for pt in t["points"]:
+            par = tf.add_paragraph()
+            par.text = f"{LABEL[pt['kind']]} {pt['text']}" + (f" — {pt['speaker']}" if pt.get("speaker") else "")
+            par.level = 1
+    if s["decisions"] or s["action_items"]:
+        sl = pr.slides.add_slide(pr.slide_layouts[1])
+        sl.shapes.title.text = "결정사항 · 액션 아이템"
+        tf = sl.placeholders[1].text_frame
+        tf.text = "결정사항"
+        for x in s["decisions"]:
+            par = tf.add_paragraph(); par.text = x; par.level = 1
+        par = tf.add_paragraph(); par.text = "액션 아이템"
+        for a in s["action_items"]:
+            par = tf.add_paragraph()
+            par.text = f"{a['task']} — {a['owner'] or '-'} ({a['due'] or '-'})"
+            par.level = 1
+    pr.save(path)
+
+
+def export(s: dict, out: Path, target: str) -> str:
+    """target별 산출물을 만들고, 데스크탑에서 열 대상(파일 경로 또는 URL)을 돌려준다."""
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "summary.json").write_text(json.dumps(s, ensure_ascii=False, indent=2))
+    (out / "summary.md").write_text(to_markdown(s))
+    if target == "figjam":
+        mmd = to_mermaid(s)
+        (out / "diagram.mmd").write_text(mmd)
+        # ponytail: FigJam 보드 직접 생성은 Figma 플러그인이나 MCP가 필요하다.
+        # 지금은 mermaid.live를 열어 SVG/PNG로 받아 FigJam에 붙이는 경로.
+        return mermaid_live_url(mmd)
+    if target == "word":
+        _docx(s, out / "summary.docx")
+        return str(out / "summary.docx")
+    if target == "ppt":
+        _pptx(s, out / "summary.pptx")
+        return str(out / "summary.pptx")
+    raise ValueError(f"모르는 target: {target}")
+
+
 def main():
     ap = argparse.ArgumentParser(description="회의 mp3 -> 위계 요약 + FigJam 도식")
     ap.add_argument("audio", type=Path, help="mp3/m4a/wav 등 ffmpeg가 읽는 오디오")
     ap.add_argument("-o", "--out", type=Path, default=Path("out"))
     ap.add_argument("--transcript", type=Path, help="전사 건너뛰고 이 텍스트 파일 사용")
+    ap.add_argument("-t", "--target", choices=["figjam", "word", "ppt"], help="export 대상")
+    ap.add_argument("--open", action="store_true", help="결과물을 바로 열기")
     a = ap.parse_args()
 
     a.out.mkdir(parents=True, exist_ok=True)
@@ -170,10 +259,10 @@ def main():
 
     print("요약 중...", file=sys.stderr)
     s = summarize(text)
-    (a.out / "summary.json").write_text(json.dumps(s, ensure_ascii=False, indent=2))
-    (a.out / "summary.md").write_text(to_markdown(s))
-    (a.out / "diagram.mmd").write_text(to_mermaid(s))
-    print(f"완료 -> {a.out}/ (transcript.txt, summary.json, summary.md, diagram.mmd)")
+    dest = export(s, a.out, a.target or "figjam")
+    print(f"완료 -> {a.out}/  열 대상: {dest}")
+    if a.open:
+        subprocess.run(["open", dest])
 
 
 if __name__ == "__main__":

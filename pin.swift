@@ -19,8 +19,9 @@ let W: CGFloat = 264
 let MARGIN: CGFloat = 14
 let RADIUS: CGFloat = 28
 
-// 번들은 저장소 안에 있다. out/ 은 그 옆.
-let REPO = Bundle.main.bundleURL.deletingLastPathComponent()
+// 앱을 어디로 옮겨도 저장소를 찾을 수 있게, 빌드할 때 Info.plist에 경로를 박아둔다.
+let REPO = (Bundle.main.object(forInfoDictionaryKey: "MeetnoteRepo") as? String)
+    .map { URL(fileURLWithPath: $0) } ?? Bundle.main.bundleURL.deletingLastPathComponent()
 let OUTDIR = REPO.appendingPathComponent("out")
 
 func stamp() -> String {
@@ -206,7 +207,23 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         }
     }
 
+    /// 앱만 눌러도 다 돌아가야 한다. 서버가 없으면 여기서 띄운다.
+    /// 로그인 셸로 띄우는 이유: 터미널과 같은 PATH(파이썬 3.12)와 ANTHROPIC_API_KEY를 물려받는다.
+    func ensureServer() {
+        var r = URLRequest(url: URL(string: "\(SERVER)/health")!)
+        r.timeoutInterval = 1
+        URLSession.shared.dataTask(with: r) { _, resp, _ in
+            guard (resp as? HTTPURLResponse)?.statusCode != 200 else { return }
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            p.arguments = ["-lc",
+                "cd '\(REPO.path)' && exec python3 -u server.py >> /tmp/meetnote-server.log 2>&1"]
+            try? p.run()
+        }.resume()
+    }
+
     func applicationDidFinishLaunching(_ n: Notification) {
+        ensureServer()
         let cfg = WKWebViewConfiguration()
         cfg.userContentController.add(self, name: "pin")
         web = WKWebView(frame: .zero, configuration: cfg)
@@ -257,7 +274,7 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         place(130, animate: false)
         panel.orderFrontRegardless()
 
-        web.load(URLRequest(url: URL(string: PANEL_URL)!))
+        loadPanel()
 
         // 모니터가 바뀌거나 해상도가 변해도 자리를 다시 잡는다
         NotificationCenter.default.addObserver(
@@ -279,6 +296,15 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
 
         rec.onLevel = { [weak self] l in
             DispatchQueue.main.async { self?.push("level", "\(min(100, Int(l * 900)))") }
+        }
+    }
+
+    /// 서버가 막 켜졌으면 아직 안 받는다. 붙을 때까지 다시 시도한다.
+    func loadPanel(_ tries: Int = 0) {
+        web.load(URLRequest(url: URL(string: PANEL_URL)!))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            guard let self, tries < 12 else { return }
+            if web.url == nil || web.title?.isEmpty != false { loadPanel(tries + 1) }
         }
     }
 

@@ -205,9 +205,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
-        import os
-        if not os.getenv(key):
-            print(f"경고: {key} 가 없습니다. 전사/요약 단계에서 실패합니다.", file=sys.stderr)
+    import os
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        # 전사는 온디바이스라 키가 필요 없다. 요약만 막힌다.
+        print("경고: ANTHROPIC_API_KEY 가 없습니다. 전사까지는 되고 요약에서 멈춥니다.", file=sys.stderr)
     print(f"meetnote 서버: http://127.0.0.1:{PORT}  (Ctrl+C 종료)")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

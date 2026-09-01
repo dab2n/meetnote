@@ -22,8 +22,13 @@ if [ "$DIR/pin.swift" -nt "$APP/Contents/MacOS/pin" ] || [ ! -x "$APP/Contents/M
   <key>NSAudioCaptureUsageDescription</key><string>회의 상대방 목소리(시스템 오디오)를 녹음합니다.</string>
 </dict></plist>
 PLIST
+  # 앱을 옮겨도 저장소를 찾도록 경로를 심는다
+  /usr/libexec/PlistBuddy -c "Add :MeetnoteRepo string $DIR" "$APP/Contents/Info.plist"
   codesign -s - --force "$APP" >/dev/null 2>&1 || true
 fi
+
+# 바탕화면에서 더블클릭으로 시작할 수 있게
+[ -e ~/Desktop/meetnote.app ] || ln -s "$APP" ~/Desktop/meetnote.app
 
 curl -s -m 1 http://127.0.0.1:8787/health >/dev/null 2>&1 ||
   (cd "$DIR" && nohup python3 -u server.py >> /tmp/meetnote-server.log 2>&1 &)

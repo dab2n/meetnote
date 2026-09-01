@@ -32,8 +32,10 @@
   }
 
   header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  header { cursor:grab; }
   h1 { margin:0; font-size:9px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
-       opacity:.6; cursor:pointer; }
+       opacity:.6; }
+  h1::before { content:"⠿"; margin-right:6px; letter-spacing:0; opacity:.55; }
   #meta { display:flex; align-items:center; gap:7px; }
   #timer { font:590 15px/1 "SF Pro Text", -apple-system, system-ui, sans-serif;
            font-variant-numeric:tabular-nums; }
@@ -129,7 +131,7 @@
   }
 </style>
 
-<header><h1 id="home">meetnote</h1><span id="meta"><span id="timer"></span><span id="srv"></span></span></header>
+<header title="끌어서 이동 · 더블클릭하면 기본 위치"><h1>meetnote</h1><span id="meta"><span id="timer"></span><span id="srv"></span></span></header>
 
 <div id="idle">
   <button id="rec" class="glass"><span class="bulb"></span>녹음 시작</button>
@@ -326,7 +328,6 @@ $("stop").onclick = () => nat("stop");
 $("add").onclick = () => nat("pick");
 $("fix").onclick = () => nat("settings");
 $("go").onclick = go;
-$("home").onclick = () => show("idle");
 $("openrec").onclick = $("openrec2").onclick = () => show("records");
 document.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => chooseTarget(b.dataset.t)));
 document.querySelectorAll("[data-back]").forEach((b) => (b.onclick = () => show("ready", cur)));

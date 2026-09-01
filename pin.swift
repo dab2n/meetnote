@@ -169,6 +169,16 @@ func pcm(from sb: CMSampleBuffer) -> AVAudioPCMBuffer? {
 
 // MARK: - 패널
 
+/// 헤더 부분을 잡고 끌면 창이 움직인다. WKWebView가 마우스를 다 먹어서
+/// isMovableByWindowBackground 만으로는 안 잡히기 때문에 투명한 손잡이를 덮어둔다.
+final class DragView: NSView {
+    var onReset: () -> Void = {}
+    override func mouseDown(with e: NSEvent) {
+        if e.clickCount == 2 { onReset() } else { window?.performDrag(with: e) }
+    }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
+}
+
 /// 테두리 없는 패널은 기본적으로 키 윈도우가 못 된다. FigJam 보드 URL을 타이핑하려면 필요하다.
 final class KeyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
@@ -183,6 +193,14 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
     var staged: URL?          // 녹음이 끝났거나 사용자가 고른 파일
     var timer: Timer?
     var startedAt = Date()
+    private var placing = false   // place()가 옮기는 중엔 didMove를 무시한다
+    /// 사용자가 옮긴 위치(창의 좌상단). nil이면 기본 자리(화면 우상단).
+    var anchor: CGPoint? {
+        didSet {
+            anchor.map { UserDefaults.standard.set([$0.x, $0.y], forKey: "anchor") }
+                ?? UserDefaults.standard.removeObject(forKey: "anchor")
+        }
+    }
 
     func applicationDidFinishLaunching(_ n: Notification) {
         let cfg = WKWebViewConfiguration()
@@ -203,8 +221,24 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         panel.hasShadow = true
         panel.isMovableByWindowBackground = true
         panel.contentView = web
+        if let a = UserDefaults.standard.array(forKey: "anchor") as? [Double], a.count == 2 {
+            anchor = CGPoint(x: a[0], y: a[1])
+        }
         place(130, animate: false)
+
+        let drag = DragView(frame: NSRect(x: 0, y: panel.frame.height - 30, width: W, height: 30))
+        drag.autoresizingMask = [.width, .minYMargin]
+        drag.onReset = { [weak self] in self?.anchor = nil; self?.place(self?.panel.frame.height ?? 130, animate: true) }
+        web.addSubview(drag)
         panel.orderFrontRegardless()
+
+        // 끌어서 놓은 자리를 기억한다. 이후로는 높이가 바뀌어도 그 자리에서 아래로만 자란다.
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didMoveNotification, object: panel, queue: .main
+        ) { [weak self] _ in
+            guard let self, !self.placing else { return }
+            self.anchor = CGPoint(x: self.panel.frame.minX, y: self.panel.frame.maxY)
+        }
         web.load(URLRequest(url: URL(string: PANEL_URL)!))
 
         // 모니터가 바뀌거나 해상도가 변해도 우상단을 다시 잡는다
@@ -217,11 +251,20 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         }
     }
 
-    /// 우상단 고정. 메뉴바/노치를 피해 visibleFrame 기준.
+    /// 기본은 화면 우상단. 한 번 옮기면 그 좌상단을 기준으로 붙어 있는다.
+    /// 메뉴바/노치를 피해 visibleFrame 기준.
     func place(_ h: CGFloat, animate: Bool) {
         guard let s = NSScreen.main else { return }
         let v = s.visibleFrame
-        let f = NSRect(x: v.maxX - W - MARGIN, y: v.maxY - h - MARGIN, width: W, height: h)
+        let top = anchor ?? CGPoint(x: v.maxX - W - MARGIN, y: v.maxY - MARGIN)
+        var f = NSRect(x: top.x, y: top.y - h, width: W, height: h)
+        // 모니터가 바뀌거나 창이 길어져서 화면 밖으로 나가면 끌어들인다
+        f.origin.x = min(max(f.minX, v.minX), max(v.minX, v.maxX - W))
+        f.origin.y = min(max(f.minY, v.minY), max(v.minY, v.maxY - h))
+        // 애니메이션이 도는 동안 didMove가 계속 날아온다. 그걸 사용자가 옮긴 걸로
+        // 착각하면 기본 위치가 슬금슬금 고정돼버린다. 애니메이션보다 길게 잠근다.
+        placing = true
+        defer { DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.placing = false } }
         if animate {
             NSAnimationContext.runAnimationGroup {
                 $0.duration = 0.26

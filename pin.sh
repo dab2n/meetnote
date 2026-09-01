@@ -29,4 +29,6 @@ curl -s -m 1 http://127.0.0.1:8787/health >/dev/null 2>&1 ||
   (cd "$DIR" && nohup python3 -u server.py >> /tmp/meetnote-server.log 2>&1 &)
 
 pkill -x pin 2>/dev/null || true
-exec "$APP/Contents/MacOS/pin"
+# 바이너리를 셸에서 직접 실행하면 TCC가 권한 요청을 부모(터미널) 책임으로 돌려서
+# 마이크·화면기록 프롬프트가 뜨지 않는다. LaunchServices로 띄워야 앱 자신이 주체가 된다.
+exec open -n "$APP"

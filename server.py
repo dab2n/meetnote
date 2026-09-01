@@ -12,6 +12,7 @@ import meetnote
 
 PORT = 8787
 OUT = Path(__file__).parent / "out"
+CONF = Path(__file__).parent / ".meetnote.json"
 MAX_BYTES = 500 * 1024 * 1024  # 익스텐션이 보낸다고 무한정 받아주진 않는다
 
 
@@ -24,26 +25,74 @@ def staged(path: str):
     return src if OUT.resolve() in src.parents and src.is_file() else None
 
 
-def process(src: Path, target: str):
+# 진행 상황. 패널이 1초마다 긁어간다. 프로세스 하나뿐이라 dict면 충분하다.
+# ponytail: 재시작하면 날아간다. 이력이 필요하면 각 디렉터리에 job.json으로 떨구면 된다.
+JOBS = {}
+STAGES = [("전사", 0, 62), ("요약", 62, 90), ("문서 만들기", 90, 100)]
+
+
+def report(key, stage, frac=0.0, **extra):
+    lo, hi = next((a, b) for n, a, b in STAGES if n == stage)
+    JOBS.setdefault(key, {}).update(
+        stage=stage, pct=int(lo + (hi - lo) * min(max(frac, 0), 1)), **extra)
+
+
+def process(src: Path, target: str, board: str = ""):
+    key = src.parent.name
+    JOBS[key] = {"stage": "전사", "pct": 0, "target": target, "done": False, "error": ""}
     try:
         if src.suffix.lower() in TEXT_EXTS:
             # 이미 전사된 회의록. 전사 단계를 건너뛴다.
             text = src.read_text(errors="replace")
-            print(f"[{src.parent.name}] 전사문 {len(text)}자 수신", flush=True)
+            report(key, "전사", 1)
         else:
-            print(f"[{src.parent.name}] 전사 중...", flush=True)
-            text = meetnote.transcribe(src)
+            print(f"[{key}] 전사 중...", flush=True)
+            text = meetnote.transcribe(src, on_progress=lambda f: report(key, "전사", f))
         (src.parent / "transcript.txt").write_text(text)
         if not text.strip():
-            raise ValueError("전사 결과가 비어 있습니다")
-        print(f"[{src.parent.name}] 요약 중...", flush=True)
+            raise ValueError("전사 결과가 비어 있습니다 (무음이거나 마이크 권한이 없었을 수 있습니다)")
+
+        print(f"[{key}] 요약 중...", flush=True)
+        report(key, "요약", 0.15)
         s = meetnote.summarize(text)
+        report(key, "요약", 1, title=s.get("title", ""))
+
+        report(key, "문서 만들기", 0.2)
         dest = meetnote.export(s, src.parent, target)
-        print(f"[{src.parent.name}] 완료 -> {dest}", flush=True)
+        JOBS[key].update(pct=100, stage="완료", done=True, dest=dest)
+        print(f"[{key}] 완료 -> {dest}", flush=True)
         subprocess.run(["open", dest])
-    except Exception:
+        if target == "figjam" and board:
+            subprocess.run(["open", board])   # 붙여넣을 보드도 같이 연다
+    except Exception as e:
         traceback.print_exc()
-        print(f"[{src.parent.name}] 실패. out/ 안의 중간 결과를 확인하세요.", flush=True)
+        msg = f"{type(e).__name__}: {e}"
+        if "authentication" in msg.lower() or "api_key" in msg.lower():
+            msg = "요약하려면 ANTHROPIC_API_KEY가 필요합니다.\n키를 넣고 서버를 다시 켜세요.\n(전사문은 이미 저장돼 있습니다)"
+        JOBS.setdefault(key, {}).update(error=msg, done=True, stage="실패")
+        print(f"[{key}] 실패. out/ 안의 중간 결과를 확인하세요.", flush=True)
+
+
+def records(limit=12):
+    """지난 회의들. 전사문·요약이 남아 있는 디렉터리만 보여준다."""
+    out = []
+    for d in sorted((p for p in OUT.glob("*") if p.is_dir()), key=lambda p: p.name, reverse=True):
+        js = d / "summary.json"
+        title = ""
+        if js.exists():
+            try:
+                title = json.loads(js.read_text()).get("title", "")
+            except Exception:
+                pass
+        out.append({
+            "key": d.name,
+            "dir": str(d),
+            "title": title or (JOBS.get(d.name, {}).get("title") or "제목 없음"),
+            "files": sorted(f.name for f in d.iterdir() if f.is_file()),
+        })
+        if len(out) >= limit:
+            break
+    return out
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -71,6 +120,12 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/health":
             return self._json(200, {"ok": True})
+        if path == "/jobs":
+            return self._json(200, JOBS)
+        if path == "/records":
+            return self._json(200, {"records": records()})
+        if path == "/conf":
+            return self._json(200, json.loads(CONF.read_text()) if CONF.exists() else {})
         if path == "/panel":  # 네이티브 고정 패널(pin)이 띄우는 UI
             raw = (Path(__file__).parent / "panel.html").read_bytes()
             self.send_response(200)
@@ -85,6 +140,18 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         if u.path == "/local":
             return self.do_LOCAL()
+        if u.path == "/conf":     # 마지막에 쓴 FigJam 보드 URL 같은 것
+            size = int(self.headers.get("Content-Length") or 0)
+            CONF.write_text(json.dumps(json.loads(self.rfile.read(size) or b"{}"),
+                                       ensure_ascii=False))
+            return self._json(200, {"ok": True})
+        if u.path == "/open":     # 기록에서 파일 열기
+            size = int(self.headers.get("Content-Length") or 0)
+            src = staged(json.loads(self.rfile.read(size) or b"{}").get("path", ""))
+            if not src:
+                return self._json(400, {"error": "out/ 안의 파일만 엽니다"})
+            subprocess.run(["open", str(src)])
+            return self._json(200, {"ok": True})
         if u.path != "/upload":
             return self._json(404, {"error": "/upload, /local 만 받습니다"})
         q = parse_qs(u.query)
@@ -108,22 +175,24 @@ class Handler(BaseHTTPRequestHandler):
         print(f"수신: {src.name} ({size/1e6:.1f}MB) -> {target}", flush=True)
 
         # 전사+요약은 몇 분 걸린다. 익스텐션을 붙잡아두지 않고 백그라운드로 넘긴다.
-        threading.Thread(target=process, args=(src, target), daemon=True).start()
-        self._json(202, {"ok": True, "dir": str(d)})
+        threading.Thread(target=process, args=(src, target,
+                                               (q.get("board") or [""])[0]), daemon=True).start()
+        self._json(202, {"ok": True, "dir": str(d), "key": d.name})
 
     def do_LOCAL(self):
         """고정 패널이 이미 out/ 안에 넣어둔 파일을 경로로만 넘긴다. 녹음 파일을 두 번 나르지 않는다."""
         size = int(self.headers.get("Content-Length") or 0)
         body = json.loads(self.rfile.read(size) or b"{}")
         target = body.get("target", "figjam")
+        board = body.get("board", "")
         if target not in ("figjam", "word", "ppt"):
             return self._json(400, {"error": f"모르는 target: {target}"})
         src = staged(body.get("path", ""))
         if not src:
             return self._json(400, {"error": "out/ 안의 파일만 받습니다"})
         print(f"수신(로컬): {src.name} ({src.stat().st_size/1e6:.1f}MB) -> {target}", flush=True)
-        threading.Thread(target=process, args=(src, target), daemon=True).start()
-        self._json(202, {"ok": True, "dir": str(src.parent)})
+        threading.Thread(target=process, args=(src, target, board), daemon=True).start()
+        self._json(202, {"ok": True, "dir": str(src.parent), "key": src.parent.name})
 
     def log_message(self, *_):
         pass

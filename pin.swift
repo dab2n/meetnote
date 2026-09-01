@@ -10,6 +10,7 @@
 import AppKit
 import AVFoundation
 import ScreenCaptureKit
+import Speech
 import WebKit
 
 let PANEL_URL = "http://127.0.0.1:8787/panel"
@@ -168,10 +169,15 @@ func pcm(from sb: CMSampleBuffer) -> AVAudioPCMBuffer? {
 
 // MARK: - 패널
 
+/// 테두리 없는 패널은 기본적으로 키 윈도우가 못 된다. FigJam 보드 URL을 타이핑하려면 필요하다.
+final class KeyPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+}
+
 final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
-    let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: W, height: 130),
-                        styleMask: [.borderless, .nonactivatingPanel],
-                        backing: .buffered, defer: false)
+    let panel = KeyPanel(contentRect: NSRect(x: 0, y: 0, width: W, height: 130),
+                         styleMask: [.borderless, .nonactivatingPanel],
+                         backing: .buffered, defer: false)
     var web: WKWebView!
     let rec = Recorder()
     var staged: URL?          // 녹음이 끝났거나 사용자가 고른 파일
@@ -231,9 +237,7 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         web.evaluateJavaScript("window.native_\(fn)?.(\(arg))", completionHandler: nil)
     }
 
-    func state(_ s: String, _ extra: String = "") {
-        push("state", "'\(s)'\(extra.isEmpty ? "" : ", \(extra)")")
-    }
+    func state(_ s: String, _ obj: String = "{}") { push("state", "'\(s)', \(obj)") }
 
     // MARK: JS -> 네이티브
     func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
@@ -244,7 +248,11 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         case "rec":   startRec()
         case "stop":  stopRec()
         case "pick":  pick()
-        case "export": if let target = b["target"] as? String { send(target) }
+        case "export":
+            if let target = b["target"] as? String { send(target, b["board"] as? String ?? "") }
+        case "focus":
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
         case "reset": staged = nil; state("idle")
         case "settings":
             // ponytail: 애드혹 서명이라 pin.swift를 고쳐 다시 빌드하면 화면기록 권한이 초기화된다.
@@ -265,9 +273,9 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
                     guard let self else { return }
                     self.push("time", "\(Int(Date().timeIntervalSince(self.startedAt)))")
                 }
-                state("recording", "'\(esc(rec.warning))'")
+                state("recording", "{warn:'\(esc(rec.warning))'}")
             } catch {
-                state("error", "'녹음 시작 실패: \(esc(error.localizedDescription))'")
+                state("error", "{msg:'녹음 시작 실패: \(esc(error.localizedDescription))'}")
             }
         }
     }
@@ -275,7 +283,7 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
     func stopRec() {
         timer?.invalidate(); timer = nil
         staged = rec.stop()
-        state("ready", "'\(esc(staged?.lastPathComponent ?? "녹음"))'")
+        ready(staged?.lastPathComponent ?? "녹음")
     }
 
     /// WKWebView의 <input type=file>은 .nonactivatingPanel에서 안 열린다. 네이티브로 연다.
@@ -291,29 +299,37 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
                 let dst = try newDir().appendingPathComponent("input." + src.pathExtension.lowercased())
                 try FileManager.default.copyItem(at: src, to: dst)
                 self.staged = dst
-                self.state("ready", "'\(esc(src.lastPathComponent))'")
+                self.ready(src.lastPathComponent)
             } catch {
-                self.state("error", "'파일 복사 실패: \(esc(error.localizedDescription))'")
+                self.state("error", "{msg:'파일 복사 실패: \(esc(error.localizedDescription))'}")
             }
         }
     }
 
+    func ready(_ name: String) {
+        let dir = staged?.deletingLastPathComponent().path ?? ""
+        state("ready", "{name:'\(esc(name))', dir:'\(esc(dir))'}")
+    }
+
     /// 파일은 이미 out/ 안에 있다. 경로만 알려주면 서버가 집어간다.
-    func send(_ target: String) {
-        guard let path = staged?.path else { return state("error", "'보낼 파일이 없습니다'") }
-        state("sending")
+    func send(_ target: String, _ board: String) {
+        guard let path = staged?.path else { return state("error", "{msg:'보낼 파일이 없습니다'}") }
+        state("working", "{}")
         var r = URLRequest(url: URL(string: "\(SERVER)/local")!)
         r.httpMethod = "POST"
         r.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        r.httpBody = try? JSONSerialization.data(withJSONObject: ["path": path, "target": target])
-        URLSession.shared.dataTask(with: r) { [weak self] _, resp, err in
+        r.httpBody = try? JSONSerialization.data(
+            withJSONObject: ["path": path, "target": target, "board": board])
+        URLSession.shared.dataTask(with: r) { [weak self] data, resp, err in
             DispatchQueue.main.async {
                 let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
-                if err != nil || !(200..<300).contains(code) {
-                    self?.state("error", "'서버에 못 보냈습니다 (\(code))\\n로컬 서버가 떠 있나요?'")
-                } else {
-                    self?.state("sent")
+                let key = (try? JSONSerialization.jsonObject(with: data ?? Data()) as? [String: Any])
+                    .flatMap { $0?["key"] as? String }
+                guard err == nil, (200..<300).contains(code), let key else {
+                    return self?.state("error",
+                        "{msg:'서버에 못 보냈습니다 (\(code))\\n로컬 서버가 떠 있나요?'}") ?? ()
                 }
+                self?.state("working", "{key:'\(key)'}")
             }
         }.resume()
     }
@@ -326,6 +342,50 @@ func esc(_ s: String) -> String {
 
 import UniformTypeIdentifiers
 
+// MARK: - 전사 (온디바이스, API 키 불필요)
+
+/// macOS 26 SpeechAnalyzer. 오디오를 통째로 넘기면 한국어 전사문이 나온다.
+/// 진행률은 `P 0.42` 로 stdout에 흘려서 서버가 읽어간다.
+func transcribeFile(_ src: URL, to dst: URL) async throws {
+    let t = SpeechTranscriber(locale: Locale(identifier: "ko-KR"), preset: .transcription)
+    if let req = try await AssetInventory.assetInstallationRequest(supporting: [t]) {
+        FileHandle.standardError.write("한국어 음성 모델 내려받는 중…\n".data(using: .utf8)!)
+        try await req.downloadAndInstall()
+    }
+    let file = try AVAudioFile(forReading: src)
+    let dur = max(1, Double(file.length) / file.fileFormat.sampleRate)
+
+    let analyzer = SpeechAnalyzer(modules: [t])
+    let collect = Task { () -> String in
+        var out = ""
+        for try await r in t.results where r.isFinal {
+            out += String(r.text.characters)
+            print("P \(min(0.99, CMTimeGetSeconds(r.range.end) / dur))")
+            fflush(stdout)
+        }
+        return out
+    }
+    _ = try await analyzer.analyzeSequence(from: file)
+    try await analyzer.finalizeAndFinishThroughEndOfInput()
+    let text = try await collect.value
+    try text.trimmingCharacters(in: .whitespacesAndNewlines)
+        .write(to: dst, atomically: true, encoding: .utf8)
+    print("P 1.0")
+}
+
+if let i = CommandLine.arguments.firstIndex(of: "--transcribe"), CommandLine.arguments.count > i + 2 {
+    let src = URL(fileURLWithPath: CommandLine.arguments[i + 1])
+    let dst = URL(fileURLWithPath: CommandLine.arguments[i + 2])
+    Task {
+        do { try await transcribeFile(src, to: dst) } catch {
+            FileHandle.standardError.write("전사 실패: \(error)\n".data(using: .utf8)!)
+            exit(1)
+        }
+        exit(0)
+    }
+    RunLoop.main.run()
+}
+
 // 오디오 그래프가 실제로 파일을 만드는지 확인용. `pin --selftest` (권한 프롬프트가 뜬다)
 if CommandLine.arguments.contains("--selftest") {
     let r = Recorder()
@@ -336,8 +396,9 @@ if CommandLine.arguments.contains("--selftest") {
             _ = r.stop()
             try await Task.sleep(nanoseconds: 500_000_000)
             let n = (try? FileManager.default.attributesOfItem(atPath: u.path)[.size] as? Int) ?? 0
-            print("selftest: \(u.lastPathComponent) \(n)바이트 마이크=\(r.mic) 시스템오디오=\(r.sysAudio)")
-            print("  mic TCC=\(AVCaptureDevice.authorizationStatus(for: .audio).rawValue) screen TCC=\(CGPreflightScreenCaptureAccess())")
+            let line = "selftest: \(n)바이트 마이크=\(r.mic) 시스템오디오=\(r.sysAudio) screenTCC=\(CGPreflightScreenCaptureAccess())\n"
+            print(line)
+            try? line.write(toFile: "/tmp/meetnote-selftest.log", atomically: true, encoding: .utf8)
         } catch { print("selftest 실패: \(error)") }
         exit(0)
     }

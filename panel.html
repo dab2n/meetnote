@@ -32,15 +32,15 @@
   }
 
   header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-  h1 { margin:0; font-size:9px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; opacity:.6; }
+  h1 { margin:0; font-size:9px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+       opacity:.6; cursor:pointer; }
   #meta { display:flex; align-items:center; gap:7px; }
   #timer { font:590 15px/1 "SF Pro Text", -apple-system, system-ui, sans-serif;
-           font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+           font-variant-numeric:tabular-nums; }
   #srv { width:6px; height:6px; border-radius:999px; background:#30d158;
          box-shadow:0 0 7px rgba(48,209,88,.85); transition:background .3s; }
   #srv.off { background:#ff6b6b; box-shadow:0 0 7px rgba(255,107,107,.85); }
 
-  /* 유리: 반투명 + 뒤 그라디언트 blur + 위쪽 하이라이트 */
   .glass {
     background:rgba(255,255,255,.13);
     backdrop-filter:blur(26px) saturate(190%);
@@ -66,8 +66,7 @@
                box-shadow:0 0 0 .5px rgba(255,255,255,.45), 0 2px 9px rgba(48,209,88,.5); }
   #stop { background:rgba(255,255,255,.17); justify-content:center; }
 
-  #wave { display:flex; align-items:center; justify-content:center; gap:5px;
-          height:34px; margin:0 0 9px; }
+  #wave { display:flex; align-items:center; justify-content:center; gap:5px; height:34px; margin:0 0 9px; }
   #wave i { width:4px; height:4px; border-radius:999px; background:rgba(255,255,255,.92);
             box-shadow:0 0 9px rgba(255,255,255,.5);
             transition:height .13s cubic-bezier(.22,1,.36,1); }
@@ -76,6 +75,43 @@
   .row button { padding:9px 2px; border-radius:var(--r); font-size:10px; line-height:1.3;
                 font-weight:500; display:block; text-align:center; }
   .row .ico { display:block; font-size:15px; margin-bottom:3px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+  .two button { justify-content:center; padding:9px; font-size:11px; }
+
+  /* 진행 링 */
+  #ring { display:flex; align-items:center; gap:12px; margin-bottom:9px; }
+  #ring svg { flex:0 0 54px; transform:rotate(-90deg); }
+  #ring .bg { fill:none; stroke:rgba(255,255,255,.16); stroke-width:5; }
+  #ring .fg { fill:none; stroke:#fff; stroke-width:5; stroke-linecap:round;
+              filter:drop-shadow(0 0 6px rgba(255,255,255,.55));
+              transition:stroke-dashoffset .5s cubic-bezier(.22,1,.36,1); }
+  #pct { font:600 20px/1 "SF Pro Text", -apple-system, system-ui, sans-serif;
+         font-variant-numeric:tabular-nums; }
+  #stage { font-size:11px; opacity:.8; margin-top:4px; }
+  .steps { display:flex; gap:5px; margin-top:7px; }
+  .steps i { flex:1; height:3px; border-radius:999px; background:rgba(255,255,255,.2);
+             transition:background .4s; }
+  .steps i.on { background:rgba(255,255,255,.92); }
+
+  .kv { font-size:10.5px; opacity:.72; margin:0 0 3px; }
+  .path { font:10.5px/1.35 ui-monospace, SFMono-Regular, monospace; opacity:.92;
+          margin:0 0 8px; word-break:break-all; }
+  input {
+    width:100%; border-radius:14px; padding:8px 11px; color:#fff; font:inherit; font-size:11px;
+    background:rgba(0,0,0,.24); border:.5px solid rgba(255,255,255,.28); margin-bottom:8px;
+  }
+  input::placeholder { color:rgba(255,255,255,.42); }
+  input:focus { outline:none; border-color:rgba(255,255,255,.6); }
+
+  #list { max-height:210px; overflow:auto; margin-bottom:7px; }
+  .rec { border-radius:var(--r); padding:8px 10px; margin-bottom:6px;
+         background:rgba(255,255,255,.10); border:.5px solid rgba(255,255,255,.22); }
+  .rec b { display:block; font-size:11px; font-weight:560; white-space:nowrap;
+           overflow:hidden; text-overflow:ellipsis; }
+  .rec small { opacity:.55; font-size:9.5px; }
+  .files { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+  .files button { width:auto; padding:3px 9px; font-size:9.5px; border-radius:999px;
+                  background:rgba(255,255,255,.14); border:.5px solid rgba(255,255,255,.25); }
 
   .hint { margin:0 0 8px; font-size:10.5px; opacity:.66; }
   .name { margin:0 0 8px; font-size:11px; opacity:.92; white-space:nowrap; overflow:hidden;
@@ -83,7 +119,8 @@
   .link { border:0; background:0; box-shadow:none; backdrop-filter:none; opacity:.6;
           font-size:10.5px; padding:4px; justify-content:center; }
   .link:hover { background:rgba(255,255,255,.1); opacity:.95; }
-  .err { color:#ffd0cb; font-size:10.5px; white-space:pre-wrap; margin:0 0 7px; }
+  .err { color:#ffd0cb; font-size:10.5px; white-space:pre-wrap; margin:0 0 7px;
+         max-height:80px; overflow:auto; }
   .hidden { display:none; }
   body.drag::after {
     content:"놓으면 추가됩니다"; position:fixed; inset:6px; border-radius:var(--r);
@@ -92,18 +129,21 @@
   }
 </style>
 
-<header><h1>meetnote</h1><span id="meta"><span id="timer"></span><span id="srv"></span></span></header>
+<header><h1 id="home">meetnote</h1><span id="meta"><span id="timer"></span><span id="srv"></span></span></header>
 
 <div id="idle">
   <button id="rec" class="glass"><span class="bulb"></span>녹음 시작</button>
   <button id="add" class="glass"><span class="bulb">+</span>회의 파일 (mp3 · txt)</button>
+  <button class="link" id="openrec">🗂 지난 회의 기록</button>
 </div>
+
 <div id="recording" class="hidden">
   <div id="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <button id="stop" class="glass">■&nbsp; 정지</button>
-  <p class="hint" id="miconly"></p>
+  <p class="hint" id="warn"></p>
   <button class="link hidden" id="fix">권한 열기 →</button>
 </div>
+
 <div id="ready" class="hidden">
   <p class="name" id="fname"></p>
   <div class="row">
@@ -113,67 +153,185 @@
   </div>
   <button class="link" data-r="1">↩︎ 취소</button>
 </div>
-<div id="sending" class="hidden"><p class="hint">보내는 중…</p></div>
-<div id="sent" class="hidden">
-  <p class="hint">✅ 정리 중입니다.<br>끝나면 데스크탑에서 자동으로 열립니다.</p>
+
+<div id="dest" class="hidden">
+  <p class="kv" id="destlabel"></p>
+  <p class="path" id="destpath"></p>
+  <div id="boardwrap" class="hidden">
+    <p class="kv">붙여넣을 FigJam 보드 (비우면 mermaid.live만 엽니다)</p>
+    <input id="board" placeholder="https://figma.com/board/…" spellcheck="false">
+  </div>
+  <div class="two">
+    <button class="link" data-back="1">↩︎ 뒤로</button>
+    <button class="glass" id="go">정리 시작</button>
+  </div>
+</div>
+
+<div id="working" class="hidden">
+  <div id="ring">
+    <svg width="54" height="54" viewBox="0 0 54 54">
+      <circle class="bg" cx="27" cy="27" r="22"></circle>
+      <circle class="fg" cx="27" cy="27" r="22" stroke-dasharray="138.2" stroke-dashoffset="138.2"></circle>
+    </svg>
+    <div><span id="pct">0%</span><div id="stage">준비 중…</div></div>
+  </div>
+  <div class="steps"><i></i><i></i><i></i></div>
+</div>
+
+<div id="done" class="hidden">
+  <p class="hint" id="donemsg">✅ 정리 완료. 데스크탑에서 열었습니다.</p>
+  <div class="two">
+    <button class="link" data-r="1">↩︎ 처음으로</button>
+    <button class="link" id="openrec2">🗂 기록</button>
+  </div>
+</div>
+
+<div id="records" class="hidden">
+  <div id="list"></div>
   <button class="link" data-r="1">↩︎ 처음으로</button>
 </div>
+
 <div id="error" class="hidden">
   <p class="err" id="errmsg"></p><button class="link" data-r="1">↩︎ 처음으로</button>
 </div>
 
 <script>
 const SERVER = "http://127.0.0.1:8787";
-const PANELS = ["idle", "recording", "ready", "sending", "sent", "error"];
-const BG = { recording: "rec", ready: "done", sending: "done", sent: "done", error: "done" };
+const PANELS = ["idle", "recording", "ready", "dest", "working", "done", "records", "error"];
+const BG = { recording:"rec", ready:"done", dest:"done", working:"done", done:"done",
+             records:"done", error:"done" };
+const FILE = { word:"summary.docx", ppt:"summary.pptx", figjam:"diagram.mmd + summary.md" };
+const NAME = { word:"Word 문서", ppt:"PPT 슬라이드", figjam:"FigJam 도식" };
 const $ = (id) => document.getElementById(id);
 const nat = (t, extra = {}) => window.webkit?.messageHandlers?.pin?.postMessage({ t, ...extra });
-
-// documentElement.scrollHeight는 뷰포트 높이 밑으로 안 내려간다. body 실제 높이를 쓴다.
 const fit = () => nat("fit", { h: Math.ceil(document.body.offsetHeight) });
 
-function show(state, extra) {
+let cur = {};        // 지금 상태의 부가 정보 (파일명, 저장 위치, 잡 키)
+let target = null;   // 고른 export 대상
+let dropped = null;  // 끌어다 놓은 파일 (경로를 몰라서 바이트로 올린다)
+let poll = null;
+
+function show(state, o = {}) {
+  cur = o;
+  clearInterval(poll); poll = null;
   PANELS.forEach((p) => $(p).classList.toggle("hidden", p !== state));
   document.body.className = BG[state] || "";
-  if (state !== "recording") { $("timer").textContent = ""; paint(0); }
+  if (state !== "recording") { $("timer").textContent = ""; level(0); }
+
   if (state === "recording") {
-    $("miconly").textContent = extra || "";
-    $("fix").classList.toggle("hidden", !extra);
+    $("warn").textContent = o.warn || "";
+    $("fix").classList.toggle("hidden", !o.warn);
   }
-  if (state === "ready") $("fname").textContent = extra || "";
-  if (state === "error") $("errmsg").textContent = extra || "알 수 없는 오류";
+  if (state === "ready") $("fname").textContent = o.name || "";
+  if (state === "working") { progress(0, "준비 중…"); if (o.key) watch(o.key); }
+  if (state === "error") $("errmsg").textContent = o.msg || "알 수 없는 오류";
+  if (state === "records") loadRecords();
+  if (state === "idle") { target = null; dropped = null; }
   fit();
 }
-
-// 네이티브가 부른다
 window.native_state = show;
+
+// --- 녹음 표시
 window.native_time = (s) =>
-  ($("timer").textContent = `${String((s / 60) | 0).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`);
+  ($("timer").textContent = `${String((s/60)|0).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`);
 const bars = [...document.querySelectorAll("#wave i")];
 const SHAPE = [.4, .68, .9, 1, .9, .68, .4];
-const paint = (l) => bars.forEach((b, i) => (b.style.height = `${Math.round(4 + (l || 0) * .3 * SHAPE[i])}px`));
-window.native_level = paint;
+const level = (l) => bars.forEach((b,i) => (b.style.height = `${Math.round(4 + (l||0)*.3*SHAPE[i])}px`));
+window.native_level = level;
+
+// --- 진행률
+const CIRC = 2 * Math.PI * 22;
+function progress(pct, stage) {
+  $("pct").textContent = `${pct}%`;
+  $("stage").textContent = stage;
+  document.querySelector("#ring .fg").style.strokeDashoffset = CIRC * (1 - pct / 100);
+  const step = pct >= 90 ? 2 : pct >= 62 ? 1 : 0;
+  document.querySelectorAll(".steps i").forEach((i, n) => i.classList.toggle("on", n <= step));
+}
+
+function watch(key) {
+  poll = setInterval(async () => {
+    try {
+      const j = (await (await fetch(`${SERVER}/jobs`)).json())[key];
+      if (!j) return;
+      progress(j.pct || 0, j.error ? "실패" : j.stage || "");
+      if (j.error) show("error", { msg: j.error });
+      else if (j.done) { show("done"); $("donemsg").textContent =
+        `✅ ${j.title || "정리 완료"}\n데스크탑에서 열었습니다.`; fit(); }
+    } catch { /* 서버가 잠깐 없어도 다음 틱에 다시 본다 */ }
+  }, 900);
+}
+
+// --- 목적지 확인
+async function chooseTarget(t) {
+  target = t;
+  const dir = cur.dir || "";
+  $("destlabel").textContent = `${NAME[t]} — 여기에 정리합니다`;
+  $("destpath").textContent = dir ? `${dir}/${FILE[t]}` : FILE[t];
+  $("boardwrap").classList.toggle("hidden", t !== "figjam");
+  show("dest", cur);
+  if (t === "figjam") {
+    const conf = await fetch(`${SERVER}/conf`).then((r) => r.json()).catch(() => ({}));
+    $("board").value = conf.board || "";
+    nat("focus");
+    $("board").focus();
+    fit();
+  }
+}
+
+async function go() {
+  const board = target === "figjam" ? $("board").value.trim() : "";
+  if (board) fetch(`${SERVER}/conf`, { method:"POST", body: JSON.stringify({ board }) }).catch(()=>{});
+  if (!dropped) return nat("export", { target, board });
+  show("working");
+  try {
+    const ext = (dropped.name.split(".").pop() || "mp3").toLowerCase();
+    const r = await fetch(
+      `${SERVER}/upload?target=${target}&ext=${ext}&board=${encodeURIComponent(board)}`,
+      { method:"POST", headers:{ "Content-Type":"application/octet-stream" }, body: dropped });
+    if (!r.ok) throw new Error(`서버 오류 ${r.status}`);
+    show("working", { key: (await r.json()).key });
+  } catch (e) { show("error", { msg: e.message }); }
+}
+
+// --- 기록
+async function loadRecords() {
+  const el = $("list");
+  el.innerHTML = '<p class="hint">불러오는 중…</p>';
+  try {
+    const { records } = await (await fetch(`${SERVER}/records`)).json();
+    el.innerHTML = records.length ? "" : '<p class="hint">아직 기록이 없습니다.</p>';
+    for (const r of records) {
+      const d = document.createElement("div");
+      d.className = "rec";
+      const t = r.key.replace(/^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d).*/, "$1.$2.$3 $4:$5");
+      d.innerHTML = `<b></b><small></small><div class="files"></div>`;
+      d.querySelector("b").textContent = r.title;
+      d.querySelector("small").textContent = t;
+      for (const f of r.files) {
+        const b = document.createElement("button");
+        b.textContent = f;
+        b.onclick = () => fetch(`${SERVER}/open`, { method:"POST",
+          body: JSON.stringify({ path: `${r.dir}/${f}` }) });
+        d.querySelector(".files").appendChild(b);
+      }
+      el.appendChild(d);
+    }
+  } catch { el.innerHTML = '<p class="hint">서버가 꺼져 있습니다.</p>'; }
+  fit();
+}
 
 $("rec").onclick = () => nat("rec");
 $("stop").onclick = () => nat("stop");
 $("add").onclick = () => nat("pick");
 $("fix").onclick = () => nat("settings");
-let dropped = null;   // 끌어다 놓은 파일. 경로를 알 수 없어 바이트로 올린다.
-
-async function doExport(target) {
-  if (!dropped) return nat("export", { target });
-  show("sending");
-  try {
-    const ext = (dropped.name.split(".").pop() || "mp3").toLowerCase();
-    const r = await fetch(`${SERVER}/upload?target=${target}&ext=${ext}`,
-      { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: dropped });
-    if (!r.ok) throw new Error(`서버 오류 ${r.status}`);
-    show("sent");
-  } catch (err) { show("error", err.message); }
-}
-
-document.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => doExport(b.dataset.t)));
+$("go").onclick = go;
+$("home").onclick = () => show("idle");
+$("openrec").onclick = $("openrec2").onclick = () => show("records");
+document.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => chooseTarget(b.dataset.t)));
+document.querySelectorAll("[data-back]").forEach((b) => (b.onclick = () => show("ready", cur)));
 document.querySelectorAll("[data-r]").forEach((b) => (b.onclick = () => { dropped = null; nat("reset"); }));
+$("board").onkeydown = (e) => { if (e.key === "Enter") go(); };
 
 document.addEventListener("dragover", (e) => { e.preventDefault(); document.body.classList.add("drag"); });
 document.addEventListener("dragleave", () => document.body.classList.remove("drag"));
@@ -183,7 +341,7 @@ document.addEventListener("drop", (e) => {
   const f = e.dataTransfer.files[0];
   if (!f) return;
   dropped = f;
-  show("ready", f.name);
+  show("ready", { name: f.name, dir: "" });
 });
 
 const ping = () => fetch(`${SERVER}/health`).then(() => true).catch(() => false)

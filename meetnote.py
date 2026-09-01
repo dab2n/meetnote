@@ -84,7 +84,24 @@ def shrink(src: Path) -> Path:
     return out
 
 
-def transcribe(src: Path) -> str:
+PIN = Path(__file__).parent / "meetnote.app/Contents/MacOS/pin"
+
+
+def transcribe(src: Path, on_progress=None) -> str:
+    """macOS 온디바이스 전사(SpeechAnalyzer). API 키도 비용도 필요 없다.
+
+    앱 번들이 없으면(./pin.sh 를 한 번도 안 돌렸으면) OpenAI Whisper로 넘어간다."""
+    if PIN.exists():
+        out = src.parent / "transcript.txt"
+        p = subprocess.Popen([str(PIN), "--transcribe", str(src), str(out)],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for line in p.stdout:
+            if line.startswith("P ") and on_progress:
+                on_progress(float(line[2:]))
+        if p.wait() != 0:
+            raise RuntimeError(f"전사 실패: {p.stderr.read().strip()}")
+        return out.read_text()
+
     from openai import OpenAI
     small = shrink(src)
     if small.stat().st_size > 25 * 1024 * 1024:

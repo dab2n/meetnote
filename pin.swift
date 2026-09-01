@@ -173,6 +173,8 @@ func pcm(from sb: CMSampleBuffer) -> AVAudioPCMBuffer? {
 /// isMovableByWindowBackground 만으로는 안 잡히기 때문에 투명한 손잡이를 덮어둔다.
 final class DragView: NSView {
     var onReset: () -> Void = {}
+    // 패널이 키 윈도우가 아닐 때 첫 클릭이 활성화에 먹히면 드래그가 시작되지 않는다.
+    override func acceptsFirstMouse(for e: NSEvent?) -> Bool { true }
     override func mouseDown(with e: NSEvent) {
         if e.clickCount == 2 { onReset() } else { window?.performDrag(with: e) }
     }
@@ -220,16 +222,30 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.isMovableByWindowBackground = true
-        panel.contentView = web
+        // WKWebView 안에 넣으면 웹뷰가 마우스를 먼저 먹는다. 형제로 올려야 손잡이가 잡힌다.
+        let box = NSView(frame: NSRect(x: 0, y: 0, width: W, height: 130))
+        box.wantsLayer = true
+        box.layer?.cornerRadius = RADIUS
+        box.layer?.cornerCurve = .continuous
+        box.layer?.masksToBounds = true
+        web.frame = box.bounds
+        web.autoresizingMask = [.width, .height]
+        box.addSubview(web)
+
+        let drag = DragView(frame: NSRect(x: 0, y: box.bounds.height - 30, width: W, height: 30))
+        drag.autoresizingMask = [.width, .minYMargin]
+        drag.onReset = { [weak self] in
+            guard let self else { return }
+            anchor = nil
+            place(panel.frame.height, animate: true)
+        }
+        box.addSubview(drag)
+        panel.contentView = box
+
         if let a = UserDefaults.standard.array(forKey: "anchor") as? [Double], a.count == 2 {
             anchor = CGPoint(x: a[0], y: a[1])
         }
         place(130, animate: false)
-
-        let drag = DragView(frame: NSRect(x: 0, y: panel.frame.height - 30, width: W, height: 30))
-        drag.autoresizingMask = [.width, .minYMargin]
-        drag.onReset = { [weak self] in self?.anchor = nil; self?.place(self?.panel.frame.height ?? 130, animate: true) }
-        web.addSubview(drag)
         panel.orderFrontRegardless()
 
         // 끌어서 놓은 자리를 기억한다. 이후로는 높이가 바뀌어도 그 자리에서 아래로만 자란다.
@@ -245,6 +261,18 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in self.map { $0.place($0.panel.frame.height, animate: false) } }
+
+        // 손잡이가 진짜 맨 위에 있는지 확인 (마우스 없이 검증할 방법이 이것뿐이다)
+        if CommandLine.arguments.contains("--hittest") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                let h = self.panel.frame.height
+                let hit = self.panel.contentView?.hitTest(NSPoint(x: 130, y: h - 12))
+                let body = self.panel.contentView?.hitTest(NSPoint(x: 130, y: h - 80))
+                let line = "header=\(hit?.className ?? "nil") body=\(body?.className ?? "nil") firstMouse=\(hit?.acceptsFirstMouse(for: nil) ?? false)\n"
+                try? line.write(toFile: "/tmp/meetnote-hittest.log", atomically: true, encoding: .utf8)
+                exit(0)
+            }
+        }
 
         rec.onLevel = { [weak self] l in
             DispatchQueue.main.async { self?.push("level", "\(min(100, Int(l * 900)))") }

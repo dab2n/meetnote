@@ -18,6 +18,12 @@ MAX_BYTES = 500 * 1024 * 1024  # 익스텐션이 보낸다고 무한정 받아�
 TEXT_EXTS = {".txt", ".md"}
 
 
+def staged(path: str):
+    """CORS를 열어둔 로컬 서버다. out/ 안의 실제 파일만 통과시킨다."""
+    src = Path(path or ".").resolve()
+    return src if OUT.resolve() in src.parents and src.is_file() else None
+
+
 def process(src: Path, target: str):
     try:
         if src.suffix.lower() in TEXT_EXTS:
@@ -77,8 +83,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urlparse(self.path)
+        if u.path == "/local":
+            return self.do_LOCAL()
         if u.path != "/upload":
-            return self._json(404, {"error": "/upload 만 받습니다"})
+            return self._json(404, {"error": "/upload, /local 만 받습니다"})
         q = parse_qs(u.query)
         target = (q.get("target") or ["figjam"])[0]
         if target not in ("figjam", "word", "ppt"):
@@ -102,6 +110,20 @@ class Handler(BaseHTTPRequestHandler):
         # 전사+요약은 몇 분 걸린다. 익스텐션을 붙잡아두지 않고 백그라운드로 넘긴다.
         threading.Thread(target=process, args=(src, target), daemon=True).start()
         self._json(202, {"ok": True, "dir": str(d)})
+
+    def do_LOCAL(self):
+        """고정 패널이 이미 out/ 안에 넣어둔 파일을 경로로만 넘긴다. 녹음 파일을 두 번 나르지 않는다."""
+        size = int(self.headers.get("Content-Length") or 0)
+        body = json.loads(self.rfile.read(size) or b"{}")
+        target = body.get("target", "figjam")
+        if target not in ("figjam", "word", "ppt"):
+            return self._json(400, {"error": f"모르는 target: {target}"})
+        src = staged(body.get("path", ""))
+        if not src:
+            return self._json(400, {"error": "out/ 안의 파일만 받습니다"})
+        print(f"수신(로컬): {src.name} ({src.stat().st_size/1e6:.1f}MB) -> {target}", flush=True)
+        threading.Thread(target=process, args=(src, target), daemon=True).start()
+        self._json(202, {"ok": True, "dir": str(src.parent)})
 
     def log_message(self, *_):
         pass

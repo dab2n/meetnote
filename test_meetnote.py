@@ -31,3 +31,19 @@ assert "- ✅ 3월 31일 출시 확정" in md and "— 김" in md
 assert "| 견적 취합 | 이 | 3/10 |" in md, "액션 아이템 표 누락"
 
 print("ok")
+
+
+def test_staged_경로_가드():
+    """패널이 넘긴 경로. out/ 밖이면 무조건 막아야 한다."""
+    import server
+    real = server.OUT / "테스트" / "input.m4a"
+    real.parent.mkdir(parents=True, exist_ok=True)
+    real.write_bytes(b"x")
+    try:
+        assert server.staged(str(real)) == real.resolve()
+        assert server.staged("/etc/passwd") is None
+        assert server.staged(str(server.OUT / ".." / "meetnote.py")) is None   # 탈출 시도
+        assert server.staged(str(server.OUT / "없는파일.m4a")) is None
+        assert server.staged("") is None
+    finally:
+        real.unlink(); real.parent.rmdir()

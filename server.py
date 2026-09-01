@@ -13,6 +13,7 @@ import meetnote
 PORT = 8787
 OUT = Path(__file__).parent / "out"
 CONF = Path(__file__).parent / ".meetnote.json"
+APP = Path(__file__).parent / "meetnote.app"
 MAX_BYTES = 500 * 1024 * 1024  # 익스텐션이 보낸다고 무한정 받아주진 않는다
 
 
@@ -138,6 +139,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urlparse(self.path)
+        if u.path == "/show":     # 크롬 확장 툴바 아이콘이 부른다
+            up = subprocess.run(["pgrep", "-x", "pin"], capture_output=True).returncode == 0
+            if not up:
+                subprocess.Popen(["open", "-n", str(APP)])
+            return self._json(200, {"ok": True, "already": up})
         if u.path == "/local":
             return self.do_LOCAL()
         if u.path == "/conf":     # 마지막에 쓴 FigJam 보드 URL 같은 것

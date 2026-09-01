@@ -1,57 +1,29 @@
-// 팝업은 닫히면 죽는다. 녹음은 offscreen 문서가 들고 있고, 여기는 중계만 한다.
-const OFFSCREEN = "offscreen.html";
+// 툴바 아이콘 = meetnote 패널 스위치.
+// 확장이 네이티브 앱을 직접 못 켜니까, 이미 떠 있는 로컬 서버에게 부탁한다.
+// (네이티브 메시징 호스트를 깔면 서버 없이도 되지만, 매니페스트를 크롬 프로필에
+//  설치해야 해서 이 쪽이 훨씬 싸다.)
+const SERVER = "http://127.0.0.1:8787";
 
-// storage.session은 기본이 확장 내부 컨텍스트 전용이다.
-// PiP 컨트롤러(콘텐츠 스크립트)도 상태를 읽어야 하므로 열어준다.
-chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" });
+async function flash(text, color) {
+  await chrome.action.setBadgeBackgroundColor({ color });
+  await chrome.action.setBadgeText({ text });
+  setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2000);
+}
 
-async function ensureOffscreen() {
-  const has = await chrome.offscreen.hasDocument();
-  if (!has) {
-    await chrome.offscreen.createDocument({
-      url: OFFSCREEN,
-      reasons: ["USER_MEDIA"],
-      justification: "회의 탭 오디오를 녹음한다",
-    });
+chrome.action.onClicked.addListener(async () => {
+  try {
+    const r = await fetch(`${SERVER}/show`, { method: "POST" });
+    if (!r.ok) throw new Error(r.status);
+    await flash("●", "#4a86ff");
+  } catch {
+    // 서버가 꺼져 있으면 확장이 할 수 있는 게 없다. 켜는 법을 알려준다.
+    await flash("!", "#ff5c8f");
+    chrome.tabs.create({ url: "data:text/html;charset=utf-8," + encodeURIComponent(`
+      <meta charset=utf-8><title>meetnote</title>
+      <body style="font:14px/1.7 -apple-system,system-ui;padding:40px;max-width:520px">
+      <h2>meetnote 서버가 꺼져 있습니다</h2>
+      <p>터미널에서 한 번만 켜두면 됩니다.</p>
+      <pre style="background:#f3f4f6;padding:14px;border-radius:10px">cd ~/projects/meetnote && ./pin.sh</pre>
+      <p>그 다음부터는 툴바 아이콘으로 패널을 띄우고 닫을 수 있습니다.</p>`) });
   }
-}
-
-async function setState(state, extra = {}) {
-  await chrome.storage.session.set({ state, ...extra });
-}
-
-chrome.runtime.onMessage.addListener((msg, sender, reply) => {
-  if (msg.to !== "bg") return;
-  (async () => {
-    try {
-      if (msg.cmd === "start") {
-        // PiP 컨트롤러(콘텐츠 스크립트)에서 온 거면 그 탭이 곧 회의 탭이다.
-        // 활성 탭을 쓰면, 딴 탭 보는 동안 엉뚱한 탭을 녹음하게 된다.
-        let tab = sender.tab;
-        if (!tab) [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab || tab.url?.startsWith("chrome://")) throw new Error("이 탭은 녹음할 수 없습니다 (chrome:// 페이지)");
-        await ensureOffscreen();
-        // 사용자 제스처(팝업 클릭) 직후에만 발급된다.
-        const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-        await chrome.runtime.sendMessage({ to: "off", cmd: "start", streamId });
-        await setState("recording", { startedAt: Date.now(), title: tab.title || "회의" });
-      } else if (msg.cmd === "stop") {
-        await chrome.runtime.sendMessage({ to: "off", cmd: "stop" });
-        await setState("ready");
-      } else if (msg.cmd === "export") {
-        await setState("sending");
-        const r = await chrome.runtime.sendMessage({ to: "off", cmd: "export", target: msg.target });
-        if (!r?.ok) throw new Error(r?.error || "전송 실패");
-        await setState("sent");
-      } else if (msg.cmd === "reset") {
-        await chrome.runtime.sendMessage({ to: "off", cmd: "reset" }).catch(() => {});
-        await setState("idle");
-      }
-      reply({ ok: true });
-    } catch (e) {
-      await setState("error", { error: String(e.message || e) });
-      reply({ ok: false, error: String(e.message || e) });
-    }
-  })();
-  return true; // async reply
 });

@@ -1,24 +1,12 @@
 {
   "manifest_version": 3,
   "name": "meetnote",
-  "version": "0.1.0",
-  "description": "회의 탭 오디오를 녹음해 위계·핵심 중심 문서(FigJam/PPT/Word)로 정리",
-  "permissions": [
-    "tabCapture",
-    "offscreen",
-    "storage",
-    "scripting",
-    "activeTab"
-  ],
-  "host_permissions": [
-    "http://127.0.0.1:8787/*"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
+  "version": "0.2.0",
+  "description": "툴바 아이콘을 누르면 화면에 고정되는 meetnote 패널을 띄운다",
+  "host_permissions": ["http://127.0.0.1:8787/*"],
+  "background": { "service_worker": "background.js" },
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "meetnote",
+    "default_title": "meetnote 패널 띄우기",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

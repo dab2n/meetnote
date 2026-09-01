@@ -173,10 +173,13 @@ func pcm(from sb: CMSampleBuffer) -> AVAudioPCMBuffer? {
 /// isMovableByWindowBackground 만으로는 안 잡히기 때문에 투명한 손잡이를 덮어둔다.
 final class DragView: NSView {
     var onReset: () -> Void = {}
+    var onMoved: () -> Void = {}
     // 패널이 키 윈도우가 아닐 때 첫 클릭이 활성화에 먹히면 드래그가 시작되지 않는다.
     override func acceptsFirstMouse(for e: NSEvent?) -> Bool { true }
     override func mouseDown(with e: NSEvent) {
-        if e.clickCount == 2 { onReset() } else { window?.performDrag(with: e) }
+        if e.clickCount == 2 { return onReset() }
+        window?.performDrag(with: e)   // 드래그가 끝나야 돌아온다
+        onMoved()
     }
     override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
 }
@@ -195,7 +198,6 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
     var staged: URL?          // 녹음이 끝났거나 사용자가 고른 파일
     var timer: Timer?
     var startedAt = Date()
-    private var placing = false   // place()가 옮기는 중엔 didMove를 무시한다
     /// 사용자가 옮긴 위치(창의 좌상단). nil이면 기본 자리(화면 우상단).
     var anchor: CGPoint? {
         didSet {
@@ -232,12 +234,19 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         web.autoresizingMask = [.width, .height]
         box.addSubview(web)
 
-        let drag = DragView(frame: NSRect(x: 0, y: box.bounds.height - 30, width: W, height: 30))
-        drag.autoresizingMask = [.width, .minYMargin]
+        // 오른쪽 끝 34pt는 닫기 버튼 몫으로 비워둔다. 안 그러면 손잡이가 클릭을 다 먹는다.
+        let drag = DragView(frame: NSRect(x: 0, y: box.bounds.height - 30, width: W - 34, height: 30))
+        drag.autoresizingMask = [.minYMargin]
         drag.onReset = { [weak self] in
             guard let self else { return }
             anchor = nil
             place(panel.frame.height, animate: true)
+        }
+        // 위치는 "사용자가 끌었을 때"만 기억한다. didMove를 듣게 하면 place()의
+        // 애니메이션이나 화면 클램프까지 사용자 이동으로 저장돼 창이 코너로 기어간다.
+        drag.onMoved = { [weak self] in
+            guard let f = self?.panel.frame else { return }
+            self?.anchor = CGPoint(x: f.minX, y: f.maxY)
         }
         box.addSubview(drag)
         panel.contentView = box
@@ -248,16 +257,9 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         place(130, animate: false)
         panel.orderFrontRegardless()
 
-        // 끌어서 놓은 자리를 기억한다. 이후로는 높이가 바뀌어도 그 자리에서 아래로만 자란다.
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didMoveNotification, object: panel, queue: .main
-        ) { [weak self] _ in
-            guard let self, !self.placing else { return }
-            self.anchor = CGPoint(x: self.panel.frame.minX, y: self.panel.frame.maxY)
-        }
         web.load(URLRequest(url: URL(string: PANEL_URL)!))
 
-        // 모니터가 바뀌거나 해상도가 변해도 우상단을 다시 잡는다
+        // 모니터가 바뀌거나 해상도가 변해도 자리를 다시 잡는다
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in self.map { $0.place($0.panel.frame.height, animate: false) } }
@@ -268,7 +270,8 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
                 let h = self.panel.frame.height
                 let hit = self.panel.contentView?.hitTest(NSPoint(x: 130, y: h - 12))
                 let body = self.panel.contentView?.hitTest(NSPoint(x: 130, y: h - 80))
-                let line = "header=\(hit?.className ?? "nil") body=\(body?.className ?? "nil") firstMouse=\(hit?.acceptsFirstMouse(for: nil) ?? false)\n"
+                let x = self.panel.contentView?.hitTest(NSPoint(x: W - 16, y: h - 14))
+                let line = "header=\(hit?.className ?? "nil") body=\(body?.className ?? "nil") 닫기=\(x?.className ?? "nil") firstMouse=\(hit?.acceptsFirstMouse(for: nil) ?? false)\n"
                 try? line.write(toFile: "/tmp/meetnote-hittest.log", atomically: true, encoding: .utf8)
                 exit(0)
             }
@@ -289,10 +292,6 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         // 모니터가 바뀌거나 창이 길어져서 화면 밖으로 나가면 끌어들인다
         f.origin.x = min(max(f.minX, v.minX), max(v.minX, v.maxX - W))
         f.origin.y = min(max(f.minY, v.minY), max(v.minY, v.maxY - h))
-        // 애니메이션이 도는 동안 didMove가 계속 날아온다. 그걸 사용자가 옮긴 걸로
-        // 착각하면 기본 위치가 슬금슬금 고정돼버린다. 애니메이션보다 길게 잠근다.
-        placing = true
-        defer { DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.placing = false } }
         if animate {
             NSAnimationContext.runAnimationGroup {
                 $0.duration = 0.26
@@ -321,6 +320,9 @@ final class Pin: NSObject, WKScriptMessageHandler, NSApplicationDelegate {
         case "pick":  pick()
         case "export":
             if let target = b["target"] as? String { send(target, b["board"] as? String ?? "") }
+        case "close":
+            if timer != nil { stopRec() }   // 녹음 중이었으면 파일은 살려두고 끈다
+            NSApp.terminate(nil)
         case "focus":
             NSApp.activate(ignoringOtherApps: true)
             panel.makeKeyAndOrderFront(nil)

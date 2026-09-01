@@ -54,6 +54,27 @@ python server.py     # 먼저 로컬 서버를 띄운다
 
 전사·요약은 몇 분 걸리므로 서버가 백그라운드로 돌리고, 끝나면 결과물을 데스크탑에서 자동으로 연다.
 
+## 1-2) 화면 좌상단에 고정해두기 (macOS)
+
+```bash
+./pin.sh          # 서버 + 좌상단 고정 패널
+```
+
+240px 폭 썸네일이 화면 왼쪽 위에 붙어서, 어떤 앱 위에도 항상 떠 있다.
+파일을 끌어다 놓거나 `+`를 눌러 회의 내용을 넣고, FigJam / PPT / Word 중에 고르면 된다.
+우상단 점은 로컬 서버 생사. 내용에 맞춰 창 높이가 알아서 줄었다 늘었다 한다.
+
+로그인할 때 자동으로 띄우려면:
+
+```bash
+sed "s|__DIR__|$PWD|" com.meetnote.pin.plist > ~/Library/LaunchAgents/com.meetnote.pin.plist
+launchctl load ~/Library/LaunchAgents/com.meetnote.pin.plist
+```
+
+크롬 PiP가 아니라 네이티브 창인 이유: Document PiP는 위치를 지정할 수 없고(`moveTo`가
+무시된다), 크롬을 껐다 켜면 우하단으로 돌아가며, 탭이 닫히면 같이 죽는다.
+**탭 녹음은 여전히 익스텐션 담당**이고, 이 패널은 파일 추가 · export 전용이다.
+
 ## 2) CLI로 쓰기 (mp3 테스트)
 
 ```bash
@@ -69,6 +90,8 @@ python meetnote.py x.mp3 --transcript out/transcript.txt   # 전사 재사용(�
 |---|---|
 | `meetnote.py` | 전사 · 요약 · export (CLI 겸용) |
 | `server.py` | 익스텐션이 던진 오디오를 받아 파이프라인 실행 + 결과물 열기 |
+| `pin.swift` / `pin.sh` | 화면 좌상단 고정, 항상-위 네이티브 패널 (AppKit + WKWebView) |
+| `panel.html` | 그 패널이 띄우는 UI (`/panel`로 서빙) |
 | `extension/` | 크롬 MV3 익스텐션 |
 | ↳ `content.js` | 데스크탑 위에 뜨는 PiP 컨트롤러 (파일 추가 · 오디오 레벨) |
 | ↳ `offscreen.js` | 실제 녹음 (MediaRecorder) |
@@ -111,5 +134,6 @@ FigJam 보드를 API로 직접 만드는 방법은 없어서(Figma REST는 파�
 - [ ] 5. FigJam 보드 직접 생성 (지금은 mermaid.live를 열어 SVG로 받아 붙이는 경로)
 - [x] 6. 데스크탑 위에 띄우는 PiP 컨트롤러
 - [x] 7. 파일로 회의 추가 (mp3 · txt)
+- [x] 7-1. 화면 좌상단 고정 네이티브 썸네일 (macOS)
 - [ ] 8. 실시간 요약 (녹음 중 중간 전사)
 - [ ] 9. 2시간 초과 오디오 분할 전사

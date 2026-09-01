@@ -1,0 +1,143 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>meetnote</title>
+<style>
+  * { box-sizing:border-box; }
+  :root { color-scheme: dark; }
+  html, body { margin:0; }
+  body {
+    padding:11px 12px; color:#fff; overflow:hidden;
+    font:12px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    transition:background .55s ease;
+    background:
+      radial-gradient(64% 74% at 18% 2%,   #4ade9a 0%, rgba(74,222,154,0) 64%),
+      radial-gradient(70% 80% at 96% 18%,  #17a06a 0%, rgba(23,160,106,0) 62%),
+      radial-gradient(88% 92% at 58% 108%, #0a5f47 0%, rgba(10,95,71,0) 70%),
+      #0c2a20;
+  }
+  body.done {
+    background:
+      radial-gradient(64% 74% at 14% 0%,   #8fcbff 0%, rgba(143,203,255,0) 64%),
+      radial-gradient(70% 80% at 98% 18%,  #4b7bec 0%, rgba(75,123,236,0) 60%),
+      radial-gradient(90% 94% at 62% 110%, #ffb37a 0%, rgba(255,179,122,0) 68%),
+      #14203a;
+  }
+  header { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px;
+           -webkit-app-region:drag; }
+  h1 { margin:0; font-size:9px; font-weight:600; letter-spacing:.13em; text-transform:uppercase; opacity:.62; }
+  #dot { width:6px; height:6px; border-radius:999px; background:#30d158; opacity:.85;
+         box-shadow:0 0 7px rgba(48,209,88,.8); }
+  #dot.off { background:#ff6b6b; box-shadow:0 0 7px rgba(255,107,107,.8); }
+  .glass {
+    background:rgba(255,255,255,.13);
+    backdrop-filter:blur(22px) saturate(180%);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    border:.5px solid rgba(255,255,255,.30);
+    box-shadow:inset 0 .5px 0 rgba(255,255,255,.42), 0 5px 18px rgba(0,0,0,.30);
+  }
+  button { width:100%; border-radius:999px; color:#fff; font:inherit; cursor:pointer;
+           padding:9px 12px; font-weight:530; letter-spacing:-.01em;
+           transition:background .18s ease, transform .12s ease; }
+  button:hover { background:rgba(255,255,255,.22); }
+  button:active { transform:scale(.97); }
+  #add { display:flex; align-items:center; gap:9px; justify-content:flex-start;
+         background:rgba(255,255,255,.10); font-size:11px; }
+  #add .plus { width:22px; height:22px; border-radius:999px; flex:0 0 22px;
+               display:grid; place-items:center; font-size:15px; font-weight:400; line-height:1;
+               background:#30d158; color:#04240f;
+               box-shadow:0 0 0 .5px rgba(255,255,255,.45), 0 2px 8px rgba(48,209,88,.45); }
+  .row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:6px; }
+  .row button { padding:8px 2px; border-radius:15px; font-size:10px; line-height:1.3; font-weight:500; }
+  .row .ico { display:block; font-size:14px; margin-bottom:2px; }
+  .hint { margin:0 0 7px; font-size:10.5px; opacity:.66; letter-spacing:.01em; }
+  .name { margin:0 0 7px; font-size:10.5px; opacity:.9; white-space:nowrap; overflow:hidden;
+          text-overflow:ellipsis; }
+  .link { border:0; background:0; box-shadow:none; backdrop-filter:none; opacity:.6;
+          font-size:10.5px; padding:3px; }
+  .link:hover { background:rgba(255,255,255,.10); opacity:.9; }
+  .err { color:#ffd0cb; font-size:10.5px; white-space:pre-wrap; margin:0 0 6px; }
+  .hidden { display:none; }
+  body.drag::after {
+    content:"놓으면 추가됩니다"; position:fixed; inset:5px; border-radius:14px;
+    border:1.5px dashed rgba(255,255,255,.7); background:rgba(0,0,0,.34);
+    display:grid; place-items:center; font-size:11px;
+  }
+</style>
+
+<header><h1>meetnote</h1><span id="dot"></span></header>
+<div id="idle">
+  <button id="add" class="glass"><span class="plus">+</span>회의 내용 추가</button>
+  <input type="file" id="file" accept=".txt,.md,.mp3,.m4a,.wav,.webm,audio/*" hidden>
+</div>
+<div id="ready" class="hidden">
+  <p class="name" id="fname"></p>
+  <div class="row">
+    <button class="glass" data-t="figjam"><span class="ico">🗺️</span>FigJam</button>
+    <button class="glass" data-t="ppt"><span class="ico">📊</span>PPT</button>
+    <button class="glass" data-t="word"><span class="ico">📄</span>Word</button>
+  </div>
+  <button class="link" data-r="1">↩︎ 취소</button>
+</div>
+<div id="sending" class="hidden"><p class="hint">보내는 중…</p></div>
+<div id="sent" class="hidden">
+  <p class="hint">✅ 처리 중입니다.<br>끝나면 데스크탑에서 자동으로 열립니다.</p>
+  <button class="link" data-r="1">↩︎ 처음으로</button>
+</div>
+<div id="error" class="hidden">
+  <p class="err" id="errmsg"></p><button class="link" data-r="1">↩︎ 처음으로</button>
+</div>
+
+<script>
+const SERVER = "http://127.0.0.1:8787";
+const PANELS = ["idle", "ready", "sending", "sent", "error"];
+const $ = (id) => document.getElementById(id);
+let file = null;
+
+// 네이티브 패널이 내용 높이에 맞춰 창을 줄인다. 없으면(브라우저로 열었을 때) 그냥 무시.
+// documentElement.scrollHeight는 뷰포트 높이 밑으로 안 내려간다. body 실제 높이를 쓴다.
+const fit = () => window.webkit?.messageHandlers?.pin?.postMessage(
+  Math.ceil(document.body.offsetHeight));
+
+function show(state, msg) {
+  PANELS.forEach((p) => $(p).classList.toggle("hidden", p !== state));
+  document.body.className = state === "idle" || state === "ready" ? "" : "done";
+  if (state === "error") $("errmsg").textContent = msg;
+  if (state === "ready") $("fname").textContent = file.name;
+  if (state === "idle") file = null;
+  fit();
+}
+
+async function upload(target) {
+  const ext = (file.name.split(".").pop() || "mp3").toLowerCase();
+  show("sending");
+  try {
+    const r = await fetch(`${SERVER}/upload?target=${target}&ext=${ext}`,
+      { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file });
+    if (!r.ok) throw new Error(`서버 오류 ${r.status}`);
+    show("sent");
+  } catch (e) {
+    show("error", `${e.message}\n로컬 서버가 떠 있나요?\npython server.py`);
+  }
+}
+
+$("add").onclick = () => $("file").click();
+$("file").onchange = (e) => { file = e.target.files[0]; if (file) show("ready"); };
+document.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => upload(b.dataset.t)));
+document.querySelectorAll("[data-r]").forEach((b) => (b.onclick = () => show("idle")));
+
+document.addEventListener("dragover", (e) => { e.preventDefault(); document.body.classList.add("drag"); });
+document.addEventListener("dragleave", () => document.body.classList.remove("drag"));
+document.addEventListener("drop", (e) => {
+  e.preventDefault();
+  document.body.classList.remove("drag");
+  file = e.dataTransfer.files[0];
+  if (file) show("ready");
+});
+
+// 서버 생사만 점 하나로 보여준다
+const ping = () => fetch(`${SERVER}/health`).then(() => true).catch(() => false)
+  .then((ok) => $("dot").classList.toggle("off", !ok));
+ping(); setInterval(ping, 5000);
+show("idle");
+</script>

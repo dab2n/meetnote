@@ -1,6 +1,8 @@
-out/
-samples/*.aiff
-samples/*.mp3
+
 __pycache__/
 .env
 .venv/
+out/
+pin
+samples/*.aiff
+samples/*.mp3

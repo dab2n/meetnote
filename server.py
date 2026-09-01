@@ -62,7 +62,18 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        self._json(200, {"ok": True}) if urlparse(self.path).path == "/health" else self._json(404, {"error": "?"})
+        path = urlparse(self.path).path
+        if path == "/health":
+            return self._json(200, {"ok": True})
+        if path == "/panel":  # 네이티브 고정 패널(pin)이 띄우는 UI
+            raw = (Path(__file__).parent / "panel.html").read_bytes()
+            self.send_response(200)
+            self._cors()
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            return self.wfile.write(raw)
+        self._json(404, {"error": "?"})
 
     def do_POST(self):
         u = urlparse(self.path)

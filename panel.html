@@ -141,6 +141,7 @@
 <div id="idle">
   <button id="rec" class="glass"><span class="bulb"></span>녹음 시작</button>
   <button id="add" class="glass"><span class="bulb">+</span>회의 파일 (mp3 · txt)</button>
+  <button class="link" id="opennotes">🗂 회의록 열기</button>
   <button class="link" id="openrec">지난 회의 기록</button>
 </div>
 
@@ -334,6 +335,7 @@ $("add").onclick = () => nat("pick");
 $("fix").onclick = () => nat("settings");
 $("close").onclick = () => nat("close");
 $("go").onclick = go;
+$("opennotes").onclick = () => fetch(`${SERVER}/notes`, { method:"POST" });
 $("openrec").onclick = $("openrec2").onclick = () => show("records");
 document.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => chooseTarget(b.dataset.t)));
 document.querySelectorAll("[data-back]").forEach((b) => (b.onclick = () => show("ready", cur)));

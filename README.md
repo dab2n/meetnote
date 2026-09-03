@@ -124,6 +124,25 @@ launchctl load ~/Library/LaunchAgents/com.meetnote.pin.plist
 그래서 녹음까지 네이티브로 옮겼고, 덕분에 Zoom 데스크탑 앱처럼 브라우저 밖 회의도 녹음된다.
 익스텐션은 "이 탭만" 녹음하고 싶을 때 쓰는 별도 경로로 남겨뒀다.
 
+## 회의록 뷰어 (docs/)
+
+`docs/`는 정적 회의록 뷰어다. 빌드가 없고 파일 세 개(`index.html` + `data/*.json` + `audio/*.m4a`)로 돈다.
+
+- **데스크탑** — 패널의 **🗂 회의록 열기**(또는 `http://127.0.0.1:8787/notes/`)를 누르면 브라우저에서 열린다
+- **모바일** — GitHub Pages(`Settings → Pages → main /docs`)로 공개하면 폰에서 그대로 본다
+- 3단 레이아웃: **이어지는 안건**(회의를 건너 이어지는 주제) · **회의록**(결론 → 흐름 → 협업 갭 → 다음 행동) · **원문**(전사문 검색)
+- 900px 아래에서는 상단 탭 3개로 바뀌고 플레이어는 하단에 고정된다
+- 회의록·원문의 어느 지점을 눌러도 **그 시각의 음성으로 이동**한다. 재생 중에는 원문이 따라 스크롤되고, 지금 재생 중인 흐름 카드가 표시된다
+
+### 회의를 하나 추가하려면
+
+1. `docs/data/meetings.json`의 `meetings`에 한 줄 추가하고, `threads[].steps`에 이번 회의의 상태를 덧붙인다 (이게 회의 사이를 잇는 축이다)
+2. `docs/data/<id>.json` — 결론·흐름·협업 갭·다음 행동. 시각은 `"12:34"` 또는 `"1:02:03"` 문자열
+3. `docs/data/<id>.transcript.json` — `{"segments":[{"t":초, "s":"화자", "l":["문장", ...]}]}`
+4. `docs/audio/<id>.m4a` — 용량을 줄여서 넣는다
+   `ffmpeg -i 원본.m4a -c:a aac -b:a 32k -ac 1 -ar 22050 -movflags +faststart docs/audio/<id>.m4a`
+   (`+faststart`가 없으면 브라우저가 스트리밍하지 못한다)
+
 ## 4) CLI로 쓰기 (mp3 테스트)
 
 ```bash
@@ -142,6 +161,7 @@ python meetnote.py x.mp3 --transcript out/transcript.txt   # 전사 재사용(�
 | `pin.swift` / `pin.sh` | 우상단 고정 항상-위 패널 + 녹음 (AppKit · ScreenCaptureKit · AVAudioEngine) |
 | `panel.html` | 그 패널이 띄우는 UI (`/panel`로 서빙) |
 | `extension/` | 크롬 MV3 익스텐션 — 툴바 아이콘으로 패널을 띄우는 스위치 |
+| `docs/` | 회의록 뷰어 (GitHub Pages · 서버의 `/notes`) |
 
 ## 테스트용 샘플 만들기
 

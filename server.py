@@ -14,6 +14,7 @@ PORT = 8787
 OUT = Path(__file__).parent / "out"
 CONF = Path(__file__).parent / ".meetnote.json"
 APP = Path(__file__).parent / "meetnote.app"
+DOCS = (Path(__file__).parent / "docs").resolve()
 MAX_BYTES = 500 * 1024 * 1024  # 익스텐션이 보낸다고 무한정 받아주진 않는다
 
 
@@ -97,6 +98,8 @@ def records(limit=12):
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"   # 오디오 스트리밍(Range)에는 keep-alive가 필요하다
+
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
@@ -127,6 +130,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"records": records()})
         if path == "/conf":
             return self._json(200, json.loads(CONF.read_text()) if CONF.exists() else {})
+        if path == "/" or path.startswith("/notes"):
+            return self.serve_docs(path)
         if path == "/panel":  # 네이티브 고정 패널(pin)이 띄우는 UI
             raw = (Path(__file__).parent / "panel.html").read_bytes()
             self.send_response(200)
@@ -137,6 +142,44 @@ class Handler(BaseHTTPRequestHandler):
             return self.wfile.write(raw)
         self._json(404, {"error": "?"})
 
+    MIME = {".html": "text/html; charset=utf-8", ".json": "application/json; charset=utf-8",
+            ".m4a": "audio/mp4", ".mp3": "audio/mpeg", ".js": "text/javascript", ".css": "text/css"}
+
+    def serve_docs(self, path):
+        """docs/ 를 그대로 서빙한다. 오디오 탐색을 위해 Range만 최소로 받아준다."""
+        rel = path[len("/notes"):] if path.startswith("/notes") else path
+        f = (DOCS / rel.lstrip("/")).resolve()
+        if f.is_dir():
+            f = f / "index.html"
+        if DOCS not in f.parents or not f.is_file():
+            return self._json(404, {"error": "없는 파일"})
+        size = f.stat().st_size
+        start, end = 0, size - 1
+        rng = self.headers.get("Range", "")
+        if rng.startswith("bytes="):
+            a, _, b = rng[6:].partition("-")
+            start = int(a or 0)
+            end = int(b) if b else size - 1
+            end = min(end, size - 1)
+        partial = rng.startswith("bytes=")
+        self.send_response(206 if partial else 200)
+        self._cors()
+        self.send_header("Content-Type", self.MIME.get(f.suffix, "application/octet-stream"))
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(end - start + 1))
+        if partial:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.end_headers()
+        with f.open("rb") as fh:
+            fh.seek(start)
+            remaining = end - start + 1
+            while remaining > 0:
+                chunk = fh.read(min(1 << 16, remaining))
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+                remaining -= len(chunk)
+
     def do_POST(self):
         u = urlparse(self.path)
         if u.path == "/show":     # 크롬 확장 툴바 아이콘이 부른다
@@ -144,6 +187,9 @@ class Handler(BaseHTTPRequestHandler):
             if not up:
                 subprocess.Popen(["open", "-n", str(APP)])
             return self._json(200, {"ok": True, "already": up})
+        if u.path == "/notes":    # 패널의 "회의록 열기" — 브라우저로 연다
+            subprocess.run(["open", f"http://127.0.0.1:{PORT}/notes/"])
+            return self._json(200, {"ok": True})
         if u.path == "/local":
             return self.do_LOCAL()
         if u.path == "/conf":     # 마지막에 쓴 FigJam 보드 URL 같은 것

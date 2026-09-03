@@ -7,207 +7,270 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
 <style>
 :root{
-  --bg:#fbfbfa; --card:#fff; --ink:#16181c; --sub:#6c727d; --dim:#9aa0aa; --line:#e6e7ea; --line2:#f0f0f2;
-  --decided:#0f7a5f; --conditional:#a2740c; --open:#7a8089; --action:#2563eb; --concern:#c0483f;
-  --hl:#fff3cd;
-  --rail:270px; --src:380px; --player:56px;
+  --ink:#17181c; --sub:#5f636b; --dim:#8d919a; --line:rgba(23,24,28,.10); --line2:rgba(23,24,28,.06);
+  /* 상태 — 원본 회의록의 의미 체계를 그대로 */
+  --confirmed:#00806a; --conditional:#c07a10; --open:#6b7280; --concern:#c8433c; --proposal:#2f6bdd;
+  --ux:#4a6785; --id:#6b6579; --bx:#7b6065; --team:#54706c;
+  /* 글라스 */
+  --glass:rgba(255,255,255,.55); --glass2:rgba(255,255,255,.38); --edge:rgba(255,255,255,.75);
+  --shadow:0 10px 34px rgba(24,26,34,.10), 0 1px 2px rgba(24,26,34,.05);
+  --blur:saturate(180%) blur(22px);
+  --top:52px; --tabs:52px; --player:58px; --rail:392px;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);
+body{margin:0;color:var(--ink);font-size:15px;line-height:1.6;letter-spacing:-.022em;
   font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
-  letter-spacing:-.02em;line-height:1.62;font-size:15px}
+  background:
+    radial-gradient(1100px 640px at 8% -12%, #ffe4d8 0%, rgba(255,228,216,0) 62%),
+    radial-gradient(900px 560px at 92% -6%, #dfeaff 0%, rgba(223,234,255,0) 60%),
+    radial-gradient(760px 640px at 60% 110%, #e8f3ec 0%, rgba(232,243,236,0) 60%),
+    #f2f2f4;
+  background-attachment:fixed}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;letter-spacing:inherit}
 h1,h2,h3,h4{margin:0;font-weight:700;letter-spacing:-.035em}
-mark{background:var(--hl);color:inherit;border-radius:2px}
+mark{background:rgba(255,214,120,.7);color:inherit;border-radius:3px;padding:0 1px}
 
-/* ---------- 뼈대 ---------- */
-.top{position:sticky;top:0;z-index:30;background:rgba(251,251,250,.86);backdrop-filter:saturate(1.6) blur(12px);
-  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:10px 20px}
-.brand{font-size:13px;font-weight:750;letter-spacing:-.01em}
-.brand small{display:block;font-size:11px;color:var(--dim);font-weight:600;letter-spacing:0}
-.meetsel{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub)}
-select{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:5px 8px;color:var(--ink)}
+.glass{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--edge);border-radius:20px;box-shadow:var(--shadow)}
 
-main{display:grid;grid-template-columns:var(--rail) minmax(0,1fr) var(--src);
-  gap:0;align-items:start;max-width:1560px;margin:0 auto}
-.col{min-width:0}
-.rail,.source{position:sticky;top:var(--top,49px);height:calc(100vh - var(--top,49px) - var(--player));overflow:auto;
-  padding:22px 18px 40px;-webkit-overflow-scrolling:touch}
-.rail{border-right:1px solid var(--line)}
-.source{border-left:1px solid var(--line);background:#fcfcfc;padding:0}
-.note{padding:34px 40px calc(var(--player) + 60px)}
+/* ---------- 상단 ---------- */
+.top{position:fixed;top:0;left:0;right:0;height:var(--top);z-index:40;display:flex;align-items:center;gap:14px;
+  padding:0 18px;background:rgba(255,255,255,.5);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--edge)}
+.brand{font-size:13px;font-weight:750;white-space:nowrap}
+.brand small{display:block;font-size:10.5px;color:var(--dim);font-weight:600;letter-spacing:0}
+.meetsel{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub)}
+select{font:inherit;font-size:12.5px;color:var(--ink);border:1px solid var(--edge);border-radius:99px;
+  padding:5px 10px;background:rgba(255,255,255,.6);backdrop-filter:blur(8px)}
 
-/* ---------- 회의 헤더 ---------- */
-.mhead{margin-bottom:30px}
-.mno{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--dim)}
-.mhead h1{font-size:30px;line-height:1.25;margin:6px 0 10px}
-.mhead p{margin:0;color:var(--sub);font-size:15px;max-width:60ch}
-.mmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
-.chip{font-size:12px;color:var(--sub);border:1px solid var(--line);border-radius:99px;padding:3px 9px;background:var(--card)}
+/* ---------- 뼈대: 왼쪽(결론/원문) · 오른쪽(노드맵) ---------- */
+main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);display:grid;
+  grid-template-columns:var(--rail) minmax(0,1fr);gap:14px;padding:14px}
+.left{display:grid;grid-template-rows:minmax(0,42%) minmax(0,58%);gap:14px;min-height:0}
+.pane{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.pane-head{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;flex:none}
+.pane-head h2{font-size:13px;font-weight:800;letter-spacing:-.02em}
+.pane-head .sub{font-size:11px;color:var(--dim);font-weight:600}
+.pane-body{overflow:auto;min-height:0;padding:0 14px 16px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.right{overflow:auto;min-height:0;padding:0 4px 40px;-webkit-overflow-scrolling:touch}
+
+/* ---------- 한눈에 보는 결론 ---------- */
+.stgroup{margin-bottom:14px}
+.stgroup>h3{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;color:var(--st);margin:0 2px 7px}
+.stgroup>h3 i{width:14px;height:0;border-top:2px var(--stline) var(--st);font-style:normal;flex:none}
+.stgroup>h3 em{font-style:normal;color:var(--dim);font-weight:700;font-size:10.5px}
+.oc{display:block;width:100%;text-align:left;background:var(--glass2);
+  border:1px var(--stline) color-mix(in srgb,var(--st) 42%,transparent);
+  border-radius:14px;padding:10px 12px;margin-bottom:7px;backdrop-filter:blur(10px);transition:.14s}
+.oc:hover{background:rgba(255,255,255,.68);border-color:var(--st);transform:translateY(-1px)}
+.oc b{display:block;font-size:13px;line-height:1.42}
+.oc span{display:block;font-size:11.5px;color:var(--sub);line-height:1.5;margin-top:3px}
+.oc .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;align-items:center}
+.oc .tags i{font-style:normal;font-size:10px;font-weight:700;color:var(--sub);background:rgba(23,24,28,.05);
+  border-radius:5px;padding:2px 5px}
+.s-decided{--st:var(--confirmed);--stline:solid}
+.s-conditional{--st:var(--conditional);--stline:dashed}
+.s-open{--st:var(--open);--stline:dotted}
+.s-action{--st:var(--proposal);--stline:solid}
+.s-concern{--st:var(--concern);--stline:dashed}
+.s-proposal{--st:var(--proposal);--stline:solid}
+.s-question{--st:var(--sub);--stline:dotted}
+.s-agree{--st:var(--confirmed);--stline:solid}
+
+/* ---------- 원문 ---------- */
+.srchead{display:flex;align-items:center;gap:8px;padding:0 16px 10px;flex:none}
+.search{flex:1;display:flex;align-items:center;gap:6px;border:1px solid var(--edge);background:rgba(255,255,255,.55);
+  border-radius:99px;padding:5px 12px}
+.search input{border:0;outline:0;font:inherit;font-size:12.5px;width:100%;background:none}
+.search .n{font-size:11px;color:var(--dim);white-space:nowrap}
+.tog{font-size:11px;font-weight:700;color:var(--sub);border:1px solid var(--edge);border-radius:99px;
+  padding:4px 9px;background:rgba(255,255,255,.45);white-space:nowrap}
+.tog.on{color:var(--proposal);border-color:color-mix(in srgb,var(--proposal) 45%,transparent);background:rgba(47,107,221,.10)}
+.seg{padding:8px 10px;border-radius:12px;cursor:pointer;scroll-margin:70px;border:1px solid transparent}
+.seg:hover{background:rgba(255,255,255,.5)}
+.seg-h{display:flex;align-items:baseline;gap:6px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.seg-h b{color:var(--sub);font-weight:700}
+.seg p{margin:2px 0 0;font-size:13px;line-height:1.6;color:#2f333b}
+.seg.cur{background:rgba(255,255,255,.72);border-color:var(--edge);box-shadow:0 4px 18px rgba(24,26,34,.08)}
+.seg.cur .seg-h b{color:var(--proposal)}
+.seg.hit{background:rgba(255,246,224,.6)}
+
+/* ---------- 오른쪽 머리 ---------- */
+.mhead{padding:18px 22px 16px;margin-bottom:12px}
+.mno{font-size:10.5px;font-weight:800;letter-spacing:.12em;color:var(--dim)}
+.mhead h1{font-size:26px;line-height:1.25;margin:5px 0 8px}
+.mhead p{margin:0;color:var(--sub);font-size:14px;max-width:70ch}
+.mmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+.chip{font-size:11.5px;color:var(--sub);border:1px solid var(--edge);border-radius:99px;padding:3px 10px;
+  background:rgba(255,255,255,.5)}
 .chip b{font-weight:700;color:var(--ink)}
 
-/* ---------- 섹션 ---------- */
-.sec{margin-top:44px}
-.sec>h2{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--dim);
-  padding-bottom:8px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:8px}
-.sec>h2 span{font-weight:600;font-size:12px;color:var(--dim);opacity:.85}
+/* 이어지는 안건 스트립 */
+.threads{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none}
+.threads::-webkit-scrollbar{display:none}
+.th{flex:none;max-width:230px;text-align:left;padding:8px 12px;border-radius:14px;background:var(--glass2);
+  border:1px var(--stline) color-mix(in srgb,var(--st) 40%,transparent);backdrop-filter:blur(10px);transition:.14s}
+.th:hover{background:rgba(255,255,255,.7)}
+.th.on{background:rgba(255,255,255,.85);border-color:var(--st);box-shadow:var(--shadow)}
+.th em{font-style:normal;display:block;font-size:9.5px;font-weight:800;color:var(--st);letter-spacing:.02em}
+.th b{display:block;font-size:12px;font-weight:650;line-height:1.35;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.th span{display:block;font-size:10.5px;color:var(--conditional);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* 결론 보드 */
-.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 16px;margin-top:16px}
-.bcol>h3{font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px;margin-bottom:9px;color:var(--st)}
-.bcol>h3 i{width:6px;height:6px;border-radius:50%;background:var(--st);font-style:normal}
-.bcol>h3 em{font-style:normal;color:var(--dim);font-weight:700}
-.out{background:var(--card);border:1px solid var(--line);border-left:2px solid var(--st);border-radius:10px;
-  padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
-.out:hover{box-shadow:0 2px 10px rgba(0,0,0,.05)}
-.out b{display:block;font-size:14px;line-height:1.45}
-.out span{display:block;font-size:12.5px;color:var(--sub);margin-top:4px;line-height:1.5}
-.out .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
-.out .tags i{font-style:normal;font-size:10.5px;font-weight:700;color:var(--sub);background:var(--line2);border-radius:4px;padding:2px 5px}
-.s-decided{--st:var(--decided)}.s-conditional{--st:var(--conditional)}
-.s-open{--st:var(--open)}.s-action{--st:var(--action)}.s-concern{--st:var(--concern)}
-.s-proposal{--st:var(--action)}.s-question{--st:var(--sub)}
+/* 범례 */
+.legend{display:flex;flex-wrap:wrap;gap:14px;padding:10px 16px;margin-bottom:14px;font-size:11px;color:var(--sub)}
+.legend div{display:flex;align-items:center;gap:6px}
+.legend i{width:20px;height:0;font-style:normal}
+.lg-solid{border-top:2px solid var(--confirmed)}
+.lg-dash{border-top:2px dashed var(--conditional)}
+.lg-dot{border-top:2px dotted var(--open)}
+.lg-red{border-top:2px dashed var(--concern)}
 
-/* 흐름 */
-.flow{margin-top:6px}
-.ev{display:grid;grid-template-columns:78px minmax(0,1fr);gap:16px;padding:20px 0;border-bottom:1px solid var(--line2)}
-.ev.w1 .ev-title{font-size:20px}
-.ev-time{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;padding-top:3px}
-.ev-time em{display:block;font-style:normal;opacity:.6;font-size:11px}
-.ev-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:8px}
-.ev-title{font-size:17px;font-weight:700;letter-spacing:-.035em}
-.part{font-size:10.5px;font-weight:800;letter-spacing:.03em;color:var(--sub);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
-.who{font-size:11.5px;color:var(--dim)}
-.pts{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-size:14.5px;color:#333a44}
+/* ---------- 노드맵 ---------- */
+.sec-title{display:flex;align-items:baseline;gap:9px;margin:26px 4px 12px}
+.sec-title h2{font-size:14px;font-weight:800}
+.sec-title span{font-size:11.5px;color:var(--dim)}
+.group{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;padding-bottom:10px}
+.axis{position:relative;padding-top:16px}
+.axis .t{font-size:11.5px;font-weight:750;color:var(--sub);font-variant-numeric:tabular-nums;cursor:pointer;
+  padding-left:22px;text-align:left}
+.axis .t em{display:block;font-style:normal;font-size:10.5px;color:var(--dim);font-weight:600}
+.axis:after{content:"";position:absolute;left:11px;top:44px;bottom:-10px;width:0;border-left:1px dashed rgba(23,24,28,.16)}
+.group:last-of-type .axis:after{display:none}
+.axis .dot{position:absolute;left:5px;top:19px;width:13px;height:13px;border-radius:50%;
+  background:rgba(255,255,255,.9);border:2px solid var(--accent);box-shadow:0 0 0 4px rgba(255,255,255,.45)}
+.t-ux{--accent:var(--ux)}.t-id{--accent:var(--id)}.t-bx{--accent:var(--bx)}.t-team{--accent:var(--team)}
+.nodes{min-width:0}
+
+.card{padding:16px 18px;border-radius:20px;background:var(--glass);border:1px solid var(--edge);
+  box-shadow:var(--shadow);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+.card.root{border-left:3px solid var(--accent)}
+.card.playing{background:rgba(255,255,255,.82);box-shadow:0 14px 44px rgba(47,107,221,.16);
+  border-color:color-mix(in srgb,var(--proposal) 35%,var(--edge))}
+.node-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:9px}
+.node-head h3{font-size:16.5px;letter-spacing:-.04em}
+.group.key .node-head h3{font-size:19px}
+.part{font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--accent);
+  border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);
+  border-radius:6px;padding:1px 6px;background:rgba(255,255,255,.5)}
+.who{font-size:11px;color:var(--dim)}
+.pts{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-size:14px;color:#2f333b}
 .pts li{padding-left:12px;position:relative}
-.pts li:before{content:"";position:absolute;left:0;top:.72em;width:4px;height:1px;background:var(--dim)}
-.turns{margin-top:12px;display:grid;gap:0;border-left:1px solid var(--line);padding-left:14px}
-.turn{padding:7px 0;font-size:14px;color:#3a414b}
-.turn b.k{font-weight:800;color:var(--st,var(--sub));font-size:11.5px;margin-right:6px;letter-spacing:-.01em}
-.turn b{font-weight:700}
-.turn i{font-style:normal;color:var(--dim);font-size:11.5px}
-.res{margin-top:12px;display:flex;gap:8px;align-items:baseline;background:var(--card);border:1px solid var(--line);
-  border-left:2px solid var(--st);border-radius:8px;padding:9px 12px;font-size:14px}
-.res b{font-size:11px;font-weight:800;color:var(--st);white-space:nowrap}
-.quote{margin:12px 0 0;padding:10px 12px;background:#f6f6f5;border-radius:8px;font-size:13px;color:#4b525c;cursor:pointer}
-.quote:hover{background:#f1f1ef}
-.quote em{font-style:normal;color:var(--dim);font-size:11.5px;display:block;margin-bottom:3px}
+.pts li:before{content:"";position:absolute;left:0;top:.72em;width:5px;height:0;border-top:1px solid var(--dim)}
 
-/* 갭 */
-.gaps{display:grid;gap:14px;margin-top:16px}
-.gap{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
-.gap-tag{font-size:11px;font-weight:800;color:var(--concern);letter-spacing:-.01em}
-.gap h3{font-size:16px;margin:4px 0 14px}
-.steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px}
-.step{position:relative}
-.step+.step:before{content:"→";position:absolute;left:-15px;top:8px;color:var(--dim);font-size:11px}
-.step{border-top:1px solid var(--line);padding-top:9px}
-.step h4{font-size:11.5px;color:var(--dim);font-weight:700;margin-bottom:6px}
-.step blockquote{margin:0 0 6px;font-size:13.5px;line-height:1.55}
-.step blockquote:before{content:"“"}.step blockquote:after{content:"”"}
-.step .src{font-size:11.5px;color:var(--sub);font-weight:700;margin-bottom:4px}
-.step p{margin:0;font-size:12.5px;color:var(--sub);line-height:1.55}
-.cause{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--sub)}
-.cause b{color:var(--ink);font-size:12px}
+/* 노드 사이 연결선 — 관계를 선 모양으로 구분 */
+.edge{height:26px;margin-left:26px;position:relative;display:flex;align-items:center}
+.edge:before{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px var(--eline) var(--ecolor)}
+.edge span{margin-left:14px;font-size:10px;font-weight:750;color:var(--ecolor);
+  background:rgba(255,255,255,.6);border:1px solid var(--edge);border-radius:99px;padding:1px 8px;backdrop-filter:blur(8px)}
+.e-support{--eline:solid;--ecolor:var(--confirmed)}
+.e-oppose{--eline:dashed;--ecolor:var(--concern)}
+.e-change{--eline:dashed;--ecolor:var(--conditional)}
+.e-derive{--eline:dotted;--ecolor:var(--open)}
 
-/* 액션 */
-.tasks{margin-top:12px;border-top:1px solid var(--line2)}
-.task{display:grid;grid-template-columns:120px minmax(0,1fr) 96px;gap:12px;padding:11px 0;border-bottom:1px solid var(--line2);font-size:14px}
-.task b{font-size:12.5px}
-.task span{color:#3a414b}
-.task em{font-style:normal;font-size:12px;color:var(--dim);text-align:right}
-.notice{margin-top:26px;font-size:12px;color:var(--dim);line-height:1.6}
+.sub{margin-left:26px;width:fit-content;max-width:calc(100% - 26px);padding:11px 14px;border-radius:16px;background:var(--glass2);backdrop-filter:blur(12px);
+  border:1px var(--stline) color-mix(in srgb,var(--st) 38%,transparent);font-size:13.5px;color:#2f333b;line-height:1.58}
+.sub b.k{display:inline-block;font-size:10px;font-weight:800;color:var(--st);letter-spacing:.02em;margin-right:7px;
+  border:1px var(--stline) color-mix(in srgb,var(--st) 45%,transparent);border-radius:99px;padding:1px 7px}
+.sub i{font-style:normal;color:var(--dim);font-size:11px}
+.state{margin-left:26px;width:fit-content;max-width:calc(100% - 26px);padding:13px 16px;border-radius:16px;background:rgba(255,255,255,.62);backdrop-filter:blur(14px);
+  border:1.5px var(--stline) var(--st);font-size:14px;display:flex;gap:9px;align-items:baseline;
+  box-shadow:0 6px 22px rgba(24,26,34,.07)}
+.state b{font-size:10.5px;font-weight:800;color:var(--st);white-space:nowrap;letter-spacing:.02em}
+.quote{margin-top:10px;width:100%;text-align:left;padding:10px 13px;border-radius:14px;font-size:12.5px;color:#4a4f58;
+  background:rgba(255,255,255,.34);border:1px solid var(--edge);backdrop-filter:blur(10px)}
+.quote:hover{background:rgba(255,255,255,.6)}
+.quote em{font-style:normal;display:block;color:var(--dim);font-size:10.5px;margin-bottom:3px}
 
-/* ---------- 왼쪽 레일 (이어지는 안건) ---------- */
-.rail h2{font-size:12px;font-weight:800;color:var(--dim);margin-bottom:4px}
-.rail .hint{font-size:11.5px;color:var(--dim);margin:0 0 14px;line-height:1.5}
-.th{width:100%;text-align:left;border-radius:9px;padding:9px 10px;margin-bottom:2px;display:block}
-.th:hover{background:#f2f2f0}
-.th.on{background:#eef1f6}
-.th-top{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--dim);font-weight:700}
-.th-top i{width:6px;height:6px;border-radius:50%;background:var(--st);font-style:normal;flex:none}
-.th b{display:block;font-size:13px;font-weight:650;line-height:1.4;margin:2px 0 0}
-.th span{display:block;font-size:11.5px;color:var(--sub);line-height:1.45;margin-top:3px}
-.th .carry{color:var(--conditional);font-size:11px;margin-top:4px}
-.railfoot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);line-height:1.6}
-body.filtered .dimmed{opacity:.24}
+/* 협업 갭 */
+.gap{padding:18px 20px;margin-bottom:14px}
+.gap .tag{font-size:10.5px;font-weight:800;color:var(--concern)}
+.gap h3{font-size:16px;margin:4px 0 6px}
+.gsteps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px;margin-top:14px}
+.gstep{position:relative}
+.gstep+.gstep:before{content:"";position:absolute;left:-17px;top:12px;width:9px;height:0;
+  border-top:2px dashed var(--concern);opacity:.55}
+.gstep+.gstep:after{content:"";position:absolute;left:-9px;top:9px;border:3px solid transparent;
+  border-left-color:var(--concern);opacity:.55}
+.gstep h4{font-size:10.5px;color:var(--dim);font-weight:750;margin-bottom:6px}
+.gstep .src{font-size:11px;font-weight:750;color:var(--st);margin-bottom:4px}
+.gstep blockquote{margin:0 0 6px;font-size:13px;line-height:1.55;padding-left:9px;
+  border-left:2px var(--stline) color-mix(in srgb,var(--st) 45%,transparent)}
+.gstep p{margin:0;font-size:12px;color:var(--sub);line-height:1.55}
+.cause{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--sub)}
+.cause b{color:var(--ink);font-size:11.5px}
 
-/* ---------- 오른쪽 원문 ---------- */
-.srchead{position:sticky;top:0;background:#fcfcfc;border-bottom:1px solid var(--line);padding:12px 16px;z-index:5}
-.srctitle{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--dim);margin-bottom:8px}
-.srctitle button{font-size:11.5px;font-weight:700;color:var(--sub);border:1px solid var(--line);border-radius:99px;padding:2px 8px;margin-left:auto}
-.srctitle button.on{color:var(--action);border-color:#c7d7fb;background:#eef3fe}
-.search{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 9px}
-.search input{border:0;outline:0;font:inherit;font-size:13px;width:100%;background:none}
-.search .n{font-size:11.5px;color:var(--dim);white-space:nowrap}
-.tr{padding:8px 16px 40px}
-.seg{padding:7px 9px;border-radius:8px;cursor:pointer;scroll-margin:80px}
-.seg:hover{background:#f3f3f1}
-.seg-h{display:flex;align-items:baseline;gap:6px;font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
-.seg-h b{color:var(--sub);font-weight:700}
-.seg p{margin:2px 0 0;font-size:13.5px;line-height:1.6;color:#333a44}
-.seg.cur{background:#eef3fe}
-.seg.cur .seg-h b{color:var(--action)}
-.seg.hit{background:#fffbeb}
+/* 다음 행동 */
+.tasks{padding:6px 20px 14px}
+.task{display:grid;grid-template-columns:118px minmax(0,1fr) 92px;gap:12px;padding:11px 0;font-size:13.5px;
+  border-bottom:1px solid var(--line2)}
+.task:last-child{border-bottom:0}
+.task b{font-size:12px}
+.task span{color:#2f333b}
+.task em{font-style:normal;font-size:11.5px;color:var(--dim);text-align:right}
+.notice{margin:14px 6px 0;font-size:11.5px;color:var(--dim);line-height:1.6}
+
+/* 시간 앵커 */
+.at{font-size:10.5px;font-weight:750;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap;
+  border:1px solid var(--edge);border-radius:99px;padding:2px 8px;background:rgba(255,255,255,.55);backdrop-filter:blur(8px)}
+.at:hover{color:var(--proposal);border-color:color-mix(in srgb,var(--proposal) 45%,transparent)}
+.at:before{content:"▶ ";font-size:8px;vertical-align:1px}
+body.noaudio .at:before{content:"↳ "}
+body.filtered .dim{opacity:.2}
 
 /* ---------- 플레이어 ---------- */
-.player{position:fixed;left:0;right:0;bottom:0;z-index:40;height:var(--player);
-  background:rgba(255,255,255,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);
-  display:flex;align-items:center;gap:12px;padding:0 16px calc(env(safe-area-inset-bottom))}
-.play{width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;flex:none;font-size:12px}
+.player{position:fixed;left:0;right:0;bottom:0;z-index:40;height:var(--player);display:flex;align-items:center;gap:12px;
+  padding:0 16px calc(env(safe-area-inset-bottom));background:rgba(255,255,255,.6);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--edge)}
+.play{width:34px;height:34px;border-radius:50%;background:rgba(23,24,28,.9);color:#fff;display:grid;place-items:center;
+  flex:none;font-size:12px;box-shadow:0 4px 14px rgba(24,26,34,.25)}
 .bar{position:relative;flex:1;height:22px;display:flex;align-items:center;cursor:pointer}
-.bar .track{width:100%;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
-.bar .fill{height:100%;background:var(--ink);width:0}
+.bar .track{width:100%;height:4px;background:rgba(23,24,28,.10);border-radius:3px;overflow:hidden}
+.bar .fill{height:100%;background:rgba(23,24,28,.75);width:0}
 .tt{font-size:11.5px;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
-.now{font-size:12px;color:var(--dim);max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rate{font-size:11.5px;color:var(--sub);border:1px solid var(--line);border-radius:99px;padding:2px 8px}
-
-/* ---------- 시간 앵커 ---------- */
-.at{font-size:11px;font-weight:700;color:var(--dim);font-variant-numeric:tabular-nums;
-  border:1px solid var(--line);border-radius:99px;padding:1px 7px;white-space:nowrap;background:var(--card)}
-.at:hover{color:var(--action);border-color:#c7d7fb;background:#eef3fe}
-.at:before{content:"▶ ";font-size:8px;vertical-align:1px}
+.now{font-size:11.5px;color:var(--dim);max-width:36ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rate{font-size:11px;color:var(--sub);border:1px solid var(--edge);border-radius:99px;padding:3px 9px;background:rgba(255,255,255,.5)}
 body.noaudio .play,body.noaudio .rate{display:none}
-body.noaudio .now{display:block;color:var(--dim);max-width:none}
-body.noaudio .at:before{content:"↳ "}
-.ev.playing{background:linear-gradient(90deg,#eef3fe,transparent 60%)}
-.ev.playing .ev-time{color:var(--action);font-weight:700}
+body.noaudio .now{display:block;max-width:none}
 
 /* ---------- 모바일 ---------- */
 .tabs{display:none}
-@media (max-width:1180px){ :root{--rail:230px;--src:330px} .note{padding:28px 24px 90px} }
+@media (max-width:1240px){
+  :root{--rail:340px}
+  .gsteps{grid-template-columns:1fr;gap:20px}
+  .gstep+.gstep:before{left:0;top:-14px;width:0;height:8px;border-top:0;border-left:2px dashed var(--concern)}
+  .gstep+.gstep:after{left:-3px;top:-7px;border-left-color:transparent;border-top-color:var(--concern)}
+}
 @media (max-width:900px){
-  main{display:block;max-width:none}
-  .rail,.source,.note{position:static;height:auto;border:0;overflow:visible}
-  .col{display:none}
-  .col.show{display:block}
-  .note{padding:20px 18px 40px}
-  .rail{padding:20px 18px 40px}
-  .source{padding:0 0 40px;background:transparent}
-  .srchead{background:rgba(251,251,250,.95);backdrop-filter:blur(10px)}
-  .tr{padding:6px 12px 20px}
-  .board{grid-template-columns:1fr;gap:20px}
-  .steps{grid-template-columns:1fr;gap:14px}
-  .step+.step:before{content:"↓";left:0;top:-13px}
-  .ev{grid-template-columns:1fr;gap:6px;padding:16px 0}
-  .ev-time{padding-top:0}
-  .ev-time em{display:inline;margin-left:6px}
-  .ev.w1 .ev-title{font-size:18px}
-  .task{grid-template-columns:1fr;gap:2px;padding:12px 0}
+  main{position:static;display:block;padding:calc(var(--top) + var(--tabs) + 10px) 12px calc(var(--player) + 30px)}
+  .left{display:block}
+  .pane{margin-bottom:12px}
+  .pane-body{overflow:visible;min-height:0}
+  #src .pane-body{max-height:72vh;overflow:auto}
+  .right{overflow:visible;padding:0}
+  .col{display:none}.col.show{display:block}
+  .tabs{display:flex;position:fixed;top:var(--top);left:0;right:0;height:var(--tabs);z-index:35;
+    background:rgba(255,255,255,.55);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+    border-bottom:1px solid var(--edge);padding:8px 12px;gap:8px}
+  .tabs button{flex:1;border-radius:99px;font-size:12.5px;font-weight:700;color:var(--sub);border:1px solid transparent}
+  .tabs button.on{color:var(--ink);background:rgba(255,255,255,.8);border-color:var(--edge);box-shadow:var(--shadow)}
+  .group{grid-template-columns:1fr;gap:8px}
+  .axis{padding-top:0;display:flex;align-items:center;gap:8px}
+  .axis:after{display:none}
+  .axis .dot{position:static;flex:none}
+  .axis .t{padding-left:0}
+  .axis .t em{display:inline;margin-left:6px}
+  .mhead{padding:16px 18px}
+  .mhead h1{font-size:21px}
+  .task{grid-template-columns:1fr;gap:2px}
   .task em{text-align:left}
-  .mhead h1{font-size:23px}
-  .tabs{display:flex;position:sticky;top:var(--top,49px);z-index:25;background:rgba(251,251,250,.94);
-    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  .tabs button{flex:1;padding:10px 4px;font-size:13px;font-weight:650;color:var(--sub);border-bottom:2px solid transparent}
-  .tabs button.on{color:var(--ink);border-bottom-color:var(--ink)}
-  .source .srchead{top:var(--tabs,93px)}
-  .player{padding-bottom:calc(env(safe-area-inset-bottom) + 2px)}
-  .now{display:none}
   .meetsel label{display:none}
-  .brand{white-space:nowrap;font-size:12px}
-  select{max-width:46vw}
-  body{padding-bottom:var(--player)}
+  select{max-width:44vw}
+  .now{display:none}
+  .edge{margin-left:20px;height:22px}
+  .sub,.state{margin-left:20px;max-width:calc(100% - 20px)}
 }
 </style>
 </head>
@@ -215,33 +278,31 @@ body.noaudio .at:before{content:"↳ "}
 
 <div class="top">
   <div class="brand" id="brand">meetnote<small>회의 기록</small></div>
-  <div class="meetsel">
-    <label for="msel">회의</label>
-    <select id="msel"></select>
-  </div>
+  <div class="meetsel"><label for="msel">회의</label><select id="msel"></select></div>
 </div>
 
-<nav class="tabs" role="tablist">
-  <button data-tab="note" class="on">회의록</button>
-  <button data-tab="source">원문</button>
-  <button data-tab="rail">이어지는 안건</button>
+<nav class="tabs">
+  <button data-tab="sum" class="on">결론</button>
+  <button data-tab="src">원문</button>
+  <button data-tab="map">흐름</button>
 </nav>
 
 <main>
-  <aside class="col rail" id="rail"></aside>
-  <section class="col note show" id="note"></section>
-  <aside class="col source" id="source">
-    <div class="srchead">
-      <div class="srctitle">원문 기록
-        <button id="follow" class="on" title="재생 위치를 따라 스크롤">자동 따라가기</button>
+  <div class="left">
+    <section class="pane glass col show" id="sum">
+      <div class="pane-head"><h2>한눈에 보는 결론</h2><span class="sub" id="sumn"></span></div>
+      <div class="pane-body" id="sumbody"></div>
+    </section>
+    <section class="pane glass col" id="src">
+      <div class="pane-head"><h2>원문 기록</h2><span class="sub">눌러서 그 시각으로</span>
+        <button class="tog on" id="follow" style="margin-left:auto">자동 따라가기</button></div>
+      <div class="srchead">
+        <div class="search"><input id="q" placeholder="원문에서 찾기 (예: 부스트, 발목)" spellcheck="false"><span class="n" id="qn"></span></div>
       </div>
-      <div class="search">
-        <input id="q" placeholder="원문에서 찾기 (예: 부스트, 발목)" spellcheck="false">
-        <span class="n" id="qn"></span>
-      </div>
-    </div>
-    <div class="tr" id="tr"></div>
-  </aside>
+      <div class="pane-body" id="tr"></div>
+    </section>
+  </div>
+  <section class="right col" id="map"></section>
 </main>
 
 <div class="player">
@@ -263,11 +324,13 @@ const mmss = s => (s >= 3600 ? Math.floor(s / 3600) + ':' + String(Math.floor(s 
 const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 const ST = { decided: '확정', conditional: '조건부', open: '미결', action: '다음 행동', concern: '우려' };
-const STANCE = { proposal: '제안', agree: '동의', conditional: '조건부', concern: '우려·반론', question: '질문', open: '미결' };
+const STANCE = { proposal: '제안', agree: '동의', conditional: '조건부 동의', concern: '우려·반론', question: '질문', open: '미결' };
+/* 발언의 성격 → 노드 사이 선 모양 (지지=실선, 대립=붉은 파선, 수정=파선, 파생=점선) */
+const EDGE = { proposal: ['e-derive', '제안'], agree: ['e-support', '동의'], conditional: ['e-change', '조건부'],
+               concern: ['e-oppose', '반론'], question: ['e-derive', '질문'], open: ['e-derive', '미결'] };
 const au = $('#au');
 let DATA, TRANS = [], SEGN = [], meta, curSeg = -1, filter = null, audioOK = true;
 
-/* ---------- 로드 ---------- */
 (async function boot() {
   meta = await (await fetch('data/meetings.json')).json();
   $('#brand').innerHTML = `${meta.project}<small>meetnote 회의 기록</small>`;
@@ -288,151 +351,158 @@ async function load(id) {
   audioOK = true; document.body.classList.remove('noaudio');
   au.src = m.audio; $('#dur').textContent = mmss(m.durationSec);
   document.title = `${m.date} ${m.title} · ${meta.project}`;
-  renderNote(); renderRail(); renderTranscript();
+  renderSummary(); renderMap(); renderTranscript();
   history.replaceState(null, '', `?m=${id}`);
 }
 
-/* ---------- 회의록 ---------- */
 function anchor(t) {
   const b = el('button', 'at', mmss(secs(t)));
   b.onclick = e => { e.stopPropagation(); seek(secs(t)); };
   return b;
 }
-function tagThread(node, id) { if (id) node.dataset.thread = id; return node; }
+const tag = (n, id) => { if (id) n.dataset.thread = id; return n; };
 
-function renderNote() {
-  const d = DATA, m = d.m, n = $('#note');
-  n.textContent = '';
-
-  const h = el('header', 'mhead');
-  h.append(el('div', 'mno', `MEETING ${String(m.no).padStart(2, '0')}`),
-    el('h1', null, esc(m.title)), el('p', null, esc(d.headline)));
-  const mm = el('div', 'mmeta');
-  [`${m.date} ${m.time}`, `${m.duration}`, `${m.people.length}인`, ...m.people.map(p =>
-    `<b>${p}</b> ${meta.people[p] ? meta.people[p].part : ''}`)]
-    .forEach(x => mm.append(el('span', 'chip', x)));
-  h.append(mm); n.append(h);
-
-  /* 결론 */
-  const s1 = el('section', 'sec', '<h2>결론 <span>이 회의에서 어디까지 정해졌는가</span></h2>');
-  const board = el('div', 'board');
+/* ---------- 왼쪽 위: 한눈에 보는 결론 ---------- */
+function renderSummary() {
+  const w = $('#sumbody'); w.textContent = '';
+  $('#sumn').textContent = `${DATA.outcomes.length}개 항목`;
   ['decided', 'conditional', 'open', 'action'].forEach(st => {
-    const items = d.outcomes.filter(o => o.status === st);
-    const c = el('div', `bcol s-${st}`);
-    c.append(el('h3', null, `<i></i>${ST[st]} <em>${items.length}</em>`));
+    const items = DATA.outcomes.filter(o => o.status === st);
+    if (!items.length) return;
+    const g = el('section', `stgroup s-${st}`);
+    g.append(el('h3', null, `<i></i>${ST[st]} <em>${items.length}</em>`));
     items.forEach(o => {
-      const card = tagThread(el('div', `out s-${st}`), o.thread);
-      card.append(el('b', null, esc(o.title)), el('span', null, esc(o.body)));
+      const c = tag(el('button', `oc s-${st}`), o.thread);
+      c.append(el('b', null, esc(o.title)), el('span', null, esc(o.body)));
       const tags = el('div', 'tags');
       o.meta.forEach(x => tags.append(el('i', null, esc(x))));
       if (o.t) tags.append(anchor(o.t));
-      card.append(tags);
-      card.onclick = () => o.t && seek(secs(o.t));
-      c.append(card);
+      c.append(tags);
+      c.onclick = () => o.t && seek(secs(o.t));
+      g.append(c);
     });
-    board.append(c);
+    w.append(g);
   });
-  s1.append(board); n.append(s1);
+}
 
-  /* 흐름 */
-  const s2 = el('section', 'sec', '<h2>흐름 <span>주제가 어떻게 제안되고 부딪히고 정리됐는가</span></h2>');
-  const flow = el('div', 'flow');
+/* ---------- 오른쪽: 시간순 노드맵 ---------- */
+function renderMap() {
+  const d = DATA, m = d.m, w = $('#map'); w.textContent = '';
+
+  const h = el('header', 'mhead glass');
+  h.append(el('div', 'mno', `MEETING ${String(m.no).padStart(2, '0')}`),
+    el('h1', null, esc(m.title)), el('p', null, esc(d.headline)));
+  const mm = el('div', 'mmeta');
+  [`${m.date} ${m.time}`, m.duration, `${m.people.length}인`,
+    ...m.people.map(p => `<b>${p}</b> ${meta.people[p] ? meta.people[p].part : ''}`)]
+    .forEach(x => mm.append(el('span', 'chip', x)));
+  h.append(mm); w.append(h);
+
+  /* 회의를 건너 이어지는 안건 */
+  const ts = el('div', 'threads');
+  meta.threads.forEach(th => {
+    const step = th.steps.filter(s => s.m === DATA.id).pop();
+    const st = step ? step.status : 'open';
+    const b = el('button', `th s-${st}`);
+    b.append(el('em', null, `${th.part} · ${ST[st]}`), el('b', null, esc(th.label)));
+    if (th.carry) b.append(el('span', null, '↳ ' + esc(th.carry)));
+    b.onclick = () => setFilter(filter === th.id ? null : th.id, b, step);
+    ts.append(b);
+  });
+  w.append(ts);
+
+  w.append(el('div', 'legend glass', `
+    <div><i class="lg-solid"></i>실선 · 합의·확정</div>
+    <div><i class="lg-dash"></i>파선 · 조건부·수정</div>
+    <div><i class="lg-dot"></i>점선 · 미결·파생</div>
+    <div><i class="lg-red"></i>붉은 파선 · 반대·우려</div>`));
+
+  w.append(el('div', 'sec-title', '<h2>시간순 논의 노드</h2><span>제안 → 반론 → 수정 → 결론이 이어진 순서</span>'));
+
   d.flow.forEach(e => {
-    const ev = tagThread(el('article', `ev w${e.weight || 2}`), e.thread);
-    ev.dataset.t0 = secs(e.t); ev.dataset.t1 = secs(e.t1 || e.t);
-    const time = el('div', 'ev-time', mmss(secs(e.t)) + `<em>${mmss(secs(e.t1 || e.t))}</em>`);
-    time.style.cursor = 'pointer'; time.onclick = () => seek(secs(e.t));
-    const body = el('div');
-    const head = el('div', 'ev-head');
-    head.append(el('h3', 'ev-title', esc(e.title)), el('span', 'part', esc(e.part)),
+    const part = { UX: 't-ux', ID: 't-id', BX: 't-bx' }[e.part.split(' ')[0]] || 't-team';
+    const g = el('article', `group ${part}${e.weight === 1 ? ' key' : ''}`);
+    const ax = el('div', 'axis');
+    const tb = el('button', 't', mmss(secs(e.t)) + `<em>${mmss(secs(e.t1 || e.t))}</em>`);
+    tb.onclick = () => seek(secs(e.t));
+    ax.append(el('i', 'dot'), tb);
+
+    const nodes = tag(el('div', 'nodes'), e.thread);
+    const root = el('div', 'card root');
+    root.dataset.t0 = secs(e.t); root.dataset.t1 = secs(e.t1 || e.t);
+    const head = el('div', 'node-head');
+    head.append(el('h3', null, esc(e.title)), el('span', 'part', esc(e.part)),
       el('span', 'who', e.who.join(' · ')), anchor(e.t));
-    body.append(head);
+    root.append(head);
     if (e.points) {
       const ul = el('ul', 'pts');
       e.points.forEach(p => ul.append(el('li', null, p)));
-      body.append(ul);
+      root.append(ul);
     }
-    if (e.turns) {
-      const tw = el('div', 'turns');
-      e.turns.forEach(t => tw.append(el('div', `turn s-${t.stance === 'agree' ? 'decided' : t.stance}`,
-        `<b class="k">${STANCE[t.stance] || t.stance}</b><i>${esc(t.who)}</i> · ${t.text}`)));
-      body.append(tw);
-    }
-    if (e.result) body.append(el('div', `res s-${e.result.status}`,
-      `<b>${ST[e.result.status]}</b><span>${esc(e.result.text)}</span>`));
     if (e.quote) {
-      const q = el('div', 'quote', `<em>원문 ${mmss(secs(e.quote.t))} · ${esc(e.quote.who)}</em>“${esc(e.quote.text)}”`);
+      const q = el('button', 'quote', `<em>원문 ${mmss(secs(e.quote.t))} · ${esc(e.quote.who)}</em>“${esc(e.quote.text)}”`);
       q.onclick = () => seek(secs(e.quote.t));
-      body.append(q);
+      root.append(q);
     }
-    ev.append(time, body); flow.append(ev);
-  });
-  s2.append(flow); n.append(s2);
+    nodes.append(root);
 
-  /* 갭 */
-  const s3 = el('section', 'sec', '<h2>협업 갭 <span>같은 말을 서로 다르게 이해했던 지점</span></h2>');
-  const gw = el('div', 'gaps');
-  d.gaps.forEach(g => {
-    const c = tagThread(el('article', 'gap'), g.thread);
-    const top = el('div');
-    top.append(el('div', 'gap-tag', esc(g.tag)), el('h3', null, esc(g.title)));
-    const ats = el('div', 'tags'); ats.style.cssText = 'display:flex;gap:5px;margin-bottom:12px';
-    g.at.forEach(t => ats.append(anchor(t)));
-    c.append(top, ats);
-    const sw = el('div', 'steps');
-    g.steps.forEach(s => {
-      const st = el('div', `step s-${s.stance === 'agree' ? 'decided' : s.stance}`);
-      st.append(el('h4', null, esc(s.h)),
-        el('div', 'src', `${esc(s.who)} · ${STANCE[s.stance] || ''}`),
+    (e.turns || []).forEach(t => {
+      const [cls, label] = EDGE[t.stance] || EDGE.open;
+      nodes.append(el('div', `edge ${cls}`, `<span>${label}</span>`));
+      nodes.append(el('div', `sub s-${t.stance}`,
+        `<b class="k">${STANCE[t.stance] || t.stance}</b><i>${esc(t.who)}</i> · ${t.text}`));
+    });
+    if (e.result) {
+      const ecls = e.result.status === 'decided' ? 'e-support'
+                 : e.result.status === 'conditional' ? 'e-change' : 'e-derive';
+      nodes.append(el('div', `edge ${ecls}`, `<span>${ST[e.result.status]}</span>`));
+      nodes.append(el('div', `state s-${e.result.status}`,
+        `<b>${ST[e.result.status]}</b><span>${esc(e.result.text)}</span>`));
+    }
+    g.append(ax, nodes); w.append(g);
+  });
+
+  /* 협업 갭 */
+  w.append(el('div', 'sec-title', '<h2>협업 갭</h2><span>같은 말을 서로 다르게 이해했던 지점</span>'));
+  d.gaps.forEach(gp => {
+    const c = tag(el('article', 'gap card'), gp.thread);
+    c.append(el('div', 'tag', esc(gp.tag)), el('h3', null, esc(gp.title)));
+    const ats = el('div', 'mmeta');
+    gp.at.forEach(t => ats.append(anchor(t)));
+    c.append(ats);
+    const sw = el('div', 'gsteps');
+    gp.steps.forEach(s => {
+      const st = el('div', `gstep s-${s.stance}`);
+      st.append(el('h4', null, esc(s.h)), el('div', 'src', `${esc(s.who)} · ${STANCE[s.stance] || ''}`),
         el('blockquote', null, esc(s.quote)));
       if (s.note) st.append(el('p', null, esc(s.note)));
       sw.append(st);
     });
-    c.append(sw, el('div', 'cause', `<b>원인 추측</b> · ${esc(g.cause)}`));
-    gw.append(c);
+    c.append(sw, el('div', 'cause', `<b>원인 추측</b> · ${esc(gp.cause)}`));
+    w.append(c);
   });
-  s3.append(gw); n.append(s3);
 
-  /* 액션 */
-  const s4 = el('section', 'sec', '<h2>다음 행동</h2>');
-  const tw = el('div', 'tasks');
+  /* 다음 행동 */
+  w.append(el('div', 'sec-title', '<h2>다음 행동</h2><span>이 회의가 다음 회의로 넘기는 것</span>'));
+  const tw = el('div', 'tasks card');
   d.actions.forEach(a => {
     const r = el('div', 'task');
     r.append(el('b', null, esc(a.owner)), el('span', null, esc(a.desc)), el('em', null, esc(a.when)));
     tw.append(r);
   });
-  s4.append(tw); n.append(s4);
-  n.append(el('p', 'notice', esc(d.notice)));
+  w.append(tw, el('p', 'notice', esc(d.notice)));
 }
 
-/* ---------- 이어지는 안건 ---------- */
-function renderRail() {
-  const r = $('#rail'); r.textContent = '';
-  r.append(el('h2', null, '이어지는 안건'),
-    el('p', 'hint', '회의를 건너 이어지는 주제입니다. 누르면 이 회의에서 해당 안건과 연결된 부분만 남습니다.'));
-  meta.threads.forEach(th => {
-    const step = th.steps.filter(s => s.m === DATA.id).pop();
-    const b = el('button', `th s-${step ? step.status : 'open'}`);
-    b.append(el('span', 'th-top', `<i></i>${th.part} · ${step ? ST[step.status] : '이전 회의'}`),
-      el('b', null, esc(th.label)));
-    if (step) b.append(el('span', null, esc(step.note)));
-    if (th.carry) b.append(el('span', 'carry', '↳ 이월 · ' + esc(th.carry)));
-    b.onclick = () => setFilter(filter === th.id ? null : th.id, b, step);
-    r.append(b);
-  });
-  r.append(el('div', 'railfoot',
-    `${meta.meetings.length}개 회의 기록 · 이월 항목은 다음 회의에서 이어서 추적합니다.`));
-}
 function setFilter(id, btn, step) {
   filter = id;
   document.querySelectorAll('.th').forEach(x => x.classList.remove('on'));
   document.body.classList.toggle('filtered', !!id);
-  document.querySelectorAll('[data-thread], .ev, .out, .gap').forEach(x =>
-    x.classList.toggle('dimmed', !!id && x.dataset.thread !== id));
+  document.querySelectorAll('.nodes, .gap, .oc').forEach(x =>
+    x.classList.toggle('dim', !!id && x.dataset.thread !== id));
   if (id) { btn.classList.add('on'); if (step && step.t) seekTo(secs(step.t)); }
 }
 
-/* ---------- 원문 ---------- */
+/* ---------- 왼쪽 아래: 원문 ---------- */
 function renderTranscript() {
   const w = $('#tr'); w.textContent = '';
   TRANS.forEach((s, i) => {
@@ -446,8 +516,7 @@ function renderTranscript() {
 }
 $('#q').oninput = applySearch;
 function applySearch() {
-  const q = $('#q').value.trim();
-  const segs = $('#tr').children;
+  const q = $('#q').value.trim(), segs = $('#tr').children;
   if (!q) {
     [...segs].forEach((d, i) => { d.hidden = false; d.classList.remove('hit'); paint(d, TRANS[i], null); });
     $('#qn').textContent = ''; return;
@@ -462,9 +531,7 @@ function applySearch() {
 }
 function paint(d, seg, q) {
   const ps = d.querySelectorAll('p');
-  seg.l.forEach((line, i) => {
-    ps[i].innerHTML = q ? esc(line).split(esc(q)).join(`<mark>${esc(q)}</mark>`) : esc(line);
-  });
+  seg.l.forEach((line, i) => { ps[i].innerHTML = q ? esc(line).split(esc(q)).join(`<mark>${esc(q)}</mark>`) : esc(line); });
 }
 
 /* ---------- 오디오 ---------- */
@@ -473,13 +540,17 @@ function seekTo(t) {
   t = Math.max(0, t);
   if (audioOK) au.currentTime = t;
   mark(t, true);
-  if (innerWidth <= 900) showTab('source');
+  if (innerWidth <= 900) showTab('src');
 }
 $('#pp').onclick = () => { if (audioOK) au.paused ? au.play() : au.pause(); };
 au.onplay = () => $('#pp').textContent = '❚❚';
 au.onpause = () => $('#pp').textContent = '▶';
+au.onerror = () => {
+  audioOK = false; document.body.classList.add('noaudio');
+  $('#now').textContent = '음성 파일이 없는 배포입니다 · 원문과 회의록만 연결됩니다';
+};
 $('#rate').onclick = () => {
-  const r = [1, 1.25, 1.5, 2][([1, 1.25, 1.5, 2].indexOf(au.playbackRate) + 1) % 4];
+  const rs = [1, 1.25, 1.5, 2], r = rs[(rs.indexOf(au.playbackRate) + 1) % 4];
   au.playbackRate = r; $('#rate').textContent = r.toFixed(2).replace(/0$/, '') + '×';
 };
 $('#bar').onclick = e => {
@@ -488,11 +559,7 @@ $('#bar').onclick = e => {
 };
 $('#follow').onclick = e => e.currentTarget.classList.toggle('on');
 au.ontimeupdate = () => mark(au.currentTime, false);
-au.onerror = () => {                     // 음성 파일이 없는 배포(공개 페이지 등)
-  audioOK = false;
-  document.body.classList.add('noaudio');
-  $('#now').textContent = '음성 파일이 없는 배포입니다 · 원문과 회의록만 연결됩니다';
-};
+
 function mark(t, force) {
   const d = au.duration || DATA.m.durationSec;
   $('#fill').style.width = (t / d * 100) + '%';
@@ -509,31 +576,29 @@ function mark(t, force) {
         now.scrollIntoView({ block: 'center', behavior: force ? 'auto' : 'smooth' });
       if (audioOK) $('#now').textContent = `${TRANS[i].s} · ${TRANS[i].l[0] || ''}`;
     }
-    document.querySelectorAll('.ev').forEach(ev =>
-      ev.classList.toggle('playing', t >= +ev.dataset.t0 && t < +ev.dataset.t1));
+    document.querySelectorAll('.card.root').forEach(c =>
+      c.classList.toggle('playing', t >= +c.dataset.t0 && t < +c.dataset.t1));
   }
 }
 
 /* ---------- 모바일 탭 ---------- */
 function showTab(name) {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
-  document.querySelectorAll('main .col').forEach(c => c.classList.toggle('show', c.id === name));
+  document.querySelectorAll('.col').forEach(c => c.classList.toggle('show', c.id === name));
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
-
-/* 스티키 오프셋: 헤더 높이가 폭에 따라 달라진다 */
 function offsets() {
-  const h = document.querySelector('.top').offsetHeight;
   const r = document.documentElement.style;
-  r.setProperty('--top', h + 'px');
-  r.setProperty('--tabs', (h + document.querySelector('.tabs').offsetHeight) + 'px');
+  r.setProperty('--top', document.querySelector('.top').offsetHeight + 'px');
+  const t = document.querySelector('.tabs');
+  if (getComputedStyle(t).display !== 'none') r.setProperty('--tabs', t.offsetHeight + 'px');
 }
 addEventListener('resize', offsets); offsets();
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'Space' && audioOK) { e.preventDefault(); au.paused ? au.play() : au.pause(); }
-  if (e.key === 'ArrowLeft') au.currentTime -= 5;
-  if (e.key === 'ArrowRight') au.currentTime += 5;
+  if (e.key === 'ArrowLeft') seekTo((au.currentTime || 0) - 5);
+  if (e.key === 'ArrowRight') seekTo((au.currentTime || 0) + 5);
 });
 </script>
 </body>

@@ -19,7 +19,7 @@ button,input{font:inherit;color:inherit;background:none;border:0;outline:0}
 button{cursor:pointer}
 
 /* ---------- 상단 ---------- */
-.top{position:fixed;top:0;left:0;right:0;height:52px;z-index:20;display:flex;align-items:center;gap:10px;
+.top{position:fixed;top:0;left:0;right:0;height:52px;z-index:45;display:flex;align-items:center;gap:10px;
   padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line)}
 .brand{font-size:14px;font-weight:800;letter-spacing:-.01em}
 .brand i{font-style:normal;color:var(--dim);font-weight:600}
@@ -338,7 +338,7 @@ body.nomap .legend,body.nomap .zoom,body.nomap .lodtip{display:none}
 #cv.lod~.lodtip{opacity:1}
 
 /* ---------- 드롭존 ---------- */
-.drop{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:var(--bg)}
+.drop{position:fixed;inset:var(--top) 0 0 0;z-index:40;display:none;place-items:center;background:var(--bg)}
 body.idle .drop,.drop.over{display:grid}
 .drop.over{background:#eaf0fd}
 .dz{width:min(580px,86vw);text-align:center;padding:44px 34px;border-radius:20px;
@@ -479,6 +479,7 @@ body.noaudio .player{display:none}
     <p class="sub">정리 맵이 있는 회의는 쟁점 → 주장 → 반론·근거 → 결론 순서로<br>논의가 진행된 시간대로 펼쳐집니다.</p>
     <div class="btns">
       <button class="big" id="pick">파일 선택</button>
+      <button class="ghost" id="pickkey">⚙︎ API 키</button>
     </div>
     <div class="mlist" id="mlist"></div>
     <p class="note">전사 <b>.txt</b>를 놓으면 원문이 열리고, 같은 이름의 정리 맵(<b>.ibis.json</b>)이 있으면 노드가 함께 펼쳐집니다.<br>
@@ -1818,8 +1819,11 @@ function toastEl(html, onClick) {
 function sheet(on) {
   $('#sheet').classList.toggle('on', on);
   if (on) { $('#keyin').value = key(); $('#keyin').focus(); }
+  $('#pickkey').textContent = key() ? '⚙︎ API 키 · 저장됨' : '⚙︎ API 키';
 }
+sheet(false);
 $('#opencfg').onclick = () => sheet(true);
+$('#pickkey').onclick = () => sheet(true);
 $('#keyno').onclick = () => sheet(false);
 $('#keydel').onclick = () => { localStorage.removeItem('mn.key'); sheet(false); if (!MAP) blank(); };
 $('#keyok').onclick = () => {

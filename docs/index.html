@@ -9,7 +9,7 @@
   --bg:#f2f2f3; --panel:#fff; --line:#e3e3e6; --line2:#eeeef0;
   --ink:#17181c; --ink2:#42444b; --dim:#8b8e96;
   --blue:#2f6bdd; --green:#1c7a4e; --red:#c53f2d; --amber:#c07d22; --gray:#9aa0a8; --gold:#e2562a;
-  --rail:380px; --top:52px; --player:0px;
+  --rail:400px; --split:44%; --top:52px; --player:0px;
   --font:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -23,25 +23,67 @@ button{cursor:pointer}
   padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line)}
 .brand{font-size:14px;font-weight:800;letter-spacing:-.01em}
 .brand i{font-style:normal;color:var(--dim);font-weight:600}
-.file{font-size:12.5px;color:var(--dim);max-width:30vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file{font-size:12.5px;color:var(--dim);max-width:24vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .top .sp{flex:1}
 .tbtn{height:30px;padding:0 11px;border-radius:8px;font-size:12.5px;font-weight:650;color:var(--ink2);border:1px solid var(--line)}
 .tbtn:hover{background:#f7f7f8}
 .tbtn.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg2{display:flex;padding:2px;border-radius:9px;background:#f1f1f3}
+.seg2 button{height:26px;padding:0 12px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--dim)}
+.seg2 button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(20,22,28,.1)}
 .prog{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
-.prog .track{width:110px;height:3px;border-radius:99px;background:var(--line)}
+.prog .track{width:96px;height:3px;border-radius:99px;background:var(--line)}
 .prog .fillp{display:block;height:100%;width:0;border-radius:99px;background:var(--ink);transition:width .25s}
-body.idle .prog,body.idle .only-run{display:none}
+body.idle .prog,body.idle .only-run,body.idle .seg2{display:none}
+body.view-cards .prog,body.view-cards .only-run{display:none}
 
 /* ---------- 본문 ---------- */
 main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
   display:grid;grid-template-columns:var(--rail) 9px minmax(0,1fr)}
-.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.rz{position:relative;display:grid;place-items:center;cursor:col-resize;background:var(--bg)}
-.rz:before{content:"";width:3px;height:40px;border-radius:99px;background:#d6d7da}
+.rail{background:var(--panel);border-right:1px solid var(--line);
+  display:grid;grid-template-rows:var(--split) 9px minmax(0,1fr);min-height:0}
+.rz{position:relative;display:grid;place-items:center;background:var(--bg)}
+.rz:before{content:"";border-radius:99px;background:#d6d7da}
 .rz:hover:before{background:var(--dim)}
+.rz-x{cursor:col-resize}.rz-x:before{width:3px;height:40px}
+.rz-y{cursor:row-resize;background:var(--panel);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.rz-y:before{width:40px;height:3px}
 
-.rhead{padding:11px 13px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px}
+/* 요약 패널 */
+.digest{display:flex;flex-direction:column;min-height:0}
+.chips{display:flex;gap:5px;padding:10px 12px 8px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;height:26px;padding:0 10px;border-radius:99px;border:1px solid var(--line);
+  font-size:11.5px;font-weight:700;color:var(--dim);white-space:nowrap}
+.chip b{font-weight:800;margin-left:4px;color:#aeb1b7}
+.chip.on{color:#fff;background:var(--ink);border-color:var(--ink)}
+.chip.on b{color:rgba(255,255,255,.6)}
+.chip.c-decision.on{background:var(--gold);border-color:var(--gold)}
+.chip.c-conditional.on{background:#e8873f;border-color:#e8873f}
+.chip.c-open.on{background:#6f747c;border-color:#6f747c}
+.chip.c-conflict.on{background:var(--red);border-color:var(--red)}
+.chip.c-fun.on{background:#7b5cd6;border-color:#7b5cd6}
+.dlist{flex:1;overflow:auto;padding:2px 10px 16px;display:flex;flex-direction:column;gap:7px}
+.dc{padding:10px 12px;border-radius:12px;border:1px solid var(--line);cursor:pointer;background:var(--panel)}
+.dc:hover{border-color:#c9cbd1;box-shadow:0 2px 10px rgba(20,22,28,.07)}
+.dc .dk{font-size:9.5px;font-weight:800;letter-spacing:.07em;margin-bottom:4px}
+.dc h5{font-size:13px;font-weight:750;line-height:1.45;letter-spacing:-.01em}
+.dc .dm{margin-top:6px;font-size:11px;color:var(--dim)}
+.dc.k-decision{border-left:3px solid var(--gold)} .dc.k-decision .dk{color:var(--gold)}
+.dc.k-conditional{border-left:3px dashed var(--gold)} .dc.k-conditional .dk{color:#c9702f}
+.dc.k-open{border-left:3px dotted #9aa0a8} .dc.k-open .dk{color:#6f747c}
+.dc.k-conflict{border-left:3px dashed var(--red)} .dc.k-conflict .dk{color:var(--red)}
+.dc.k-fun{border-left:3px solid #7b5cd6} .dc.k-fun .dk{color:#7b5cd6}
+.dc .vs{margin-top:6px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2)}
+.dc .vs span{padding-left:12px;position:relative;line-height:1.45}
+.dc .vs span:before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:2px;background:var(--blue)}
+.dc .vs span+span:before{background:var(--red)}
+.dc.k-fun .met{margin-top:6px;display:flex;gap:8px;font-size:11px;color:#7b5cd6;font-weight:700}
+.empty{padding:24px 12px;text-align:center;font-size:12px;color:var(--dim)}
+
+/* 원문 */
+.srcbox{display:flex;flex-direction:column;min-height:0}
+.rhead{padding:10px 12px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px}
 .rhead h2{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--dim);white-space:nowrap}
 .search{flex:1;display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:8px;background:#f3f3f5}
 .search input{width:100%;font-size:12.5px}
@@ -50,20 +92,34 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 #tr{flex:1;overflow:auto;padding:6px 8px 40px}
 
 .seg{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 9px;border-radius:11px;cursor:pointer}
-.seg:hover{background:#f6f6f8}
-.seg.src{background:#fdf4ea;box-shadow:inset 2px 0 0 var(--gold)}
-.seg.cur{background:#eef3fe}
-.seg.cur .seg-h time{color:var(--blue)}
-.seg.src.cur{background:#fbeeda}
+.seg:hover{background:#f8f8f9}
+.seg.src{box-shadow:inset 2px 0 0 var(--gold);background:#fefaf6}
+.seg.cur{background:#fafafb}
+.seg.fun{box-shadow:inset 2px 0 0 #7b5cd6}
 .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:750;color:#fff;background:var(--c)}
 .seg-h{display:flex;align-items:baseline;gap:6px}
 .seg-h b{font-size:13.5px;font-weight:750}
 .seg-h time{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
-.seg p{font-size:13.5px;line-height:1.62;color:var(--ink2);margin-top:3px}
+.seg.cur .seg-h time{color:var(--ink)}
+.seg-h .fb{font-size:10.5px;font-weight:800;color:#7b5cd6}
+.seg p{font-size:13.5px;line-height:1.62;color:var(--ink2);margin-top:3px;transition:color .2s}
 .seg mark{background:#ffe9a8;color:inherit;border-radius:3px}
+
+/* 재생 중인 문장 — 글자 자체에 무지갯빛 */
+@keyframes shimmer{to{background-position:-160% 0}}
+.seg p.lit{
+  font-weight:600;
+  background-image:linear-gradient(100deg,#3f7ce8,#8b5cf6,#d9539b,#e8873f,#2f9e75,#3f7ce8);
+  background-size:160% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+  animation:shimmer 5.5s linear infinite;
+}
+@media (prefers-reduced-motion:reduce){.seg p.lit{animation:none}}
 
 /* ---------- 캔버스 ---------- */
 .stage{position:relative;overflow:hidden;background:var(--bg);touch-action:none}
+body.view-cards .stage{display:none}
 .stage.grab{cursor:grabbing}
 #cv{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
 #edges{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
@@ -77,9 +133,8 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .e-condition{stroke:var(--amber);stroke-dasharray:3 4} .l-condition{fill:var(--amber)}
 .e-resolve{stroke:var(--gold);stroke-width:2px}     .l-resolve{fill:var(--gold)}
 .e-conflict{stroke:var(--red);stroke-width:2px;stroke-dasharray:7 5} .l-conflict{fill:var(--red)}
-.e-flow{stroke:#c8c9ce;stroke-width:2.4px}
+.e-flow{stroke:#c2c4c9;stroke-width:2.4px}
 
-/* 섹션 프레임 — 하나의 메인 논의 주제 */
 .frame{position:absolute;border:1.5px solid #dcdde1;border-radius:20px;background:rgba(255,255,255,.5);
   opacity:0;transition:opacity .4s}
 .frame.in{opacity:1}
@@ -89,6 +144,17 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .fhead .no{font-size:10.5px;font-weight:800;color:var(--dim);letter-spacing:.06em}
 .fhead .pt{font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;background:#f0f0f2;color:#6d727a}
 .fhead time{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+
+/* 멀리서 보면 섹션 흐름만 */
+.fbig{display:none;position:absolute;inset:0;padding:60px;flex-direction:column;justify-content:center;gap:26px}
+.fbig .n{font-size:44px;font-weight:800;color:#b3b6bc;letter-spacing:.06em}
+.fbig .t{font-size:86px;font-weight:800;line-height:1.18;letter-spacing:-.02em}
+.fbig .s{display:flex;align-items:center;gap:22px;font-size:40px;font-weight:700;color:#8b8e96}
+.fbig .dot{width:34px;height:34px;border-radius:10px}
+#cv.lod .fbig{display:flex}
+#cv.lod .fhead,#cv.lod .node{opacity:0!important;pointer-events:none}
+#cv.lod path:not(.e-flow),#cv.lod text{opacity:0!important}
+#cv.lod .frame{background:#fff;border-color:#d3d4d9}
 
 .node{position:absolute;width:228px;padding:11px 13px;border-radius:14px;background:var(--panel);
   border:1.5px solid var(--line);cursor:pointer;opacity:0;transform:scale(.94);
@@ -107,7 +173,6 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .node.issue .k{color:rgba(255,255,255,.55)}
 .node.issue h4{font-size:15px;font-weight:800}
 .node.issue p,.node.issue .m{color:rgba(255,255,255,.66)}
-
 .node.position{border-color:var(--blue);border-width:2px}
 .node.position .k{color:var(--blue)}
 .node.pro{border-color:var(--green)}
@@ -118,7 +183,6 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .node.condition .k{color:var(--amber)}
 .node.open{width:252px;border-color:#b6b9bf;border-style:dotted;background:#f4f4f6}
 .node.open .k{color:#7b7f87}
-
 .node.decision{width:252px;background:var(--gold);border-color:var(--gold);color:#fff;
   box-shadow:0 4px 18px rgba(226,86,42,.24)}
 .node.decision .k{color:rgba(255,255,255,.72)}
@@ -128,13 +192,47 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .node.conditional h4{font-size:14.5px;font-weight:800;color:var(--gold)}
 .node.conditional .k{color:var(--gold)}
 .node.conditional p{color:#8a6042}
-
 .node.live{box-shadow:0 0 0 3px rgba(23,24,28,.12)}
-.node.sel{box-shadow:0 0 0 3px rgba(226,86,42,.32)}
+.node.sel{box-shadow:0 0 0 3px rgba(226,86,42,.34)}
 .node.playing{box-shadow:0 0 0 3px rgba(47,107,221,.28)}
-
 .far .node p,.far .node .m{display:none}
-.veryfar .node h4{-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ---------- 카드 뷰 ---------- */
+.cards{display:none;overflow:auto;padding:16px 16px 60px;background:var(--bg)}
+body.view-cards .cards{display:block}
+.cgrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(370px,1fr));align-items:start}
+.sc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px 16px 14px}
+.sc>header{display:flex;align-items:baseline;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.sc .no{font-size:10.5px;font-weight:800;color:var(--dim);letter-spacing:.06em}
+.sc h3{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.sc .pt{font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;background:#f0f0f2;color:#6d727a}
+.sc>header time{margin-left:auto;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.sc .q{padding:9px 11px;border-radius:10px;background:var(--ink);color:#fff;cursor:pointer}
+.sc .q em{display:block;font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.07em;color:rgba(255,255,255,.55);margin-bottom:3px}
+.sc .q b{font-size:13.5px;font-weight:750;line-height:1.45}
+.sc ul{list-style:none;margin-top:9px}
+.sc li{position:relative;padding:6px 0 6px 13px;cursor:pointer;border-radius:8px}
+.sc li:hover{background:#f7f7f9}
+.sc li:before{content:"";position:absolute;left:2px;top:13px;width:6px;height:6px;border-radius:99px}
+.sc li>span{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;margin-bottom:2px}
+.sc li>b{display:block;font-size:13px;font-weight:700;line-height:1.5}
+.sc li>i{display:block;font-style:normal;font-size:11px;color:var(--dim);margin-top:3px}
+.sc li ul{margin-top:2px;margin-left:9px;border-left:1px solid var(--line2);padding-left:7px}
+.sc li.position:before{background:var(--blue)} .sc li.position>span{color:var(--blue)}
+.sc li.pro:before{background:var(--green)} .sc li.pro>span{color:var(--green)}
+.sc li.con:before{background:var(--red)} .sc li.con>span{color:var(--red)}
+.sc li.condition:before{background:var(--amber)} .sc li.condition>span{color:var(--amber)}
+.sc li.open:before{background:#9aa0a8} .sc li.open>span{color:#6f747c}
+.sc .cf{margin-top:9px;padding:8px 11px;border-radius:10px;border:1.5px dashed var(--red);
+  font-size:12px;line-height:1.55;color:var(--ink2)}
+.sc .cf em{font-style:normal;font-weight:800;color:var(--red);font-size:10px;letter-spacing:.06em;display:block;margin-bottom:3px}
+.sc .res{margin-top:10px;padding:10px 12px;border-radius:11px;cursor:pointer}
+.sc .res em{display:block;font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.07em;margin-bottom:3px}
+.sc .res b{font-size:13.5px;font-weight:800;line-height:1.45}
+.sc .res.decision{background:var(--gold);color:#fff}
+.sc .res.decision em{color:rgba(255,255,255,.75)}
+.sc .res.conditional{border:2px dashed var(--gold);color:var(--gold)}
+.sc .res.open{border:1.5px dotted #b6b9bf;background:#f4f4f6;color:#5f636b}
 
 /* ---------- 범례 · 줌 ---------- */
 .legend{position:absolute;left:14px;top:12px;z-index:6;display:flex;flex-wrap:wrap;gap:5px 12px;
@@ -148,6 +246,10 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .zoom button:hover{background:#f2f2f4;color:var(--ink)}
 .zoom .lv{width:44px;text-align:center;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 .zoom .fit{width:auto;padding:0 10px;font-size:11.5px;font-weight:700;color:var(--ink2)}
+.lodtip{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;padding:6px 13px;
+  border-radius:99px;background:var(--panel);border:1px solid var(--line);font-size:11.5px;font-weight:650;
+  color:var(--dim);opacity:0;transition:opacity .3s;pointer-events:none}
+#cv.lod~.lodtip{opacity:1}
 
 /* ---------- 드롭존 ---------- */
 .drop{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:var(--bg)}
@@ -163,7 +265,6 @@ body.idle .drop,.drop.over{display:grid}
 .dz .ghost{height:38px;padding:0 16px;border-radius:10px;border:1px solid var(--line);font-size:13.5px;font-weight:650;color:var(--ink2)}
 .dz .note{margin-top:16px;font-size:11.5px;line-height:1.6;color:#a7aab1}
 
-/* ---------- 토스트 ---------- */
 .toast{position:fixed;left:50%;bottom:calc(var(--player) + 22px);transform:translate(-50%,14px);z-index:30;
   max-width:88vw;padding:11px 16px;border-radius:12px;background:var(--ink);color:#fff;
   font-size:13px;font-weight:650;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;
@@ -176,18 +277,21 @@ body.idle .drop,.drop.over{display:grid}
   padding:0 14px;background:var(--panel);border-top:1px solid var(--line)}
 body.noaudio .player{display:none}
 .player #pp{width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px}
-.bar{flex:1;height:4px;border-radius:99px;background:var(--line);cursor:pointer}
-.bar .fill{height:100%;width:0;border-radius:99px;background:var(--ink)}
+.bar{position:relative;flex:1;height:16px;display:flex;align-items:center;cursor:pointer}
+.bar .rail2{position:absolute;left:0;right:0;height:4px;border-radius:99px;background:var(--line)}
+.bar .fill{position:absolute;left:0;height:4px;width:0;border-radius:99px;background:var(--ink)}
+.bar .mk{position:absolute;top:2px;width:8px;height:8px;margin-left:-4px;border-radius:99px;
+  background:#7b5cd6;border:1.5px solid #fff}
 .tm{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
-.now{max-width:32vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--dim)}
+.now{max-width:30vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--dim)}
 
 /* ---------- 모바일 ---------- */
 .tabs{display:none}
 @media (max-width:900px){
   main{grid-template-columns:1fr;bottom:calc(var(--player) + 48px)}
-  .rail,.rz{display:none}
-  body.tab-src .rail{display:flex}
-  body.tab-src .stage{display:none}
+  .rail,.rz-x{display:none}
+  body.tab-src .rail{display:grid}
+  body.tab-src .stage,body.tab-src .cards{display:none}
   .tabs{display:flex;position:fixed;left:0;right:0;bottom:var(--player);height:48px;z-index:21;
     background:var(--panel);border-top:1px solid var(--line)}
   body.idle .tabs{display:none}
@@ -195,6 +299,7 @@ body.noaudio .player{display:none}
   .tabs button.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
   .legend{left:8px;top:8px;right:8px;font-size:10.5px}
   .file,.top .brand i,.now{display:none}
+  .cgrid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -204,6 +309,7 @@ body.noaudio .player{display:none}
   <span class="brand">meetnote <i>· 회의 전개</i></span>
   <span class="file" id="fname"></span>
   <span class="sp"></span>
+  <span class="seg2"><button data-view="map" class="on">맵</button><button data-view="cards">카드</button></span>
   <span class="prog"><span class="track"><span class="fillp" id="fillp"></span></span><span id="pn">0 / 0</span></span>
   <button class="tbtn only-run" id="pause">❚❚ 일시정지</button>
   <button class="tbtn only-run" id="speed">2×</button>
@@ -212,15 +318,23 @@ body.noaudio .player{display:none}
 </header>
 
 <main>
-  <aside class="rail" id="src">
-    <div class="rhead">
-      <h2>원문</h2>
-      <label class="search">🔎<input id="q" placeholder="발언 검색"></label>
-      <span id="qn"></span>
+  <aside class="rail">
+    <div class="digest">
+      <div class="chips" id="chips"></div>
+      <div class="dlist" id="dlist"></div>
     </div>
-    <div id="tr"></div>
+    <div class="rz rz-y" id="rzy"></div>
+    <div class="srcbox">
+      <div class="rhead">
+        <h2>원문</h2>
+        <label class="search">🔎<input id="q" placeholder="발언 검색"></label>
+        <span id="qn"></span>
+      </div>
+      <div id="tr"></div>
+    </div>
   </aside>
-  <div class="rz" id="rzx"></div>
+  <div class="rz rz-x" id="rzx"></div>
+
   <section class="stage" id="vp">
     <div class="legend">
       <span><span class="sw" style="background:#17181c"></span><b>쟁점</b></span>
@@ -234,22 +348,25 @@ body.noaudio .player{display:none}
       <span><span class="sw" style="border:1.5px dotted #b6b9bf;background:#f4f4f6"></span><b>미결</b></span>
     </div>
     <div id="cv"><svg id="edges"></svg></div>
+    <div class="lodtip">논의 흐름 보기 · 확대하면 안쪽 노드가 열립니다</div>
     <div class="zoom">
       <button id="zout">−</button><span class="lv" id="zlv">100%</span><button id="zin">＋</button>
       <button class="fit" id="zfit">전체 보기</button>
     </div>
   </section>
+
+  <section class="cards" id="cards"><div class="cgrid" id="cgrid"></div></section>
 </main>
 
 <nav class="tabs">
-  <button data-tab="graph" class="on">노드</button>
-  <button data-tab="src">원문</button>
+  <button data-tab="graph" class="on">논의</button>
+  <button data-tab="src">요약 · 원문</button>
 </nav>
 
 <div class="player">
   <button id="pp">▶</button>
   <span class="tm" id="cur">0:00</span>
-  <div class="bar" id="bar"><div class="fill" id="fill"></div></div>
+  <div class="bar" id="bar"><div class="rail2"></div><div class="fill" id="fill"></div><div id="marks"></div></div>
   <span class="tm" id="dur">0:00</span>
   <span class="now" id="now"></span>
 </div>
@@ -279,11 +396,11 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const OX = 220, OY = 420;
+const OX = 300, OY = 1000, LOD = .34;
 const au = $('#au');
-let TRANS = [], SEGN = [], NODES = [], EDGES = [], FRAMES = [], REVEAL = [];
+let TRANS = [], SEGN = [], NODES = [], EDGES = [], FRAMES = [], REVEAL = [], FUN = [], MAP = null;
 let bounds = { x0: 0, y0: 0, w: 1, h: 1 };
-let view = { x: 0, y: 0, z: .8 }, curSeg = -1, audioOK = false, avatar = {}, selected = null;
+let view = { x: 0, y: 0, z: .8 }, curSeg = -1, curLine = null, audioOK = false, avatar = {}, selected = null;
 
 const KIND_KO = { issue: '쟁점', position: '주장', pro: '근거·동의', con: '반론·우려',
   condition: '조건', open: '미결', decision: '결론 · 확정', conditional: '결론 · 조건부' };
@@ -308,33 +425,70 @@ function parseTxt(text) {
   });
   return out;
 }
+/* 문장별 시각 — 발언 구간을 글자 수 비율로 나눈다 */
+function lineTimes() {
+  TRANS.forEach((s, i) => {
+    const end = i + 1 < TRANS.length ? TRANS[i + 1].t : s.t + 30;
+    const total = s.l.reduce((a, l) => a + l.length, 0) || 1;
+    let acc = s.t;
+    s.lt = s.l.map(l => { const d = (end - s.t) * l.length / total; const r = [acc, acc + d]; acc += d; return r; });
+  });
+}
 
-/* ================= 2. IBIS 맵 → 그래프 ================= */
+/* ================= 2. 웃음 · 동조가 몰린 순간 ================= */
+const LAUGH = /ㅋㅋ|ㅎㅎ|웃기|웃었|웃음|재밌|재미있|미쳤|미친|대박|개꿀|장난 아니|또라이|귀여|아름답|짱|웃겨/g;
+const AGREE = /^(맞아|맞아요|맞습니다|맞죠|그치|그러니까|좋아|좋다|좋습니다|좋네|오케이|그래|진짜|인정|완전|대박|와)/;
+function funMoments(segs) {
+  const cand = [];
+  for (let i = 0; i < segs.length; i++) {
+    const win = [];
+    for (let j = i; j < segs.length && segs[j].t < segs[i].t + 75; j++) win.push(segs[j]);
+    if (win.length < 4) continue;
+    const text = win.map(s => s.l.join(' ')).join(' ');
+    const laughs = (text.match(LAUGH) || []).length;
+    const reacts = win.filter(s => { const x = s.l.join(' '); return x.length < 34 && AGREE.test(x); }).length;
+    const people = new Set(win.map(s => s.s)).size;
+    const score = laughs * 3 + reacts * 2 + people * 1.6 + Math.min(win.length, 12) * .4;
+    if (laughs >= 2 && people >= 3) cand.push({ i, t: win[0].t, t1: win[win.length - 1].t, score, laughs, reacts, people, win });
+  }
+  cand.sort((a, b) => b.score - a.score);
+  const out = [];
+  cand.forEach(c => {
+    if (out.length >= 5) return;
+    if (out.some(o => c.t < o.t1 + 30 && c.t1 > o.t - 30)) return;
+    /* 반응 문장은 짧을수록 그 순간을 잘 드러낸다 */
+    const lines = [];
+    c.win.forEach(s => s.l.forEach(l => { LAUGH.lastIndex = 0; if (LAUGH.test(l) && l.length > 5) lines.push([l, s.s]); }));
+    lines.sort((x, y) => x[0].length - y[0].length);
+    const hit = lines[0] || [c.win[0].l[0] || '', c.win[0].s];
+    c.title = hit[0].length > 58 ? hit[0].slice(0, 57) + '…' : hit[0];
+    c.who = hit[1];
+    out.push(c);
+  });
+  return out.sort((a, b) => a.t - b.t);
+}
+
+/* ================= 3. IBIS 맵 → 그래프 ================= */
 function build(map) {
   const nodes = [], edges = [], frames = [], reveal = [];
-
   map.sections.forEach(sec => {
     const byId = {}, mine = [];
     const push = o => { o.sec = sec; nodes.push(o); mine.push(o); byId[o.id] = o; return o; };
-
     sec.nodes.forEach(n => push(Object.assign({}, n, { t: secs(n.t), at: (n.at || []).map(secs) })));
     mine.forEach(n => { if (n.parent) { n.p = byId[n.parent]; if (n.p) (n.p.kids = n.p.kids || []).push(n); } });
 
     const r = sec.resolution;
-    const res = r && push(Object.assign({}, r, { id: sec.no + '-res', kind: r.kind,
-      t: secs(r.t), at: (r.at || []).map(secs) }));
+    const res = r && push(Object.assign({}, r, { id: sec.no + '-res', t: secs(r.t), at: (r.at || []).map(secs) }));
 
-    /* 태도 관계 */
     mine.forEach(n => { if (n.p) edges.push({ a: n.p, b: n, kind: EDGE_OF[n.kind] || 'raise', label: EDGE_KO[EDGE_OF[n.kind] || 'raise'] }); });
-    /* 대립 — 양방향 */
+    sec.conflictPairs = [];
     (sec.conflicts || []).forEach(([x, y]) => {
-      if (byId[x] && byId[y]) edges.push({ a: byId[x], b: byId[y], kind: 'conflict', label: '대립', both: true });
+      if (byId[x] && byId[y]) { edges.push({ a: byId[x], b: byId[y], kind: 'conflict', label: '대립', both: true });
+        sec.conflictPairs.push([byId[x], byId[y]]); }
     });
-    /* 수렴 */
     if (res) (r.from || []).map(id => byId[id]).filter(Boolean)
       .forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
 
-    /* 섹션 안 배치 — 정돈된 트리 */
     const roots = mine.filter(n => !n.p);
     let slot = 0;
     const walk = (n, depth) => {
@@ -348,30 +502,29 @@ function build(map) {
     if (res) { res.col = maxCol + 1; res.ly = (Math.min(...mine.map(n => n.ly)) + Math.max(...mine.map(n => n.ly))) / 2; }
 
     const all = res ? mine.concat(res) : mine;
-    frames.push({ sec, nodes: all, cols: (res ? maxCol + 1 : maxCol) + 1 });
+    const frame = { sec, nodes: all, res, cols: (res ? maxCol + 1 : maxCol) + 1 };
+    frames.push(frame);
+    sec.frame = frame; sec.byId = byId;
 
-    /* 등장 순서 — 부모 먼저, 그 다음 시각 순 */
-    const done = new Set(), order = [];
-    const rest = all.slice().sort((a, b) => a.t - b.t);
+    const done = new Set(), order = [], rest = all.slice().sort((a, b) => a.t - b.t);
     while (rest.length) {
       const i = rest.findIndex(n => !n.p || done.has(n.p.id));
       const n = rest.splice(i < 0 ? 0 : i, 1)[0];
       done.add(n.id); order.push(n);
     }
-    reveal.push({ frame: frames[frames.length - 1] });
+    reveal.push({ frame });
     order.forEach(n => reveal.push({ node: n }));
   });
 
-  /* 섹션끼리 잇는 흐름선 — 앞 섹션의 결론 → 다음 섹션의 쟁점 */
   for (let i = 1; i < frames.length; i++) {
     const prev = frames[i - 1].nodes[frames[i - 1].nodes.length - 1];
     const next = frames[i].nodes.find(n => n.kind === 'issue') || frames[i].nodes[0];
-    if (prev && next) edges.push({ a: prev, b: next, kind: 'flow', section: true });
+    if (prev && next) edges.push({ a: prev, b: next, kind: 'flow' });
   }
   return { nodes, edges: edges.filter(e => e.a && e.b), frames, reveal };
 }
 
-/* ================= 3. 섹션 배치 ================= */
+/* ================= 4. 섹션 배치 ================= */
 const COL = 296, PAD = 26, HEAD = 30, GAPX = 104, GAPY = 128;
 function layout(g) {
   g.frames.forEach(f => {
@@ -379,19 +532,16 @@ function layout(g) {
     f.h = Math.max(...ys) - Math.min(...ys) + 142 + PAD * 2 + HEAD;
     f.w = (f.cols - 1) * COL + 252 + PAD * 2;
   });
-  /* 화면 비율(가로:세로 ≈ 2)에 맞춰 줄바꿈 폭을 잡는다 */
   const S = g.frames.reduce((a, f) => a + f.w + GAPX, 0);
   const H = Math.max(...g.frames.map(f => f.h)) + GAPY;
   const ROWW = Math.max(3600, Math.min(9000, Math.sqrt(2.1 * S * H)));
   let x = 0, y = 0, rowH = 0;
   g.frames.forEach(f => {
-    const ys = f.nodes.map(n => n.ly);
-    const h = f.h, w = f.w;
-    if (x && x + w > ROWW) { x = 0; y += rowH + GAPY; rowH = 0; }
-    const y0 = Math.min(...ys);
+    const ys = f.nodes.map(n => n.ly), y0 = Math.min(...ys);
+    if (x && x + f.w > ROWW) { x = 0; y += rowH + GAPY; rowH = 0; }
     f.x = x; f.y = y;
     f.nodes.forEach(n => { n.x = x + PAD + n.col * COL; n.y = y + PAD + HEAD + (n.ly - y0); });
-    rowH = Math.max(rowH, h); x += w + GAPX;
+    rowH = Math.max(rowH, f.h); x += f.w + GAPX;
   });
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   g.frames.forEach(f => {
@@ -401,18 +551,17 @@ function layout(g) {
   bounds = { x0: x0 + OX - 80, y0: y0 + OY - 80, w: x1 - x0 + 160, h: y1 - y0 + 160 };
 }
 
-/* ================= 4. 그리기 ================= */
-const ARROW = { raise: '#b4b7bd', pro: '#1c7a4e', con: '#c53f2d', condition: '#c07d22', resolve: '#e2562a', conflict: '#c53f2d', flow: '#c8c9ce' };
+/* ================= 5. 그리기 ================= */
+const ARROW = { raise: '#b4b7bd', pro: '#1c7a4e', con: '#c53f2d', condition: '#c07d22', resolve: '#e2562a', conflict: '#c53f2d', flow: '#c2c4c9' };
+const RESDOT = { decision: '#e2562a', conditional: '#e8873f', open: '#9aa0a8' };
 function defs() {
   const d = svgEl('defs');
-  Object.entries(ARROW).forEach(([k, c]) => {
-    ['e', 's'].forEach(side => {
-      const m = svgEl('marker', { id: 'ar-' + k + '-' + side, markerWidth: 9, markerHeight: 9,
-        refX: side === 'e' ? 7.5 : 1.5, refY: 3, orient: 'auto', markerUnits: 'userSpaceOnUse' });
-      m.append(svgEl('path', { d: side === 'e' ? 'M0,0 L8,3 L0,6 Z' : 'M8,0 L0,3 L8,6 Z', fill: c }));
-      d.append(m);
-    });
-  });
+  Object.entries(ARROW).forEach(([k, c]) => ['e', 's'].forEach(side => {
+    const m = svgEl('marker', { id: 'ar-' + k + '-' + side, markerWidth: 9, markerHeight: 9,
+      refX: side === 'e' ? 7.5 : 1.5, refY: 3, orient: 'auto', markerUnits: 'userSpaceOnUse' });
+    m.append(svgEl('path', { d: side === 'e' ? 'M0,0 L8,3 L0,6 Z' : 'M8,0 L0,3 L8,6 Z', fill: c }));
+    d.append(m);
+  }));
   return d;
 }
 function render(g) {
@@ -423,10 +572,15 @@ function render(g) {
   g.frames.forEach(f => {
     const d = el('div', 'frame');
     d.style.cssText = `left:${f.x + OX}px;top:${f.y + OY}px;width:${f.w}px;height:${f.h}px`;
-    const s = f.sec;
+    const s = f.sec, rk = f.res ? f.res.kind : 'open';
     d.append(el('div', 'fhead',
       `<span class="no">논의 ${String(s.no).padStart(2, '0')}</span><b>${esc(s.title)}</b>`
       + `<span class="pt">${esc(s.part)}</span><time>${esc(s.t)}–${esc(s.t1)}</time>`));
+    d.append(el('div', 'fbig',
+      `<div class="n">논의 ${String(s.no).padStart(2, '0')} · ${esc(s.part)}</div>`
+      + `<div class="t">${esc(s.title)}</div>`
+      + `<div class="s"><span class="dot" style="background:${RESDOT[rk]}"></span>`
+      + `${KIND_KO[rk] || '미결'} · ${esc(s.t)}–${esc(s.t1)}</div>`));
     f.dom = d; cv.append(d);
   });
 
@@ -445,21 +599,19 @@ function render(g) {
     const A = e.a, B = e.b, aw = A.dom.offsetWidth, ah = A.dom.offsetHeight, bh = B.dom.offsetHeight;
     let d, lx, ly;
     if (e.kind === 'conflict') {
-      const up = A.y <= B.y ? A : B, dn = A.y <= B.y ? B : A;
-      const uh = up.dom.offsetHeight;
-      if (Math.abs(A.x - B.x) < 12) {                  /* 같은 열 — 마주 보는 면을 양방향으로 잇는다 */
+      const up = A.y <= B.y ? A : B, dn = A.y <= B.y ? B : A, uh = up.dom.offsetHeight;
+      if (Math.abs(A.x - B.x) < 12) {
         const cx = up.x + OX + up.dom.offsetWidth / 2;
         d = `M ${cx} ${up.y + OY + uh + 3} L ${cx} ${dn.y + OY - 3}`;
         lx = cx + 24; ly = (up.y + OY + uh + dn.y + OY) / 2 + 4;
-      } else {                                          /* 열이 다르면 왼쪽으로 감아 잇는다 */
-        const ax = A.x + OX, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2;
-        const off = 60;
+      } else {
+        const ax = A.x + OX, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2, off = 60;
         d = `M ${ax} ${ay} C ${ax - off} ${ay}, ${Math.min(ax, bx) - off} ${by}, ${bx} ${by}`;
         lx = Math.min(ax, bx) - off + 24; ly = (ay + by) / 2;
       }
     } else {
       const ax = A.x + OX + aw, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2;
-      if (bx < ax) {                                   /* 줄바꿈 */
+      if (bx < ax) {
         const m = Math.min(A.y + OY, B.y + OY) - 74;
         d = `M ${ax} ${ay} C ${ax + 140} ${ay}, ${ax + 140} ${m}, ${ax} ${m} L ${bx} ${m} C ${bx - 140} ${m}, ${bx - 140} ${by}, ${bx} ${by}`;
         lx = (ax + bx) / 2; ly = m - 9;
@@ -482,7 +634,107 @@ function render(g) {
   NODES = g.nodes; EDGES = g.edges; FRAMES = g.frames; REVEAL = g.reveal;
 }
 
-/* ================= 5. 시간순 전개 ================= */
+/* ================= 6. 카드 뷰 ================= */
+function renderCards() {
+  const w = $('#cgrid'); w.textContent = '';
+  if (!MAP) return;
+  MAP.sections.forEach(sec => {
+    const a = el('article', 'sc');
+    a.append(el('header', null,
+      `<span class="no">논의 ${String(sec.no).padStart(2, '0')}</span><h3>${esc(sec.title)}</h3>`
+      + `<span class="pt">${esc(sec.part)}</span><time>${esc(sec.t)}–${esc(sec.t1)}</time>`));
+    const nodes = sec.frame.nodes;
+    const issue = nodes.find(n => n.kind === 'issue');
+    if (issue) {
+      const q = el('div', 'q', `<em>쟁점</em><b>${esc(issue.title)}</b>`);
+      q.onclick = () => selectNode(issue); a.append(q);
+    }
+    const listOf = (parent, depth) => {
+      const kids = nodes.filter(n => n.p === parent && n.kind !== 'issue');
+      if (!kids.length) return null;
+      const ul = el('ul');
+      kids.sort((x, y) => x.t - y.t).forEach(n => {
+        const li = el('li', n.kind,
+          `<span>${KIND_KO[n.kind]}</span><b>${esc(n.title)}</b>`
+          + `<i>${esc(n.who || '')} · ${mmss(n.t)}</i>`);
+        li.onclick = e => { e.stopPropagation(); selectNode(n); };
+        const sub = listOf(n, depth + 1); if (sub) li.append(sub);
+        ul.append(li);
+      });
+      return ul;
+    };
+    const tree = issue && listOf(issue, 0); if (tree) a.append(tree);
+    (sec.conflictPairs || []).forEach(([x, y]) => {
+      a.append(el('div', 'cf', `<em>대립</em>${esc(x.title)} <b>↔</b> ${esc(y.title)}`));
+    });
+    const r = sec.frame.res;
+    if (r) {
+      const d = el('div', 'res ' + r.kind, `<em>${KIND_KO[r.kind]}</em><b>${esc(r.title)}</b>`);
+      d.onclick = () => selectNode(r); a.append(d);
+    }
+    w.append(a);
+  });
+}
+
+/* ================= 7. 요약 패널 ================= */
+const GROUPS = [
+  { id: 'decision', ko: '확정' }, { id: 'conditional', ko: '조건부' }, { id: 'open', ko: '미결' },
+  { id: 'conflict', ko: '대립' }, { id: 'fun', ko: '하이라이트' }
+];
+let group = 'decision';
+function digestItems(g) {
+  if (g === 'fun') return FUN;
+  if (g === 'conflict') {
+    const out = [];
+    (MAP ? MAP.sections : []).forEach(s => (s.conflictPairs || []).forEach(p => out.push({ sec: s, pair: p })));
+    return out;
+  }
+  return NODES.filter(n => n.kind === g).sort((a, b) => a.t - b.t);
+}
+function renderDigest() {
+  const cw = $('#chips'); cw.textContent = '';
+  GROUPS.forEach(gr => {
+    const n = digestItems(gr.id).length;
+    const b = el('button', 'chip c-' + gr.id + (group === gr.id ? ' on' : ''), `${gr.ko}<b>${n}</b>`);
+    b.onclick = () => { group = gr.id; renderDigest(); };
+    cw.append(b);
+  });
+  const w = $('#dlist'); w.textContent = '';
+  const items = digestItems(group);
+  if (!items.length) { w.append(el('div', 'empty', '해당하는 항목이 없습니다')); return; }
+
+  if (group === 'fun') {
+    items.forEach(f => {
+      const d = el('div', 'dc k-fun',
+        `<div class="dk">웃음 · 반응이 몰린 순간</div><h5>${esc(f.title)}</h5>`
+        + `<div class="met"><span>😄 ${f.laughs}</span><span>👥 ${f.people}명</span><span>💬 반응 ${f.reacts}</span></div>`
+        + `<div class="dm">${esc(f.who || '')} · ${mmss(f.t)}–${mmss(f.t1)}</div>`);
+      d.onclick = () => highlightRange(f.t, f.t1, true);
+      w.append(d);
+    });
+    return;
+  }
+  if (group === 'conflict') {
+    items.forEach(c => {
+      const d = el('div', 'dc k-conflict',
+        `<div class="dk">대립</div><h5>${esc(c.sec.title)}</h5>`
+        + `<div class="vs"><span>${esc(c.pair[0].title)}</span><span>${esc(c.pair[1].title)}</span></div>`
+        + `<div class="dm">논의 ${String(c.sec.no).padStart(2, '0')} · ${esc(c.sec.t)}–${esc(c.sec.t1)}</div>`);
+      d.onclick = () => { selectNode(c.pair[0]); c.pair.forEach(n => n.dom.classList.add('sel')); };
+      w.append(d);
+    });
+    return;
+  }
+  items.forEach(n => {
+    const d = el('div', 'dc k-' + n.kind,
+      `<div class="dk">${KIND_KO[n.kind]}</div><h5>${esc(n.title)}</h5>`
+      + `<div class="dm">논의 ${String(n.sec.no).padStart(2, '0')} · ${esc(n.sec.title)} · ${esc(n.who || '')} ${mmss(n.t)}</div>`);
+    d.onclick = () => selectNode(n);
+    w.append(d);
+  });
+}
+
+/* ================= 8. 시간순 전개 ================= */
 let timer = null, step = 0, speed = 2, paused = false;
 function play() {
   clearTimeout(timer);
@@ -494,8 +746,7 @@ function play() {
   if (it.frame) {
     it.frame.dom.classList.add('in');
     ensureVisible(it.frame.x, it.frame.y, it.frame.w, it.frame.h);
-    timer = setTimeout(play, 620 / speed);
-    return;
+    timer = setTimeout(play, 620 / speed); return;
   }
   const n = it.node;
   n.dom.classList.add('in');
@@ -507,12 +758,12 @@ function play() {
   NODES.forEach(o => o.dom.classList.remove('live'));
   n.dom.classList.add('live');
   ensureVisible(n.x, n.y, n.dom.offsetWidth, n.dom.offsetHeight);
-  timer = setTimeout(play, (n.kind === 'decision' || n.kind === 'conditional' || n.kind === 'open' ? 900 : 560) / speed);
+  timer = setTimeout(play, (/decision|conditional|open/.test(n.kind) ? 900 : 560) / speed);
 }
 function done() {
   NODES.forEach(o => o.dom.classList.remove('live'));
-  const c = n => NODES.filter(x => x.kind === n).length;
-  toast(`✓ 회의 전개 정리 완료<em>논의 ${FRAMES.length} · 주장 ${c('position')} · 반론 ${c('con')} · 확정 ${c('decision')} · 조건부 ${c('conditional')} · 미결 ${c('open')}</em>`, 6000);
+  const c = k => NODES.filter(x => x.kind === k).length;
+  toast(`✓ 회의 전개 정리 완료<em>논의 ${FRAMES.length} · 주장 ${c('position')} · 반론 ${c('con')} · 확정 ${c('decision')} · 조건부 ${c('conditional')} · 미결 ${c('open')} · 대립 ${EDGES.filter(e => e.kind === 'conflict').length}</em>`, 6000);
   fit(false);
 }
 function toast(html, ms) {
@@ -531,31 +782,40 @@ $('#replay').onclick = () => {
   EDGES.forEach(e => { e.path.classList.remove('on'); if (e.text) e.text.classList.remove('on'); });
   fit(true); play();
 };
+document.querySelectorAll('.seg2 button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.seg2 button').forEach(x => x.classList.toggle('on', x === b));
+  document.body.classList.toggle('view-cards', b.dataset.view === 'cards');
+});
 
-/* ================= 6. 노드 ↔ 원문 ================= */
+/* ================= 9. 노드 ↔ 원문 ================= */
 function selectNode(n) {
   selected = n;
   NODES.forEach(o => o.dom.classList.toggle('sel', o === n));
-  const [a, b] = n.at && n.at.length ? n.at : [n.t, n.t + 45];
+  const [a, b] = n.at && n.at.length === 2 ? n.at : [n.t, n.t + 45];
+  highlightRange(a, b, false);
+  if (!document.body.classList.contains('view-cards') && n.dom.classList.contains('in')) centerOn(n);
+}
+function highlightRange(a, b, fromFun) {
   let first = null;
   [...$('#tr').children].forEach((d, i) => {
     const on = TRANS[i].t >= a && TRANS[i].t < b;
     d.classList.toggle('src', on);
-    if (on && first === null) first = d;
+    if (on && !first) first = d;
   });
   if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
   if (innerWidth <= 900) showTab('src');
   seekTo(a, true);
   if (audioOK) au.play().catch(() => {});
+  if (fromFun) NODES.forEach(o => o.dom.classList.remove('sel'));
 }
 
-/* ================= 7. 팬 · 줌 ================= */
+/* ================= 10. 팬 · 줌 ================= */
 const vp = $('#vp'), cv = $('#cv');
 function apply() {
   cv.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
   $('#zlv').textContent = Math.round(view.z * 100) + '%';
-  cv.classList.toggle('far', view.z < .5);
-  cv.classList.toggle('veryfar', view.z < .3);
+  cv.classList.toggle('far', view.z < .52 && view.z >= LOD);
+  cv.classList.toggle('lod', view.z < LOD);
 }
 function zoomAt(cx, cy, nz) {
   nz = Math.min(1.6, Math.max(.06, nz));
@@ -589,13 +849,14 @@ function ensureVisible(x, y, w, h) {
 }
 function centerOn(n) {
   const r = vp.getBoundingClientRect();
+  if (view.z < LOD) view.z = .7;
   view.x = r.width / 2 - (n.x + OX + 120) * view.z;
   view.y = r.height / 2 - (n.y + OY + 55) * view.z;
   cv.style.transition = 'transform .35s cubic-bezier(.4,0,.2,1)'; apply();
   setTimeout(() => cv.style.transition = '', 380);
 }
-$('#zin').onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, view.z * 1.25); };
-$('#zout').onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, view.z / 1.25); };
+$('#zin').onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, view.z * 1.3); };
+$('#zout').onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, view.z / 1.3); };
 $('#zfit').onclick = () => fit(false);
 
 let drag = null;
@@ -631,16 +892,19 @@ vp.addEventListener('pointermove', e => {
 });
 ['pointerup', 'pointercancel'].forEach(ev => vp.addEventListener(ev, e => { pts.delete(e.pointerId); if (pts.size < 2) vp._pd = 0; }));
 
-/* ================= 8. 원문 ================= */
+/* ================= 11. 원문 ================= */
 const AVCOLOR = ['#2f7d63', '#4a6da8', '#8a5a86', '#a8703c', '#5f6b7a', '#3f7d8a'];
 function renderTranscript() {
   const w = $('#tr'); w.textContent = '';
+  const funAt = new Set(FUN.map(f => f.i));
   TRANS.forEach((s, i) => {
     const d = el('div', 'seg'); d.id = 'seg' + i;
+    if (funAt.has(i)) d.classList.add('fun');
     const av = el('span', 'av', esc(s.s.slice(0, 1)));
     av.style.setProperty('--c', avatar[s.s] || '#5f6b7a');
     const body = el('div');
-    body.append(el('div', 'seg-h', `<b>${esc(s.s)}</b><time>${mmss(s.t)}</time>`));
+    body.append(el('div', 'seg-h', `<b>${esc(s.s)}</b><time>${mmss(s.t)}</time>`
+      + (funAt.has(i) ? '<span class="fb">😄 하이라이트</span>' : '')));
     s.l.forEach(line => body.append(el('p', null, esc(line))));
     d.append(av, body);
     d.onclick = () => { seekTo(s.t, true); if (audioOK) au.play().catch(() => {}); };
@@ -667,7 +931,7 @@ function paint(d, seg, q) {
   seg.l.forEach((line, i) => { ps[i].innerHTML = q ? esc(line).split(esc(q)).join(`<mark>${esc(q)}</mark>`) : esc(line); });
 }
 
-/* ================= 9. 오디오 ================= */
+/* ================= 12. 오디오 ================= */
 function seekTo(t, quiet) {
   t = Math.max(0, t);
   if (audioOK) au.currentTime = t;
@@ -678,38 +942,53 @@ au.onplay = () => $('#pp').textContent = '❚❚';
 au.onpause = () => $('#pp').textContent = '▶';
 au.onloadedmetadata = () => {
   $('#dur').textContent = mmss(au.duration);
-  audioOK = true; document.body.classList.remove('noaudio'); offsets();
+  audioOK = true; document.body.classList.remove('noaudio'); offsets(); marks();
 };
 $('#bar').onclick = e => {
   const b = e.currentTarget.getBoundingClientRect();
-  seekTo((e.clientX - b.left) / b.width * (au.duration || 0));
+  seekTo((e.clientX - b.left) / b.width * (au.duration || dur()));
 };
 au.ontimeupdate = () => mark(au.currentTime, false);
+const dur = () => au.duration || (TRANS.length ? TRANS[TRANS.length - 1].t + 30 : 1);
+function marks() {
+  const w = $('#marks'); w.textContent = '';
+  FUN.forEach(f => { const d = el('div', 'mk'); d.style.left = (f.t / dur() * 100) + '%';
+    d.title = '웃음이 몰린 순간 · ' + mmss(f.t); w.append(d); });
+}
 function mark(t, force, quiet) {
-  const d = au.duration || (TRANS.length ? TRANS[TRANS.length - 1].t + 30 : 1);
-  $('#fill').style.width = (t / d * 100) + '%';
+  $('#fill').style.width = (t / dur() * 100) + '%';
   $('#cur').textContent = mmss(t);
   let lo = 0, hi = SEGN.length - 1, i = 0;
   while (lo <= hi) { const m = (lo + hi) >> 1; if (SEGN[m] <= t) { i = m; lo = m + 1; } else hi = m - 1; }
-  if (i === curSeg && !force) return;
-  const prev = document.getElementById('seg' + curSeg); if (prev) prev.classList.remove('cur');
-  curSeg = i;
-  const now = document.getElementById('seg' + i);
-  if (now) {
-    now.classList.add('cur');
-    if (!quiet) now.scrollIntoView({ block: 'center', behavior: force ? 'auto' : 'smooth' });
-    $('#now').textContent = `${TRANS[i].s} · ${TRANS[i].l[0] || ''}`;
+  const seg = TRANS[i];
+  if (i !== curSeg || force) {
+    const prev = document.getElementById('seg' + curSeg); if (prev) prev.classList.remove('cur');
+    curSeg = i;
+    const now = document.getElementById('seg' + i);
+    if (now) {
+      now.classList.add('cur');
+      if (!quiet) now.scrollIntoView({ block: 'center', behavior: force ? 'auto' : 'smooth' });
+      $('#now').textContent = `${seg.s} · ${seg.l[0] || ''}`;
+    }
+    let hit = null;
+    NODES.forEach(n => {
+      const on = n.at && n.at.length === 2 && t >= n.at[0] && t < n.at[1];
+      n.dom.classList.toggle('playing', !!on);
+      if (on && !hit) hit = n;
+    });
+    if (hit && !quiet && hit !== selected && hit.dom.classList.contains('in')) centerOn(hit);
   }
-  let hit = null;
-  NODES.forEach(n => {
-    const on = n.at && n.at.length === 2 && t >= n.at[0] && t < n.at[1];
-    n.dom.classList.toggle('playing', !!on);
-    if (on && !hit) hit = n;
-  });
-  if (hit && !quiet && hit !== selected && hit.dom.classList.contains('in')) centerOn(hit);
+  /* 문장 단위 하이라이트 */
+  if (seg && seg.lt) {
+    let li = seg.lt.findIndex(r => t >= r[0] && t < r[1]);
+    if (li < 0) li = t >= seg.t ? seg.lt.length - 1 : 0;
+    const box = document.getElementById('seg' + i);
+    const p = box && box.querySelectorAll('p')[li];
+    if (p !== curLine) { if (curLine) curLine.classList.remove('lit'); if (p) p.classList.add('lit'); curLine = p; }
+  }
 }
 
-/* ================= 10. 파일 받기 ================= */
+/* ================= 13. 파일 받기 ================= */
 const drop = $('#drop');
 ['dragenter', 'dragover'].forEach(ev => addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
 addEventListener('dragleave', e => { if (!e.relatedTarget) drop.classList.remove('over'); });
@@ -724,22 +1003,19 @@ async function load(url) {
   const segs = (await (await fetch(map.meeting.transcript)).json()).segments;
   start(segs, map, map.meeting.title + ' · ' + map.meeting.date, map.meeting.audio);
 }
-
 async function take(files) {
-  const txt = files.find(f => /\.(txt|json)$/i.test(f.name));
+  const txt = files.find(f => /\.(txt|json)$/i.test(f.name) && !/\.ibis\.json$/i.test(f.name));
   const snd = files.find(f => /^audio\//.test(f.type) || /\.(m4a|mp3|wav|aac|ogg)$/i.test(f.name));
   const mapf = files.find(f => /\.ibis\.json$/i.test(f.name));
   if (!txt) { toast(snd ? '음성만으로는 내용을 읽지 못합니다 · 전사 txt를 함께 넣어주세요' : '전사 .txt 파일을 넣어주세요', 4200); return; }
-
   let segs, map = null;
   try {
     const raw = await txt.text();
     segs = /\.json$/i.test(txt.name) ? (JSON.parse(raw).segments || JSON.parse(raw)) : parseTxt(raw);
   } catch { segs = null; }
   if (!segs || segs.length < 5) { toast('발언을 읽지 못했습니다 · “이름 00:00” 형식인지 확인해주세요', 4200); return; }
-
-  if (mapf && mapf !== txt) { try { map = JSON.parse(await mapf.text()); } catch {} }
-  if (!map) {                                     /* 같은 이름의 정리 맵을 찾아본다 */
+  if (mapf) { try { map = JSON.parse(await mapf.text()); } catch {} }
+  if (!map) {
     const base = txt.name.replace(/\.(txt|json)$/i, '').replace(/\.transcript$/i, '');
     try { const r = await fetch(`data/${base}.ibis.json`); if (r.ok) map = await r.json(); } catch {}
   }
@@ -747,14 +1023,15 @@ async function take(files) {
 }
 
 function start(segs, map, name, audioSrc) {
-  TRANS = segs; SEGN = segs.map(s => s.t); curSeg = -1; selected = null;
+  TRANS = segs; SEGN = segs.map(s => s.t); curSeg = -1; curLine = null; selected = null; MAP = map;
   avatar = {}; [...new Set(segs.map(s => s.s))].forEach((p, i) => avatar[p] = AVCOLOR[i % AVCOLOR.length]);
   $('#fname').textContent = name;
   document.body.classList.remove('idle'); drop.classList.remove('over');
+  lineTimes(); FUN = funMoments(segs);
 
   if (map) { const g = build(map); layout(g); render(g); }
   else { NODES = []; EDGES = []; FRAMES = []; REVEAL = []; render({ nodes: [], edges: [], frames: [] }); }
-  renderTranscript();
+  renderTranscript(); renderCards(); group = 'decision'; renderDigest(); marks();
 
   audioOK = false; document.body.classList.add('noaudio'); offsets();
   if (audioSrc) { au.src = audioSrc; au.onerror = () => { audioOK = false; document.body.classList.add('noaudio'); offsets(); }; }
@@ -766,22 +1043,33 @@ function start(segs, map, name, audioSrc) {
     return;
   }
   fit(true);
-  toast(`${map.headline}`, 4200);
+  toast(map.headline, 4200);
   setTimeout(play, 900);
 }
 
-/* ================= 11. 나머지 ================= */
-(function resizer() {
-  const h = $('#rzx'), root = document.documentElement.style;
-  const saved = localStorage.getItem('mn.rail'); if (saved) root.setProperty('--rail', saved);
-  h.addEventListener('pointerdown', e => {
-    h.setPointerCapture(e.pointerId);
-    const mv = ev => { const w = Math.min(680, Math.max(260, ev.clientX));
-      root.setProperty('--rail', w + 'px'); localStorage.setItem('mn.rail', w + 'px'); };
-    const up = () => { h.removeEventListener('pointermove', mv); h.removeEventListener('pointerup', up); };
-    h.addEventListener('pointermove', mv); h.addEventListener('pointerup', up);
-  });
-  h.addEventListener('dblclick', () => { root.setProperty('--rail', '380px'); localStorage.removeItem('mn.rail'); });
+/* ================= 14. 나머지 ================= */
+(function resizers() {
+  const root = document.documentElement.style;
+  const saved = k => localStorage.getItem(k);
+  if (saved('mn.rail')) root.setProperty('--rail', saved('mn.rail'));
+  if (saved('mn.split')) root.setProperty('--split', saved('mn.split'));
+  const drag = (h, move, reset) => {
+    h.addEventListener('pointerdown', e => {
+      h.setPointerCapture(e.pointerId);
+      const mv = ev => move(ev);
+      const up = () => { h.removeEventListener('pointermove', mv); h.removeEventListener('pointerup', up); };
+      h.addEventListener('pointermove', mv); h.addEventListener('pointerup', up);
+    });
+    h.addEventListener('dblclick', reset);
+  };
+  drag($('#rzx'), e => { const w = Math.min(680, Math.max(280, e.clientX));
+    root.setProperty('--rail', w + 'px'); localStorage.setItem('mn.rail', w + 'px'); },
+    () => { root.setProperty('--rail', '400px'); localStorage.removeItem('mn.rail'); });
+  drag($('#rzy'), e => {
+    const box = document.querySelector('.rail').getBoundingClientRect();
+    const p = Math.min(78, Math.max(14, (e.clientY - box.top) / box.height * 100));
+    root.setProperty('--split', p.toFixed(1) + '%'); localStorage.setItem('mn.split', p.toFixed(1) + '%'); },
+    () => { root.setProperty('--split', '44%'); localStorage.removeItem('mn.split'); });
 })();
 function showTab(name) {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));

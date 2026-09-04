@@ -58,7 +58,7 @@ def process(src: Path, target: str, board: str = ""):
     try:
         if src.suffix.lower() in TEXT_EXTS:
             # 이미 전사된 회의록. 전사 단계를 건너뛴다.
-            text = src.read_text(errors="replace")
+            text = ibis.read_text(src)
             report(key, "전사", 1)
         else:
             print(f"[{key}] 전사 중...", flush=True)

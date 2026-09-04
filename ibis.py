@@ -216,7 +216,16 @@ REVIEW = """너는 방금 만들어진 IBIS 정리 맵을 원문과 대조해 �
 
 # ---------- 전사문 ----------
 
-HEAD = re.compile(r"^(\S{1,10})\s+((?:\d{1,2}:)?\d{1,2}:\d{2})\s*$")
+# 화자 줄. 서비스마다 다르게 뱉는다 — "시헌 00:00", "발화자 1  (00:00)", "참석자 3 [1:02:03]"
+HEAD = re.compile(r"^(.{1,20}?)\s*[(\[]?\s*((?:\d{1,2}:)?\d{1,2}:\d{2})\s*[)\]]?$")
+
+
+def read_text(p: Path) -> str:
+    """클로바노트·일부 도구는 UTF-16으로 떨어뜨린다. BOM을 보고 골라 읽는다."""
+    b = p.read_bytes()
+    if b[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return b.decode("utf-16", errors="replace")
+    return b.decode("utf-8-sig" if b[:3] == b"\xef\xbb\xbf" else "utf-8", errors="replace")
 
 
 def secs(s: str) -> int:
@@ -428,7 +437,7 @@ def main():
 
     mid = a.id or re.sub(r"\.(transcript|txt|json)$", "", a.transcript.stem)
     try:
-        out, warn = write(a.transcript.read_text(errors="replace"), a.docs, mid,
+        out, warn = write(read_text(a.transcript), a.docs, mid,
                           a.date, a.audio, a.hint, review=not a.no_review)
     except Exception as e:
         if "authentication" in str(e).lower() or "api_key" in str(e).lower():

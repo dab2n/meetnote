@@ -296,6 +296,15 @@ body.view-cards .cards{display:block}
 .zoom button:hover{background:#f2f2f4;color:var(--ink)}
 .zoom .lv{width:44px;text-align:center;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 .zoom .fit{width:auto;padding:0 10px;font-size:11.5px;font-weight:700;color:var(--ink2)}
+.blank{display:none;position:absolute;inset:0;place-content:center;justify-items:center;
+  text-align:center;padding:30px;gap:0}
+body.nomap .blank{display:grid}
+body.nomap .legend,body.nomap .zoom,body.nomap .lodtip{display:none}
+.blank b{font-size:15px;font-weight:800}
+.blank p{margin-top:9px;font-size:13px;line-height:1.7;color:var(--dim)}
+.blank p.s{margin-top:11px;font-size:11.5px;color:#aeb1b7}
+.blank code{margin-top:16px;padding:9px 13px;border-radius:9px;background:var(--panel);
+  border:1px solid var(--line);font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink2)}
 .lodtip{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;padding:6px 13px;
   border-radius:99px;background:var(--panel);border:1px solid var(--line);font-size:11.5px;font-weight:650;
   color:var(--dim);opacity:0;transition:opacity .3s;pointer-events:none}
@@ -406,6 +415,13 @@ body.noaudio .player{display:none}
       <span><span class="sw" style="border:1.5px dotted #b6b9bf;background:#f4f4f6"></span><b>미결</b></span>
     </div>
     <div id="cv"><svg id="edges"></svg></div>
+    <div class="blank" id="blank">
+      <b>이 회의는 아직 정리 맵이 없습니다</b>
+      <p>원문·검색·하이라이트는 그대로 쓸 수 있습니다.<br>
+        쟁점 → 주장 → 반론 → 결론까지 그리려면 정리 맵이 필요합니다.</p>
+      <code>python ibis.py 전사문.txt --id &lt;회의id&gt;</code>
+      <p class="s">만들어지면 <b>docs/data/</b>에 놓이고 목록에 뜹니다.</p>
+    </div>
     <div class="lodtip">논의 흐름 보기 · 확대하면 안쪽 노드가 열립니다</div>
     <div class="zoom">
       <button id="zout">−</button><span class="lv" id="zlv">100%</span><button id="zin">＋</button>
@@ -468,13 +484,19 @@ const EDGE_OF = { position: 'raise', pro: 'pro', con: 'con', concern: 'concern',
   condition: 'condition', open: 'condition', issue: 'raise' };
 
 /* ================= 1. 전사 파싱 ================= */
-const RE_HEAD = /^(\S{1,10})\s+((?:\d{1,2}:)?\d{1,2}:\d{2})\s*$/;
+/* 화자 줄. 서비스마다 다르게 뱉는다 —
+   "시헌 00:00" · "발화자 1  (00:00)" · "참석자 3 [1:02:03]" 를 모두 받는다. */
+const RE_HEAD = /^(.{1,20}?)\s*[([]?\s*((?:\d{1,2}:)?\d{1,2}:\d{2})\s*[)\]]?$/;
+const head = line => {
+  const m = line.match(RE_HEAD);
+  return m && m[1].trim() && !/[.?!,]/.test(m[1]) ? { s: m[1].trim(), t: secs(m[2]) } : null;
+};
 function parseTxt(text) {
   const segs = []; let cur = null;
   text.split(/\r?\n/).forEach(raw => {
-    const line = raw.replace(/^﻿/, '').trim();
-    const m = line.match(RE_HEAD);
-    if (m) { cur = { t: secs(m[2]), s: m[1], l: [] }; segs.push(cur); return; }
+    const line = raw.replace(/^\ufeff/, '').trim();
+    const h = head(line);
+    if (h) { cur = { t: h.t, s: h.s, l: [] }; segs.push(cur); return; }
     if (!line || !cur) return;
     cur.l.push(line);
   });
@@ -1328,17 +1350,29 @@ async function load(url) {
   const segs = (await (await fetch(map.meeting.transcript)).json()).segments;
   start(segs, map, map.meeting.title + ' · ' + map.meeting.date, map.meeting.audio);
 }
+/* 클로바노트·일부 도구는 UTF-16으로 떨어뜨린다. BOM을 보고 골라 읽는다. */
+async function readText(file) {
+  const buf = await file.arrayBuffer(), b = new Uint8Array(buf, 0, Math.min(4, buf.byteLength));
+  const enc = b[0] === 0xFF && b[1] === 0xFE ? 'utf-16le'
+    : b[0] === 0xFE && b[1] === 0xFF ? 'utf-16be' : 'utf-8';
+  return new TextDecoder(enc).decode(buf);
+}
 async function take(files) {
   const txt = files.find(f => /\.(txt|json)$/i.test(f.name) && !/\.ibis\.json$/i.test(f.name));
   const snd = files.find(f => /^audio\//.test(f.type) || /\.(m4a|mp3|wav|aac|ogg)$/i.test(f.name));
   const mapf = files.find(f => /\.ibis\.json$/i.test(f.name));
   if (!txt) { toast(snd ? '음성만으로는 내용을 읽지 못합니다 · 전사 txt를 함께 넣어주세요' : '전사 .txt 파일을 넣어주세요', 4200); return; }
-  let segs, map = null;
+  let segs, map = null, raw = '';
   try {
-    const raw = await txt.text();
+    raw = await readText(txt);
     segs = /\.json$/i.test(txt.name) ? (JSON.parse(raw).segments || JSON.parse(raw)) : parseTxt(raw);
   } catch { segs = null; }
-  if (!segs || segs.length < 5) { toast('발언을 읽지 못했습니다 · “이름 00:00” 형식인지 확인해주세요', 4200); return; }
+  if (!segs || segs.length < 5) {
+    const first = raw.split(/\r?\n/).map(x => x.trim()).find(Boolean) || '';
+    toast('시각이 붙은 화자 줄을 찾지 못했습니다 · <b>이름 00:00</b> 또는 <b>이름 (00:00)</b> 형식이 필요합니다'
+      + (first ? `<em>첫 줄: ${esc(first.slice(0, 40))}</em>` : ''), 7000);
+    return;
+  }
   if (mapf) { try { map = JSON.parse(await mapf.text()); } catch {} }
   if (!map) {
     const base = txt.name.replace(/\.(txt|json)$/i, '').replace(/\.transcript$/i, '');
@@ -1359,6 +1393,7 @@ function start(segs, map, name, audioSrc) {
   ENV = null; rankFun();
 
   loadLocal();
+  document.body.classList.toggle('nomap', !map);
   if (map) { const g = build(map); layout(g); render(g); applyEdits(); NODES.forEach(paintNode); }
   else { NODES = []; EDGES = []; FRAMES = []; REVEAL = []; render({ nodes: [], edges: [], frames: [] }); }
   renderTranscript(); renderCards(); group = 'decision'; renderDigest(); marks();

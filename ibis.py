@@ -101,7 +101,7 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
-SPEC = (Path(__file__).parent / "SPEC.md").read_text(encoding="utf-8")
+SPEC = (Path(__file__).parent / "docs/SPEC.md").read_text(encoding="utf-8")  # 웹 뷰어와 같은 파일을 본다
 
 SYSTEM = """너는 회의 기록을 IBIS(Issue-Based Information System) 구조로 정리한다.
 전사문을 읽고, 무엇이 쟁점이었고 누가 어떤 주장을 했고 무엇이 부딪혔고 어떻게 닫혔는지를 그린다.

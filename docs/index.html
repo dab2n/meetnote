@@ -471,6 +471,8 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
 const OX = 300, OY = 1000, LOD = .34;
+/* 정리 맵이 바뀌었는데 캐시된 옛 파일이 뜨는 일이 없게 매번 재검증한다 */
+const NOCACHE = { cache: 'no-cache' };
 const au = $('#au');
 let TRANS = [], SEGN = [], NODES = [], EDGES = [], FRAMES = [], REVEAL = [], FUN = [], MAP = null;
 let bounds = { x0: 0, y0: 0, w: 1, h: 1 };
@@ -1335,7 +1337,7 @@ $('#newfile').onclick = () => document.body.classList.add('idle');
 $('#fi').onchange = e => take([...e.target.files]);
 (async function meetings() {
   let list = [];
-  try { list = (await (await fetch('data/index.json')).json()).meetings || []; } catch {}
+  try { list = (await (await fetch('data/index.json', NOCACHE)).json()).meetings || []; } catch {}
   const w = $('#mlist');
   list.forEach(m => {
     const b = el('button', null,
@@ -1346,8 +1348,8 @@ $('#fi').onchange = e => take([...e.target.files]);
 })();
 
 async function load(url) {
-  const map = await (await fetch(url)).json();
-  const segs = (await (await fetch(map.meeting.transcript)).json()).segments;
+  const map = await (await fetch(url, NOCACHE)).json();
+  const segs = (await (await fetch(map.meeting.transcript, NOCACHE)).json()).segments;
   start(segs, map, map.meeting.title + ' · ' + map.meeting.date, map.meeting.audio);
 }
 /* 클로바노트·일부 도구는 UTF-16으로 떨어뜨린다. BOM을 보고 골라 읽는다. */
@@ -1376,7 +1378,7 @@ async function take(files) {
   if (mapf) { try { map = JSON.parse(await mapf.text()); } catch {} }
   if (!map) {
     const base = txt.name.replace(/\.(txt|json)$/i, '').replace(/\.transcript$/i, '');
-    try { const r = await fetch(`data/${base}.ibis.json`); if (r.ok) map = await r.json(); } catch {}
+    try { const r = await fetch(`data/${base}.ibis.json`, NOCACHE); if (r.ok) map = await r.json(); } catch {}
   }
   start(segs, map, txt.name, snd ? URL.createObjectURL(snd) : null);
 }

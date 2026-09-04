@@ -76,6 +76,8 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .dc.k-fun{border-left:3px solid #7b5cd6} .dc.k-fun .dk{color:#7b5cd6}
 .dc .vs{margin-top:6px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2)}
 .dc .vs span{padding-left:12px;position:relative;line-height:1.45}
+.dc .vs b{font-weight:800;color:var(--blue);margin-right:3px}
+.dc .vs span+span b{color:var(--red)}
 .dc .vs span:before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:2px;background:var(--blue)}
 .dc .vs span+span:before{background:var(--red)}
 .dc.k-fun .dk{display:flex;align-items:center;gap:6px}
@@ -967,7 +969,12 @@ function renderDigest() {
   });
   const w = $('#dlist'); w.textContent = '';
   const items = digestItems(group);
-  if (!items.length) { w.append(el('div', 'empty', '해당하는 항목이 없습니다')); return; }
+  if (!items.length) {
+    w.append(el('div', 'empty', group === 'conflict'
+      ? '서로 버틴 대목이 없습니다.<br>대안이 여럿 나온 곳은 미결에 있습니다.'
+      : group === 'fun' ? '웃음이 몰린 구간을 찾지 못했습니다' : '해당하는 항목이 없습니다'));
+    return;
+  }
 
   if (group === 'fun') {
     items.forEach((f, i) => {
@@ -985,8 +992,10 @@ function renderDigest() {
   if (group === 'conflict') {
     items.forEach((c, i) => {
       const d = el('div', 'dc k-conflict',
-        `<div class="dk">대립</div><h5>${esc(c.sec.title)}</h5>`
-        + `<div class="vs"><span>${esc(c.pair[0].title)}</span><span>${esc(c.pair[1].title)}</span></div>`
+        `<div class="dk">대립 · ${esc(c.pair[0].who || '')} ↔ ${esc(c.pair[1].who || '')}</div>`
+        + `<h5>${esc(c.sec.title)}</h5>`
+        + `<div class="vs"><span><b>${esc(c.pair[0].who || '')}</b> ${esc(c.pair[0].title)}</span>`
+        + `<span><b>${esc(c.pair[1].who || '')}</b> ${esc(c.pair[1].title)}</span></div>`
         + `<div class="dm">논의 ${String(c.sec.no).padStart(2, '0')} · ${esc(c.sec.t)}–${esc(c.sec.t1)}</div>`);
       d.onclick = e => {
         if (e.target.closest('.rx,.cmts')) return;

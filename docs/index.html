@@ -8,7 +8,7 @@
 :root{
   --bg:#f2f2f3; --panel:#fff; --line:#e3e3e6; --line2:#eeeef0;
   --ink:#17181c; --ink2:#42444b; --dim:#8b8e96;
-  --blue:#2f6bdd; --green:#1c7a4e; --red:#c53f2d; --gray:#9aa0a8; --gold:#e2562a;
+  --blue:#2f6bdd; --green:#1c7a4e; --red:#c53f2d; --amber:#c07d22; --gray:#9aa0a8; --gold:#e2562a;
   --rail:380px; --top:52px; --player:0px;
   --font:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",sans-serif;
 }
@@ -42,7 +42,7 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .rz:hover:before{background:var(--dim)}
 
 .rhead{padding:11px 13px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px}
-.rhead h2{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--dim)}
+.rhead h2{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--dim);white-space:nowrap}
 .search{flex:1;display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:8px;background:#f3f3f5}
 .search input{width:100%;font-size:12.5px}
 .search input::placeholder{color:var(--dim)}
@@ -51,80 +51,90 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 
 .seg{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 9px;border-radius:11px;cursor:pointer}
 .seg:hover{background:#f6f6f8}
+.seg.src{background:#fdf4ea;box-shadow:inset 2px 0 0 var(--gold)}
 .seg.cur{background:#eef3fe}
 .seg.cur .seg-h time{color:var(--blue)}
+.seg.src.cur{background:#fbeeda}
 .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:750;color:#fff;background:var(--c)}
 .seg-h{display:flex;align-items:baseline;gap:6px}
 .seg-h b{font-size:13.5px;font-weight:750}
 .seg-h time{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
 .seg p{font-size:13.5px;line-height:1.62;color:var(--ink2);margin-top:3px}
 .seg mark{background:#ffe9a8;color:inherit;border-radius:3px}
-.seg.node-of{box-shadow:inset 2px 0 0 var(--gold)}
 
 /* ---------- 캔버스 ---------- */
 .stage{position:relative;overflow:hidden;background:var(--bg);touch-action:none}
 .stage.grab{cursor:grabbing}
 #cv{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
 #edges{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
-#edges path{fill:none;stroke-width:1.6px;opacity:0;transition:opacity .35s}
+#edges path{fill:none;stroke-width:1.7px;opacity:0;transition:opacity .35s}
 #edges path.on{opacity:1}
-#edges text{font:600 10.5px var(--font);opacity:0;transition:opacity .35s}
+#edges text{font:650 10.5px var(--font);opacity:0;transition:opacity .35s}
 #edges text.on{opacity:1}
-.e-support{stroke:var(--green)}                     .l-support{fill:var(--green)}
-.e-oppose{stroke:var(--red);stroke-dasharray:6 5}   .l-oppose{fill:var(--red)}
-.e-propose{stroke:var(--blue)}                      .l-propose{fill:var(--blue)}
-.e-ask{stroke:var(--gray);stroke-dasharray:2 4}     .l-ask{fill:var(--gray)}
-.e-decide{stroke:var(--gold)}                       .l-decide{fill:var(--gold)}
-.e-flow{stroke:#c8c9ce;stroke-width:2px}
-.e-converge{stroke:var(--gold);stroke-width:2px}
-.e-openconv{stroke:#b6b9bf;stroke-dasharray:2 4}
+.e-raise{stroke:#b4b7bd}                            .l-raise{fill:#8b8e96}
+.e-pro{stroke:var(--green)}                         .l-pro{fill:var(--green)}
+.e-con{stroke:var(--red);stroke-dasharray:6 5}      .l-con{fill:var(--red)}
+.e-condition{stroke:var(--amber);stroke-dasharray:3 4} .l-condition{fill:var(--amber)}
+.e-resolve{stroke:var(--gold);stroke-width:2px}     .l-resolve{fill:var(--gold)}
+.e-conflict{stroke:var(--red);stroke-width:2px;stroke-dasharray:7 5} .l-conflict{fill:var(--red)}
+.e-flow{stroke:#c8c9ce;stroke-width:2.4px}
 
-.node{position:absolute;width:224px;padding:11px 13px;border-radius:14px;background:var(--panel);
+/* 섹션 프레임 — 하나의 메인 논의 주제 */
+.frame{position:absolute;border:1.5px solid #dcdde1;border-radius:20px;background:rgba(255,255,255,.5);
+  opacity:0;transition:opacity .4s}
+.frame.in{opacity:1}
+.fhead{position:absolute;left:20px;top:-13px;display:flex;align-items:center;gap:8px;
+  padding:4px 12px;border-radius:99px;background:var(--panel);border:1px solid #dcdde1;white-space:nowrap}
+.fhead b{font-size:14px;font-weight:800;letter-spacing:-.01em}
+.fhead .no{font-size:10.5px;font-weight:800;color:var(--dim);letter-spacing:.06em}
+.fhead .pt{font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;background:#f0f0f2;color:#6d727a}
+.fhead time{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+
+.node{position:absolute;width:228px;padding:11px 13px;border-radius:14px;background:var(--panel);
   border:1.5px solid var(--line);cursor:pointer;opacity:0;transform:scale(.94);
-  transition:opacity .32s,transform .32s,box-shadow .18s}
+  transition:opacity .3s,transform .3s,box-shadow .18s}
 .node.in{opacity:1;transform:none}
-.node:hover{box-shadow:0 3px 14px rgba(20,22,28,.13)}
-.node h4{font-size:13.5px;font-weight:750;line-height:1.42;letter-spacing:-.01em;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.node p{margin-top:5px;font-size:12px;line-height:1.55;color:var(--ink2);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.node .m{margin-top:7px;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)}
+.node:hover{box-shadow:0 3px 14px rgba(20,22,28,.14)}
+.node .k{font-size:9.5px;font-weight:800;letter-spacing:.07em;margin-bottom:4px;color:var(--dim)}
+.node h4{font-size:13.5px;font-weight:750;line-height:1.45;letter-spacing:-.01em}
+.node p{margin-top:5px;font-size:11.5px;line-height:1.55;color:var(--ink2);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.node .m{margin-top:8px;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)}
 .node .m .d{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;
   font-size:9px;font-weight:750;color:#fff;background:var(--c,#9aa0a8)}
-.node .tag{margin-left:auto;font-size:10px;font-weight:750;padding:1px 6px;border-radius:99px}
 
-.node.topic{width:250px;background:var(--ink);border-color:var(--ink);color:#fff}
-.node.topic h4{font-size:15px;font-weight:800}
-.node.topic p,.node.topic .m{color:rgba(255,255,255,.62)}
-.node.topic .no{font-size:10.5px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.5);margin-bottom:4px}
+.node.issue{width:252px;background:var(--ink);border-color:var(--ink);color:#fff}
+.node.issue .k{color:rgba(255,255,255,.55)}
+.node.issue h4{font-size:15px;font-weight:800}
+.node.issue p,.node.issue .m{color:rgba(255,255,255,.66)}
 
-.node.concl{width:250px;background:var(--gold);border-color:var(--gold);color:#fff;
-  box-shadow:0 4px 18px rgba(226,86,42,.26)}
-.node.concl h4{font-size:14.5px;font-weight:800}
-.node.concl p,.node.concl .m{color:rgba(255,255,255,.8)}
-.node.concl .tag{background:rgba(255,255,255,.24);color:#fff}
+.node.position{border-color:var(--blue);border-width:2px}
+.node.position .k{color:var(--blue)}
+.node.pro{border-color:var(--green)}
+.node.pro .k{color:var(--green)}
+.node.con{border-color:var(--red);border-style:dashed}
+.node.con .k{color:var(--red)}
+.node.condition{border-color:var(--amber);border-style:dashed}
+.node.condition .k{color:var(--amber)}
+.node.open{width:252px;border-color:#b6b9bf;border-style:dotted;background:#f4f4f6}
+.node.open .k{color:#7b7f87}
 
-.node.open{width:250px;background:#ebebee;border:1.5px dashed #bcbfc5;color:#5f636b}
-.node.open h4{font-size:14px;font-weight:750}
-.node.open p,.node.open .m{color:#83878f}
-.node.open .tag{background:rgba(0,0,0,.06);color:#6d727a}
+.node.decision{width:252px;background:var(--gold);border-color:var(--gold);color:#fff;
+  box-shadow:0 4px 18px rgba(226,86,42,.24)}
+.node.decision .k{color:rgba(255,255,255,.72)}
+.node.decision h4{font-size:14.5px;font-weight:800}
+.node.decision p,.node.decision .m{color:rgba(255,255,255,.82)}
+.node.conditional{width:252px;border:2px dashed var(--gold);color:var(--gold)}
+.node.conditional h4{font-size:14.5px;font-weight:800;color:var(--gold)}
+.node.conditional .k{color:var(--gold)}
+.node.conditional p{color:#8a6042}
 
-.node.decide{border-color:var(--gold)}
-.node.decide .tag{background:rgba(226,86,42,.12);color:var(--gold)}
-
-.node.support{border-color:var(--green)}
-.node.support .tag{background:rgba(28,122,78,.12);color:var(--green)}
-.node.oppose{border-color:var(--red);border-style:dashed}
-.node.oppose .tag{background:rgba(197,63,45,.12);color:var(--red)}
-.node.propose{border-color:var(--blue)}
-.node.propose .tag{background:rgba(47,107,221,.12);color:var(--blue)}
-.node.ask{border-color:var(--gray);border-style:dotted}
-.node.ask .tag{background:rgba(154,160,168,.16);color:#6d727a}
 .node.live{box-shadow:0 0 0 3px rgba(23,24,28,.12)}
-.node.playing{box-shadow:0 0 0 3px rgba(47,107,221,.3)}
+.node.sel{box-shadow:0 0 0 3px rgba(226,86,42,.32)}
+.node.playing{box-shadow:0 0 0 3px rgba(47,107,221,.28)}
 
 .far .node p,.far .node .m{display:none}
-.veryfar .node h4{-webkit-line-clamp:1}
+.veryfar .node h4{-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
 
 /* ---------- 범례 · 줌 ---------- */
 .legend{position:absolute;left:14px;top:12px;z-index:6;display:flex;flex-wrap:wrap;gap:5px 12px;
@@ -143,7 +153,7 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .drop{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:var(--bg)}
 body.idle .drop,.drop.over{display:grid}
 .drop.over{background:#eaf0fd}
-.dz{width:min(560px,86vw);text-align:center;padding:44px 34px;border-radius:20px;
+.dz{width:min(580px,86vw);text-align:center;padding:44px 34px;border-radius:20px;
   border:1.5px dashed #c9cbd1;background:var(--panel)}
 .drop.over .dz{border-color:var(--blue)}
 .dz h1{font-size:22px;font-weight:800;letter-spacing:-.02em}
@@ -151,7 +161,7 @@ body.idle .drop,.drop.over{display:grid}
 .dz .btns{margin-top:22px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .dz .big{height:38px;padding:0 18px;border-radius:10px;background:var(--ink);color:#fff;font-size:13.5px;font-weight:700}
 .dz .ghost{height:38px;padding:0 16px;border-radius:10px;border:1px solid var(--line);font-size:13.5px;font-weight:650;color:var(--ink2)}
-.dz .note{margin-top:16px;font-size:11.5px;color:#a7aab1}
+.dz .note{margin-top:16px;font-size:11.5px;line-height:1.6;color:#a7aab1}
 
 /* ---------- 토스트 ---------- */
 .toast{position:fixed;left:50%;bottom:calc(var(--player) + 22px);transform:translate(-50%,14px);z-index:30;
@@ -184,8 +194,7 @@ body.noaudio .player{display:none}
   .tabs button{flex:1;font-size:12.5px;font-weight:700;color:var(--dim)}
   .tabs button.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
   .legend{left:8px;top:8px;right:8px;font-size:10.5px}
-  .file,.top .brand i{display:none}
-  .now{display:none}
+  .file,.top .brand i,.now{display:none}
 }
 </style>
 </head>
@@ -214,13 +223,15 @@ body.noaudio .player{display:none}
   <div class="rz" id="rzx"></div>
   <section class="stage" id="vp">
     <div class="legend">
-      <span><i style="border-color:#2f6bdd"></i><b>제안</b></span>
-      <span><i style="border-color:#1c7a4e"></i><b>동의</b></span>
-      <span><i style="border-color:#c53f2d;border-top-style:dashed"></i><b>반대·우려</b></span>
-      <span><i style="border-color:#9aa0a8;border-top-style:dotted"></i><b>질문·미결</b></span>
-      <span><span class="sw" style="background:#17181c"></span><b>주제</b></span>
-      <span><span class="sw" style="background:#e2562a"></span><b>결론</b></span>
-      <span><span class="sw" style="background:#ebebee;border:1px dashed #bcbfc5"></span><b>미결</b></span>
+      <span><span class="sw" style="background:#17181c"></span><b>쟁점</b></span>
+      <span><i style="border-color:#2f6bdd;border-top-width:3px"></i><b>주장</b></span>
+      <span><i style="border-color:#1c7a4e"></i><b>근거·동의</b></span>
+      <span><i style="border-color:#c53f2d;border-top-style:dashed"></i><b>반론·우려</b></span>
+      <span><i style="border-color:#c07d22;border-top-style:dashed"></i><b>조건</b></span>
+      <span><i style="border-color:#c53f2d;border-top-style:dashed"></i><b>↔ 대립</b></span>
+      <span><span class="sw" style="background:#e2562a"></span><b>확정</b></span>
+      <span><span class="sw" style="border:1.5px dashed #e2562a"></span><b>조건부</b></span>
+      <span><span class="sw" style="border:1.5px dotted #b6b9bf;background:#f4f4f6"></span><b>미결</b></span>
     </div>
     <div id="cv"><svg id="edges"></svg></div>
     <div class="zoom">
@@ -246,13 +257,13 @@ body.noaudio .player{display:none}
 <div class="drop" id="drop">
   <div class="dz">
     <h1>회의 파일을 놓으세요</h1>
-    <p class="sub">텍스트 기록(.txt)을 넣으면 논의가 시간 순서대로 노드로 펼쳐집니다.<br>
-      음성(.m4a·.mp3)을 함께 넣으면 노드·원문이 재생 위치에 연결됩니다.</p>
+    <p class="sub">정리 맵이 있는 회의는 쟁점 → 주장 → 반론·근거 → 결론 순서로<br>논의가 진행된 시간대로 펼쳐집니다.</p>
     <div class="btns">
       <button class="big" id="pick">파일 선택</button>
-      <button class="ghost" id="sample">예시 회의로 보기</button>
+      <button class="ghost" id="sample">2026.06.15 회의 보기</button>
     </div>
-    <p class="note">파일은 브라우저 안에서만 처리되고 어디에도 올라가지 않습니다.</p>
+    <p class="note">전사 <b>.txt</b>를 놓으면 원문이 열리고, 같은 이름의 정리 맵(<b>.ibis.json</b>)이 있으면 노드가 함께 펼쳐집니다.<br>
+      음성(.m4a)을 같이 놓으면 재생 위치가 연결됩니다. 파일은 브라우저 안에서만 처리됩니다.</p>
   </div>
 </div>
 <input type="file" id="fi" multiple accept=".txt,.json,audio/*" hidden>
@@ -266,14 +277,20 @@ const svgEl = (t, a) => { const n = document.createElementNS('http://www.w3.org/
 const esc = s => (s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = (t % 3600) / 60 | 0, s = t % 60;
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
-const secs = s => s.split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
+const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const OX = 300, OY = 1000;          /* 캔버스 원점 오프셋 (음수 좌표 방지) */
+const OX = 220, OY = 420;
 const au = $('#au');
-let TRANS = [], SEGN = [], NODES = [], EDGES = [], bounds = { x0: 0, y0: 0, w: 1, h: 1 };
-let view = { x: 0, y: 0, z: .8 }, curSeg = -1, audioOK = false, avatar = {};
+let TRANS = [], SEGN = [], NODES = [], EDGES = [], FRAMES = [], REVEAL = [];
+let bounds = { x0: 0, y0: 0, w: 1, h: 1 };
+let view = { x: 0, y: 0, z: .8 }, curSeg = -1, audioOK = false, avatar = {}, selected = null;
 
-/* ================= 1. 파싱 ================= */
+const KIND_KO = { issue: '쟁점', position: '주장', pro: '근거·동의', con: '반론·우려',
+  condition: '조건', open: '미결', decision: '결론 · 확정', conditional: '결론 · 조건부' };
+const EDGE_KO = { raise: '주장', pro: '근거', con: '반론', condition: '조건', resolve: '결론', conflict: '대립' };
+const EDGE_OF = { position: 'raise', pro: 'pro', con: 'con', condition: 'condition', open: 'condition', issue: 'raise' };
+
+/* ================= 1. 전사 파싱 ================= */
 const RE_HEAD = /^(\S{1,10})\s+((?:\d{1,2}:)?\d{1,2}:\d{2})\s*$/;
 function parseTxt(text) {
   const segs = []; let cur = null;
@@ -284,7 +301,7 @@ function parseTxt(text) {
     if (!line || !cur) return;
     cur.l.push(line);
   });
-  const out = [];                    /* 같은 사람이 이어 말하면 한 덩어리로 */
+  const out = [];
   segs.forEach(s => {
     const p = out[out.length - 1];
     if (p && p.s === s.s && s.t - p.t < 30) p.l.push(...s.l); else out.push(s);
@@ -292,211 +309,177 @@ function parseTxt(text) {
   return out;
 }
 
-/* ================= 2. 논의 구조 뽑기 ================= */
-const DECIDE = /(하기로|하는 걸로|가는 걸로|가져가는 걸로|확정|결론적|정리하면|결정|합의|그렇게 하죠|그렇게 합시다|하면 될 것 같|하는 게 맞|잡고 가|로 가죠|정하자|정합시다|픽스)/;
-const RULES = [
-  ['decide',  DECIDE],
-  ['oppose',  /(반대|걱정|우려|위험|문제가|애매|어려울|안 될|안될|힘들|아닌 것 같|별로|무리|그건 좀|안 맞)/],
-  ['support', /(맞아|맞습니다|맞죠|동의|좋아|좋습니다|좋은데|괜찮|찬성|저도|그게 낫|공감)/],
-  ['propose', /(어때|어떨까|제안|하면 좋겠|하는 게 좋|해야 될 것 같|해보면|가져가면|넣으면|바꾸면|이렇게 하면)/],
-  ['ask',     /(뭐예요|뭔가요|어떻게|왜 |인가요|일까요|맞나요|있나요|되나요|\?)/],
-];
-const STANCE_KO = { decide: '정리', oppose: '반대', support: '동의', propose: '제안', ask: '질문' };
+/* ================= 2. IBIS 맵 → 그래프 ================= */
+function build(map) {
+  const nodes = [], edges = [], frames = [], reveal = [];
 
-const classify = text => (RULES.find(([, re]) => re.test(text)) || ['ask'])[0];
-const tokens = s => (s.match(/[가-힣]{2,}|[A-Za-z]{3,}/g) || [])
-  .map(w => w.replace(/(입니다|습니다|에서|으로|하고|한테|까지|부터|이랑|는데|라고|해서|이고|에게|하는|이런|그런|같은|것도|것을)$/, ''))
-  .filter(w => w.length > 1);
-const sentences = t => t.split(/(?<=[.?!])\s+/).map(s => s.trim()).filter(Boolean);
+  map.sections.forEach(sec => {
+    const byId = {}, mine = [];
+    const push = o => { o.sec = sec; nodes.push(o); mine.push(o); byId[o.id] = o; return o; };
 
-/* 말버릇 문장을 피하고 내용이 담긴 문장을 고른다 */
-function keyIdx(ss) {
-  let best = 0, bs = -1e9;
-  ss.forEach((s, i) => {
-    let sc = tokens(s).length * 2 + Math.min(s.length, 110) / 10;
-    if (s.length < 14) sc -= 14;
-    if (/^(네|응|어|음|아|그쵸|맞아|맞습니다|아니|그러니까|그래서|근데)[ ,.]/.test(s)) sc -= 4;
-    if (i === 0) sc += 1;
-    if (sc > bs) { bs = sc; best = i; }
-  });
-  return best;
-}
-/* 그 발언에서 실제로 태도를 드러낸 문장을 고른다 */
-const RE_OF = Object.fromEntries(RULES);
-function pickBy(text, re, max) {
-  const ss = sentences(text);
-  const hit = ss.filter(s => re.test(s) && s.length > 12);
-  const pool = hit.length ? hit : ss;
-  const s = pool[keyIdx(pool)] || text;
-  return s.length > max ? s.slice(0, max - 1) + '…' : s;
-}
-function keyText(text, max, more) {
-  const ss = sentences(text);
-  if (!ss.length) return text.slice(0, max);
-  const i = keyIdx(ss);
-  const pick = more ? ss.slice(i + 1).join(' ') || ss.slice(0, i).join(' ') : ss[i];
-  return pick.length > max ? pick.slice(0, max - 1) + '…' : pick;
-}
+    sec.nodes.forEach(n => push(Object.assign({}, n, { t: secs(n.t), at: (n.at || []).map(secs) })));
+    mine.forEach(n => { if (n.parent) { n.p = byId[n.parent]; if (n.p) (n.p.kids = n.p.kids || []).push(n); } });
 
-function build(segs) {
-  const turns = segs.map((s, i) => {
-    const text = s.l.join(' ');
-    return { i, t: s.t, who: s.s, text, len: text.length, tk: new Set(tokens(text)), stance: classify(text) };
-  }).filter(x => x.len > 14);
-  if (turns.length < 5) return { nodes: [], edges: [] };
+    const r = sec.resolution;
+    const res = r && push(Object.assign({}, r, { id: sec.no + '-res', kind: r.kind,
+      t: secs(r.t), at: (r.at || []).map(secs) }));
 
-  turns.forEach(x => {
-    let sc = Math.min(x.len, 700) / 55;
-    if (x.stance === 'decide') sc += 6;
-    if (x.stance === 'oppose') sc += 4;
-    if (x.stance === 'propose') sc += 3;
-    if (x.stance === 'support') sc += 1.5;
-    if (x.len < 45) sc -= 3;
-    x.score = sc;
+    /* 태도 관계 */
+    mine.forEach(n => { if (n.p) edges.push({ a: n.p, b: n, kind: EDGE_OF[n.kind] || 'raise', label: EDGE_KO[EDGE_OF[n.kind] || 'raise'] }); });
+    /* 대립 — 양방향 */
+    (sec.conflicts || []).forEach(([x, y]) => {
+      if (byId[x] && byId[y]) edges.push({ a: byId[x], b: byId[y], kind: 'conflict', label: '대립', both: true });
+    });
+    /* 수렴 */
+    if (res) (r.from || []).map(id => byId[id]).filter(Boolean)
+      .forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
+
+    /* 섹션 안 배치 — 정돈된 트리 */
+    const roots = mine.filter(n => !n.p);
+    let slot = 0;
+    const walk = (n, depth) => {
+      n.col = depth;
+      const kids = (n.kids || []).sort((a, b) => a.t - b.t);
+      if (!kids.length) { n.ly = slot * 142; slot++; }
+      else { kids.forEach(k => walk(k, depth + 1)); n.ly = (kids[0].ly + kids[kids.length - 1].ly) / 2; }
+    };
+    roots.sort((a, b) => a.t - b.t).forEach(n => walk(n, 0));
+    const maxCol = Math.max(...mine.map(n => n.col));
+    if (res) { res.col = maxCol + 1; res.ly = (Math.min(...mine.map(n => n.ly)) + Math.max(...mine.map(n => n.ly))) / 2; }
+
+    const all = res ? mine.concat(res) : mine;
+    frames.push({ sec, nodes: all, cols: (res ? maxCol + 1 : maxCol) + 1 });
+
+    /* 등장 순서 — 부모 먼저, 그 다음 시각 순 */
+    const done = new Set(), order = [];
+    const rest = all.slice().sort((a, b) => a.t - b.t);
+    while (rest.length) {
+      const i = rest.findIndex(n => !n.p || done.has(n.p.id));
+      const n = rest.splice(i < 0 ? 0 : i, 1)[0];
+      done.add(n.id); order.push(n);
+    }
+    reveal.push({ frame: frames[frames.length - 1] });
+    order.forEach(n => reveal.push({ node: n }));
   });
 
-  /* 주제 경계 — 앞 6턴에 없던 어휘가 몰리는 긴 발언 */
-  const cand = turns.map((x, i) => {
-    if (i === 0) return { i, v: 1e9 };
-    const prev = new Set();
-    for (let j = Math.max(0, i - 6); j < i; j++) turns[j].tk.forEach(w => prev.add(w));
-    let hit = 0; x.tk.forEach(w => { if (prev.has(w)) hit++; });
-    return { i, v: (1 - hit / Math.max(6, x.tk.size)) * Math.min(1, x.len / 260) };
-  }).sort((a, b) => b.v - a.v);
-
-  const span = turns[turns.length - 1].t - turns[0].t;
-  const want = Math.max(3, Math.min(9, Math.round(span / 560)));
-  const bnd = [0], minGap = Math.max(90, span / (want + 2));
-  for (const c of cand) {
-    if (bnd.length >= want) break;
-    if (bnd.every(b => Math.abs(turns[b].t - turns[c.i].t) > minGap && Math.abs(b - c.i) > 4)) bnd.push(c.i);
+  /* 섹션끼리 잇는 흐름선 — 앞 섹션의 결론 → 다음 섹션의 쟁점 */
+  for (let i = 1; i < frames.length; i++) {
+    const prev = frames[i - 1].nodes[frames[i - 1].nodes.length - 1];
+    const next = frames[i].nodes.find(n => n.kind === 'issue') || frames[i].nodes[0];
+    if (prev && next) edges.push({ a: prev, b: next, kind: 'flow', section: true });
   }
-  bnd.sort((a, b) => a - b);
-
-  const nodes = [], edges = [];
-  const add = o => { o.id = nodes.length; nodes.push(o); return o; };
-  let prev = null;
-
-  bnd.forEach((b, bi) => {
-    const end = bi + 1 < bnd.length ? bnd[bi + 1] : turns.length;
-    const chunk = turns.slice(b, end), head = chunk[0];
-    const topic = add({ kind: 'topic', no: bi + 1, t: head.t, who: head.who,
-      title: keyText(head.text, 40), body: '', turn: head });
-    if (prev) edges.push({ a: prev, b: topic, kind: 'flow' });
-
-    /* 결론은 논의 후반부에서 찾는다 */
-    const rest = chunk.slice(1);
-    const tail = rest.slice(Math.floor(rest.length * .45));
-    const concl = [...tail].reverse().find(x => DECIDE.test(x.text) && x.len > 50)
-      || [...rest].reverse().find(x => DECIDE.test(x.text) && x.len > 60);
-
-    const k = Math.max(2, Math.min(4, Math.round(rest.length / 8)));
-    const picked = rest.filter(x => x !== concl)
-      .sort((p, q) => q.score - p.score).slice(0, k).sort((p, q) => p.t - q.t);
-
-    let last = null; const made = [];
-    picked.forEach(x => {
-      const parent = (last && (x.stance === 'support' || x.stance === 'oppose')) ? last : topic;
-      const n = add({ kind: 'op', stance: x.stance, t: x.t, who: x.who,
-        title: pickBy(x.text, RE_OF[x.stance], 42), body: keyText(x.text, 90, true), turn: x, parent, root: topic });
-      edges.push({ a: parent, b: n, kind: x.stance, label: STANCE_KO[x.stance] });
-      parent.hasChild = true; made.push(n); last = n;
-    });
-
-    const leaves = made.filter(n => !n.hasChild);
-    const c = concl
-      ? add({ kind: 'concl', t: concl.t, who: concl.who, root: topic, turn: concl,
-          title: pickBy(concl.text, DECIDE, 44), body: keyText(concl.text, 90, true) })
-      : add({ kind: 'open', root: topic, turn: made.length ? made[made.length - 1].turn : head,
-          t: (made.length ? made[made.length - 1] : topic).t,
-          who: (made.length ? made[made.length - 1] : topic).who,
-          title: '결론 없이 넘어간 주제', body: '' });
-    (leaves.length ? leaves : [topic]).forEach(n =>
-      edges.push({ a: n, b: c, kind: concl ? 'converge' : 'openconv' }));
-    topic.concl = c; prev = c;
-  });
-
-  nodes.sort((a, b) => a.t - b.t || a.id - b.id);
-  return { nodes, edges };
+  return { nodes, edges: edges.filter(e => e.a && e.b), frames, reveal };
 }
 
-/* ================= 3. 배치 ================= */
-const COL = 300, ROWCOLS = 14, ROWGAP = 1150, SLOT = [-170, 170, -340, 340, -510, 510];
-function layout(nodes) {
-  const occ = {};
-  let col = 0, row = 0;
-  const place = (n, c, ly) => {
-    const key = row + ':' + c, used = occ[key] || (occ[key] = []);
-    while (used.some(u => Math.abs(u - ly) < 140)) ly += 140;
-    used.push(ly);
-    n.col = c; n.row = row; n.ly = ly; n.x = c * COL; n.y = ly + row * ROWGAP;
-  };
-  nodes.filter(n => n.kind === 'topic').forEach(topic => {
-    if (col > ROWCOLS) { row++; col = 0; }        /* 가로로 너무 길어지면 다음 줄로 */
-    place(topic, col, 0);
-    let maxCol = col, ci = 0;
-    nodes.filter(n => (n.kind === 'op') && n.root === topic).forEach(n => {
-      const c = n.parent.col + 1;
-      place(n, c, n.parent === topic ? SLOT[ci++ % SLOT.length] : n.parent.ly + 140);
-      maxCol = Math.max(maxCol, c);
-    });
-    if (topic.concl) place(topic.concl, ++maxCol, 0);
-    col = maxCol + 1;
+/* ================= 3. 섹션 배치 ================= */
+const COL = 296, PAD = 26, HEAD = 30, GAPX = 104, GAPY = 128;
+function layout(g) {
+  g.frames.forEach(f => {
+    const ys = f.nodes.map(n => n.ly);
+    f.h = Math.max(...ys) - Math.min(...ys) + 142 + PAD * 2 + HEAD;
+    f.w = (f.cols - 1) * COL + 252 + PAD * 2;
+  });
+  /* 화면 비율(가로:세로 ≈ 2)에 맞춰 줄바꿈 폭을 잡는다 */
+  const S = g.frames.reduce((a, f) => a + f.w + GAPX, 0);
+  const H = Math.max(...g.frames.map(f => f.h)) + GAPY;
+  const ROWW = Math.max(3600, Math.min(9000, Math.sqrt(2.1 * S * H)));
+  let x = 0, y = 0, rowH = 0;
+  g.frames.forEach(f => {
+    const ys = f.nodes.map(n => n.ly);
+    const h = f.h, w = f.w;
+    if (x && x + w > ROWW) { x = 0; y += rowH + GAPY; rowH = 0; }
+    const y0 = Math.min(...ys);
+    f.x = x; f.y = y;
+    f.nodes.forEach(n => { n.x = x + PAD + n.col * COL; n.y = y + PAD + HEAD + (n.ly - y0); });
+    rowH = Math.max(rowH, h); x += w + GAPX;
   });
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  nodes.forEach(n => {
-    x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
-    x1 = Math.max(x1, n.x + 252); y1 = Math.max(y1, n.y + 132);
+  g.frames.forEach(f => {
+    x0 = Math.min(x0, f.x); y0 = Math.min(y0, f.y);
+    x1 = Math.max(x1, f.x + f.w); y1 = Math.max(y1, f.y + f.h);
   });
-  bounds = { x0: x0 + OX - 70, y0: y0 + OY - 70, w: x1 - x0 + 140, h: y1 - y0 + 140 };
+  bounds = { x0: x0 + OX - 80, y0: y0 + OY - 80, w: x1 - x0 + 160, h: y1 - y0 + 160 };
 }
 
 /* ================= 4. 그리기 ================= */
+const ARROW = { raise: '#b4b7bd', pro: '#1c7a4e', con: '#c53f2d', condition: '#c07d22', resolve: '#e2562a', conflict: '#c53f2d', flow: '#c8c9ce' };
+function defs() {
+  const d = svgEl('defs');
+  Object.entries(ARROW).forEach(([k, c]) => {
+    ['e', 's'].forEach(side => {
+      const m = svgEl('marker', { id: 'ar-' + k + '-' + side, markerWidth: 9, markerHeight: 9,
+        refX: side === 'e' ? 7.5 : 1.5, refY: 3, orient: 'auto', markerUnits: 'userSpaceOnUse' });
+      m.append(svgEl('path', { d: side === 'e' ? 'M0,0 L8,3 L0,6 Z' : 'M8,0 L0,3 L8,6 Z', fill: c }));
+      d.append(m);
+    });
+  });
+  return d;
+}
 function render(g) {
   const cv = $('#cv'), sv = $('#edges');
   [...cv.children].forEach(c => { if (c !== sv) c.remove(); });
-  sv.textContent = '';
+  sv.textContent = ''; sv.append(defs());
+
+  g.frames.forEach(f => {
+    const d = el('div', 'frame');
+    d.style.cssText = `left:${f.x + OX}px;top:${f.y + OY}px;width:${f.w}px;height:${f.h}px`;
+    const s = f.sec;
+    d.append(el('div', 'fhead',
+      `<span class="no">논의 ${String(s.no).padStart(2, '0')}</span><b>${esc(s.title)}</b>`
+      + `<span class="pt">${esc(s.part)}</span><time>${esc(s.t)}–${esc(s.t1)}</time>`));
+    f.dom = d; cv.append(d);
+  });
 
   g.nodes.forEach(n => {
-    const d = el('div', 'node ' + (n.kind === 'op' ? n.stance : n.kind));
+    const d = el('div', 'node ' + n.kind);
     d.style.left = (n.x + OX) + 'px'; d.style.top = (n.y + OY) + 'px';
-    const tag = n.kind === 'concl' ? '<span class="tag">결론</span>'
-      : n.kind === 'open' ? '<span class="tag">미결</span>'
-      : n.kind === 'op' ? `<span class="tag">${STANCE_KO[n.stance]}</span>` : '';
-    d.innerHTML = (n.kind === 'topic' ? `<div class="no">주제 ${n.no}</div>` : '')
-      + `<h4>${esc(n.title)}</h4>`
-      + (n.body ? `<p>${esc(n.body)}</p>` : '')
-      + `<div class="m"><span class="d" style="--c:${avatar[n.who] || '#9aa0a8'}">${esc(n.who.slice(0, 1))}</span>`
-      + `${esc(n.who)} · ${mmss(n.t)}${tag}</div>`;
-    d.onclick = () => {
-      NODES.forEach(o => o.dom.classList.remove('live'));
-      d.classList.add('live'); seek(n.t);
-    };
+    d.innerHTML = `<div class="k">${KIND_KO[n.kind] || ''}</div><h4>${esc(n.title)}</h4>`
+      + (n.note ? `<p>${esc(n.note)}</p>` : '')
+      + `<div class="m"><span class="d" style="--c:${avatar[n.who] || '#9aa0a8'}">${esc((n.who || '').slice(0, 1))}</span>`
+      + `${esc(n.who || '')} · ${mmss(n.t)}</div>`;
+    d.onclick = () => selectNode(n);
     n.dom = d; cv.append(d);
   });
 
   g.edges.forEach(e => {
-    const A = e.a, B = e.b;
-    const ax = A.x + OX + A.dom.offsetWidth, ay = A.y + OY + A.dom.offsetHeight / 2;
-    const bx = B.x + OX, by = B.y + OY + B.dom.offsetHeight / 2;
-    let d;
-    if (bx < ax) {                                   /* 줄바꿈 — 오른쪽 끝에서 다음 줄 왼쪽으로 */
-      const m = (ay + by) / 2;
-      d = `M ${ax} ${ay} C ${ax + 140} ${ay}, ${ax + 140} ${m}, ${ax} ${m} L ${bx} ${m} C ${bx - 140} ${m}, ${bx - 140} ${by}, ${bx} ${by}`;
+    const A = e.a, B = e.b, aw = A.dom.offsetWidth, ah = A.dom.offsetHeight, bh = B.dom.offsetHeight;
+    let d, lx, ly;
+    if (e.kind === 'conflict') {
+      const up = A.y <= B.y ? A : B, dn = A.y <= B.y ? B : A;
+      const uh = up.dom.offsetHeight;
+      if (Math.abs(A.x - B.x) < 12) {                  /* 같은 열 — 마주 보는 면을 양방향으로 잇는다 */
+        const cx = up.x + OX + up.dom.offsetWidth / 2;
+        d = `M ${cx} ${up.y + OY + uh + 3} L ${cx} ${dn.y + OY - 3}`;
+        lx = cx + 24; ly = (up.y + OY + uh + dn.y + OY) / 2 + 4;
+      } else {                                          /* 열이 다르면 왼쪽으로 감아 잇는다 */
+        const ax = A.x + OX, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2;
+        const off = 60;
+        d = `M ${ax} ${ay} C ${ax - off} ${ay}, ${Math.min(ax, bx) - off} ${by}, ${bx} ${by}`;
+        lx = Math.min(ax, bx) - off + 24; ly = (ay + by) / 2;
+      }
     } else {
-      const dx = Math.max(46, Math.abs(bx - ax) * .55);
-      d = `M ${ax} ${ay} C ${ax + dx} ${ay}, ${bx - dx} ${by}, ${bx} ${by}`;
+      const ax = A.x + OX + aw, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2;
+      if (bx < ax) {                                   /* 줄바꿈 */
+        const m = Math.min(A.y + OY, B.y + OY) - 74;
+        d = `M ${ax} ${ay} C ${ax + 140} ${ay}, ${ax + 140} ${m}, ${ax} ${m} L ${bx} ${m} C ${bx - 140} ${m}, ${bx - 140} ${by}, ${bx} ${by}`;
+        lx = (ax + bx) / 2; ly = m - 9;
+      } else {
+        const dx = Math.max(46, (bx - ax) * .55);
+        d = `M ${ax} ${ay} C ${ax + dx} ${ay}, ${bx - dx} ${by}, ${bx} ${by}`;
+        lx = (ax + bx) / 2; ly = (ay + by) / 2 - 8;
+      }
     }
-    e.path = svgEl('path', { d, class: 'e-' + e.kind });
+    e.path = svgEl('path', { d, class: 'e-' + e.kind, 'marker-end': `url(#ar-${e.kind}-e)` });
+    if (e.both) e.path.setAttribute('marker-start', `url(#ar-${e.kind}-s)`);
     sv.append(e.path);
     if (e.label) {
-      e.text = svgEl('text', { x: (ax + bx) / 2, y: (ay + by) / 2 - 7, class: 'l-' + e.kind, 'text-anchor': 'middle' });
+      e.text = svgEl('text', { x: lx, y: ly, class: 'l-' + e.kind, 'text-anchor': 'middle' });
       e.text.textContent = e.label; sv.append(e.text);
     }
   });
   sv.style.width = (bounds.x0 + bounds.w + 300) + 'px';
   sv.style.height = (bounds.y0 + bounds.h + 300) + 'px';
-  NODES = g.nodes; EDGES = g.edges;
+  NODES = g.nodes; EDGES = g.edges; FRAMES = g.frames; REVEAL = g.reveal;
 }
 
 /* ================= 5. 시간순 전개 ================= */
@@ -504,27 +487,32 @@ let timer = null, step = 0, speed = 2, paused = false;
 function play() {
   clearTimeout(timer);
   if (paused) return;
-  if (step >= NODES.length) return done();
-  const n = NODES[step++];
+  if (step >= REVEAL.length) return done();
+  const it = REVEAL[step++];
+  $('#fillp').style.width = (step / REVEAL.length * 100) + '%';
+  $('#pn').textContent = `${step} / ${REVEAL.length}`;
+  if (it.frame) {
+    it.frame.dom.classList.add('in');
+    ensureVisible(it.frame.x, it.frame.y, it.frame.w, it.frame.h);
+    timer = setTimeout(play, 620 / speed);
+    return;
+  }
+  const n = it.node;
   n.dom.classList.add('in');
   EDGES.forEach(e => {
-    if (e.b === n && e.a.dom.classList.contains('in')) {
+    if ((e.b === n && e.a.dom.classList.contains('in')) || (e.both && e.a === n && e.b.dom.classList.contains('in'))) {
       e.path.classList.add('on'); if (e.text) e.text.classList.add('on');
     }
   });
   NODES.forEach(o => o.dom.classList.remove('live'));
   n.dom.classList.add('live');
-  ensureVisible(n);
-  $('#fillp').style.width = (step / NODES.length * 100) + '%';
-  $('#pn').textContent = `${step} / ${NODES.length}`;
-  timer = setTimeout(play, (n.kind === 'concl' || n.kind === 'open' ? 1150 : n.kind === 'topic' ? 950 : 640) / speed);
+  ensureVisible(n.x, n.y, n.dom.offsetWidth, n.dom.offsetHeight);
+  timer = setTimeout(play, (n.kind === 'decision' || n.kind === 'conditional' || n.kind === 'open' ? 900 : 560) / speed);
 }
 function done() {
   NODES.forEach(o => o.dom.classList.remove('live'));
-  const t = NODES.filter(n => n.kind === 'topic').length;
-  const c = NODES.filter(n => n.kind === 'concl').length;
-  const o = NODES.filter(n => n.kind === 'open').length;
-  toast(`✓ 회의 전개 정리 완료<em>주제 ${t} · 의견 ${NODES.length - t - c - o} · 결론 ${c} · 미결 ${o}</em>`, 5600);
+  const c = n => NODES.filter(x => x.kind === n).length;
+  toast(`✓ 회의 전개 정리 완료<em>논의 ${FRAMES.length} · 주장 ${c('position')} · 반론 ${c('con')} · 확정 ${c('decision')} · 조건부 ${c('conditional')} · 미결 ${c('open')}</em>`, 6000);
   fit(false);
 }
 function toast(html, ms) {
@@ -538,53 +526,70 @@ $('#pause').onclick = e => {
 $('#speed').onclick = e => { speed = { 1: 2, 2: 4, 4: 1 }[speed]; e.currentTarget.textContent = speed + '×'; };
 $('#replay').onclick = () => {
   clearTimeout(timer); step = 0; paused = false; $('#pause').textContent = '❚❚ 일시정지';
-  NODES.forEach(n => n.dom.classList.remove('in', 'live', 'playing'));
+  NODES.forEach(n => n.dom.classList.remove('in', 'live', 'playing', 'sel'));
+  FRAMES.forEach(f => f.dom.classList.remove('in'));
   EDGES.forEach(e => { e.path.classList.remove('on'); if (e.text) e.text.classList.remove('on'); });
   fit(true); play();
 };
 
-/* ================= 6. 팬 · 줌 ================= */
+/* ================= 6. 노드 ↔ 원문 ================= */
+function selectNode(n) {
+  selected = n;
+  NODES.forEach(o => o.dom.classList.toggle('sel', o === n));
+  const [a, b] = n.at && n.at.length ? n.at : [n.t, n.t + 45];
+  let first = null;
+  [...$('#tr').children].forEach((d, i) => {
+    const on = TRANS[i].t >= a && TRANS[i].t < b;
+    d.classList.toggle('src', on);
+    if (on && first === null) first = d;
+  });
+  if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (innerWidth <= 900) showTab('src');
+  seekTo(a, true);
+  if (audioOK) au.play().catch(() => {});
+}
+
+/* ================= 7. 팬 · 줌 ================= */
 const vp = $('#vp'), cv = $('#cv');
 function apply() {
   cv.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
   $('#zlv').textContent = Math.round(view.z * 100) + '%';
   cv.classList.toggle('far', view.z < .5);
-  cv.classList.toggle('veryfar', view.z < .28);
+  cv.classList.toggle('veryfar', view.z < .3);
 }
 function zoomAt(cx, cy, nz) {
-  nz = Math.min(1.6, Math.max(.08, nz));
+  nz = Math.min(1.6, Math.max(.06, nz));
   view.x = cx - (cx - view.x) * (nz / view.z);
   view.y = cy - (cy - view.y) * (nz / view.z);
   view.z = nz; apply();
 }
 function fit(initial) {
-  const r = vp.getBoundingClientRect(), padT = 78, padB = 62, padX = 26;
+  const r = vp.getBoundingClientRect(), padT = 92, padB = 62, padX = 26;
   const aw = r.width - padX * 2, ah = r.height - padT - padB;
-  if (initial && NODES.length) {
-    view.z = .8;
-    const n = NODES[0];
-    view.x = padX + 30 - (n.x + OX) * view.z;
-    view.y = padT + ah / 2 - (n.y + OY + 55) * view.z;
+  if (initial && FRAMES.length) {
+    view.z = .72;
+    view.x = padX - (FRAMES[0].x + OX) * view.z + 20;
+    view.y = padT + 20 - (FRAMES[0].y + OY) * view.z;
   } else {
-    view.z = Math.max(.08, Math.min(1, Math.min(aw / bounds.w, ah / bounds.h)));
+    view.z = Math.max(.06, Math.min(1, Math.min(aw / bounds.w, ah / bounds.h)));
     view.x = padX - bounds.x0 * view.z + (aw - bounds.w * view.z) / 2;
     view.y = padT - bounds.y0 * view.z + (ah - bounds.h * view.z) / 2;
   }
   apply();
 }
-function ensureVisible(n) {
+function ensureVisible(x, y, w, h) {
   const r = vp.getBoundingClientRect();
-  const sx = (n.x + OX) * view.z + view.x, sy = (n.y + OY) * view.z + view.y;
-  const w = n.dom.offsetWidth * view.z, h = n.dom.offsetHeight * view.z;
-  const mx = Math.min(190, r.width * .22), my = Math.min(130, r.height * .2);
+  const sx = (x + OX) * view.z + view.x, sy = (y + OY) * view.z + view.y;
+  const sw = w * view.z, sh = h * view.z;
+  const mx = Math.min(200, r.width * .2), my = Math.min(140, r.height * .18);
   let need = false;
-  if (sx < mx) { view.x += mx - sx; need = true; } else if (sx + w > r.width - mx) { view.x -= sx + w - (r.width - mx); need = true; }
-  if (sy < my) { view.y += my - sy; need = true; } else if (sy + h > r.height - my) { view.y -= sy + h - (r.height - my); need = true; }
+  if (sx < mx) { view.x += mx - sx; need = true; } else if (sx + sw > r.width - mx) { view.x -= sx + sw - (r.width - mx); need = true; }
+  if (sy < my + 60) { view.y += my + 60 - sy; need = true; } else if (sy + sh > r.height - my) { view.y -= sy + sh - (r.height - my); need = true; }
   if (need) { cv.style.transition = 'transform .5s cubic-bezier(.4,0,.2,1)'; apply(); setTimeout(() => cv.style.transition = '', 520); }
 }
 function centerOn(n) {
   const r = vp.getBoundingClientRect();
-  view.x = r.width / 2 - (n.x + OX + 112) * view.z;
+  view.x = r.width / 2 - (n.x + OX + 120) * view.z;
   view.y = r.height / 2 - (n.y + OY + 55) * view.z;
   cv.style.transition = 'transform .35s cubic-bezier(.4,0,.2,1)'; apply();
   setTimeout(() => cv.style.transition = '', 380);
@@ -626,21 +631,19 @@ vp.addEventListener('pointermove', e => {
 });
 ['pointerup', 'pointercancel'].forEach(ev => vp.addEventListener(ev, e => { pts.delete(e.pointerId); if (pts.size < 2) vp._pd = 0; }));
 
-/* ================= 7. 원문 ================= */
+/* ================= 8. 원문 ================= */
 const AVCOLOR = ['#2f7d63', '#4a6da8', '#8a5a86', '#a8703c', '#5f6b7a', '#3f7d8a'];
 function renderTranscript() {
   const w = $('#tr'); w.textContent = '';
-  const marked = new Set(NODES.map(n => n.turn && n.turn.i));
   TRANS.forEach((s, i) => {
     const d = el('div', 'seg'); d.id = 'seg' + i;
-    if (marked.has(i)) d.classList.add('node-of');
     const av = el('span', 'av', esc(s.s.slice(0, 1)));
     av.style.setProperty('--c', avatar[s.s] || '#5f6b7a');
     const body = el('div');
     body.append(el('div', 'seg-h', `<b>${esc(s.s)}</b><time>${mmss(s.t)}</time>`));
     s.l.forEach(line => body.append(el('p', null, esc(line))));
     d.append(av, body);
-    d.onclick = () => seek(s.t);
+    d.onclick = () => { seekTo(s.t, true); if (audioOK) au.play().catch(() => {}); };
     w.append(d);
   });
   applySearch();
@@ -664,12 +667,11 @@ function paint(d, seg, q) {
   seg.l.forEach((line, i) => { ps[i].innerHTML = q ? esc(line).split(esc(q)).join(`<mark>${esc(q)}</mark>`) : esc(line); });
 }
 
-/* ================= 8. 오디오 ================= */
-function seek(t) { seekTo(t); if (audioOK) au.play().catch(() => {}); }
-function seekTo(t) {
+/* ================= 9. 오디오 ================= */
+function seekTo(t, quiet) {
   t = Math.max(0, t);
   if (audioOK) au.currentTime = t;
-  mark(t, true);
+  mark(t, true, quiet);
 }
 $('#pp').onclick = () => { if (audioOK) au.paused ? au.play() : au.pause(); };
 au.onplay = () => $('#pp').textContent = '❚❚';
@@ -683,7 +685,7 @@ $('#bar').onclick = e => {
   seekTo((e.clientX - b.left) / b.width * (au.duration || 0));
 };
 au.ontimeupdate = () => mark(au.currentTime, false);
-function mark(t, force) {
+function mark(t, force, quiet) {
   const d = au.duration || (TRANS.length ? TRANS[TRANS.length - 1].t + 30 : 1);
   $('#fill').style.width = (t / d * 100) + '%';
   $('#cur').textContent = mmss(t);
@@ -695,19 +697,19 @@ function mark(t, force) {
   const now = document.getElementById('seg' + i);
   if (now) {
     now.classList.add('cur');
-    now.scrollIntoView({ block: 'center', behavior: force ? 'auto' : 'smooth' });
+    if (!quiet) now.scrollIntoView({ block: 'center', behavior: force ? 'auto' : 'smooth' });
     $('#now').textContent = `${TRANS[i].s} · ${TRANS[i].l[0] || ''}`;
   }
-  let hitNode = null;
+  let hit = null;
   NODES.forEach(n => {
-    const on = n.turn && n.turn.i === i;
-    n.dom.classList.toggle('playing', on);
-    if (on) hitNode = n;
+    const on = n.at && n.at.length === 2 && t >= n.at[0] && t < n.at[1];
+    n.dom.classList.toggle('playing', !!on);
+    if (on && !hit) hit = n;
   });
-  if (hitNode && hitNode.dom.classList.contains('in')) centerOn(hitNode);
+  if (hit && !quiet && hit !== selected && hit.dom.classList.contains('in')) centerOn(hit);
 }
 
-/* ================= 9. 파일 받기 ================= */
+/* ================= 10. 파일 받기 ================= */
 const drop = $('#drop');
 ['dragenter', 'dragover'].forEach(ev => addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
 addEventListener('dragleave', e => { if (!e.relatedTarget) drop.classList.remove('over'); });
@@ -715,52 +717,60 @@ addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'
 $('#pick').onclick = () => $('#fi').click();
 $('#newfile').onclick = () => document.body.classList.add('idle');
 $('#fi').onchange = e => take([...e.target.files]);
-$('#sample').onclick = async () => {
-  const j = await (await fetch('data/2026-06-15.transcript.json')).json();
-  start(j.segments, '예시 · NEWTON 통합 회의 2026.06.15', 'audio/2026-06-15.m4a');
-};
+$('#sample').onclick = () => load('data/2026-06-15.ibis.json');
+
+async function load(url) {
+  const map = await (await fetch(url)).json();
+  const segs = (await (await fetch(map.meeting.transcript)).json()).segments;
+  start(segs, map, map.meeting.title + ' · ' + map.meeting.date, map.meeting.audio);
+}
 
 async function take(files) {
   const txt = files.find(f => /\.(txt|json)$/i.test(f.name));
   const snd = files.find(f => /^audio\//.test(f.type) || /\.(m4a|mp3|wav|aac|ogg)$/i.test(f.name));
-  if (!txt) {
-    toast(snd ? '음성만으로는 내용을 읽지 못합니다 · 기록 txt를 함께 넣어주세요' : '.txt 기록 파일을 넣어주세요', 4200);
-    return;
-  }
-  const raw = await txt.text();
-  let segs;
+  const mapf = files.find(f => /\.ibis\.json$/i.test(f.name));
+  if (!txt) { toast(snd ? '음성만으로는 내용을 읽지 못합니다 · 전사 txt를 함께 넣어주세요' : '전사 .txt 파일을 넣어주세요', 4200); return; }
+
+  let segs, map = null;
   try {
+    const raw = await txt.text();
     segs = /\.json$/i.test(txt.name) ? (JSON.parse(raw).segments || JSON.parse(raw)) : parseTxt(raw);
   } catch { segs = null; }
   if (!segs || segs.length < 5) { toast('발언을 읽지 못했습니다 · “이름 00:00” 형식인지 확인해주세요', 4200); return; }
-  start(segs, txt.name, snd ? URL.createObjectURL(snd) : null);
+
+  if (mapf && mapf !== txt) { try { map = JSON.parse(await mapf.text()); } catch {} }
+  if (!map) {                                     /* 같은 이름의 정리 맵을 찾아본다 */
+    const base = txt.name.replace(/\.(txt|json)$/i, '').replace(/\.transcript$/i, '');
+    try { const r = await fetch(`data/${base}.ibis.json`); if (r.ok) map = await r.json(); } catch {}
+  }
+  start(segs, map, txt.name, snd ? URL.createObjectURL(snd) : null);
 }
 
-function start(segs, name, audioSrc) {
-  TRANS = segs; SEGN = segs.map(s => s.t); curSeg = -1;
+function start(segs, map, name, audioSrc) {
+  TRANS = segs; SEGN = segs.map(s => s.t); curSeg = -1; selected = null;
   avatar = {}; [...new Set(segs.map(s => s.s))].forEach((p, i) => avatar[p] = AVCOLOR[i % AVCOLOR.length]);
   $('#fname').textContent = name;
+  document.body.classList.remove('idle'); drop.classList.remove('over');
 
-  const g = build(segs);
-  if (!g.nodes.length) { toast('구조를 만들 만한 논의를 찾지 못했습니다', 3600); return; }
-  layout(g.nodes);
-  document.body.classList.remove('idle');
-  drop.classList.remove('over');
-  render(g);
+  if (map) { const g = build(map); layout(g); render(g); }
+  else { NODES = []; EDGES = []; FRAMES = []; REVEAL = []; render({ nodes: [], edges: [], frames: [] }); }
   renderTranscript();
 
   audioOK = false; document.body.classList.add('noaudio'); offsets();
-  if (audioSrc) {
-    au.src = audioSrc;
-    au.onerror = () => { audioOK = false; document.body.classList.add('noaudio'); offsets(); };
-  }
+  if (audioSrc) { au.src = audioSrc; au.onerror = () => { audioOK = false; document.body.classList.add('noaudio'); offsets(); }; }
+
   clearTimeout(timer); step = 0; paused = false; $('#pause').textContent = '❚❚ 일시정지';
+  if (!map) {
+    toast('이 회의의 정리 맵이 없어 원문만 표시합니다 · <b>.ibis.json</b>을 함께 넣어주세요', 6000);
+    if (innerWidth <= 900) showTab('src');
+    return;
+  }
   fit(true);
-  toast(`발언 ${segs.length}개에서 논의 구조를 찾았습니다 · 시간 순으로 펼칩니다`, 3000);
-  setTimeout(play, 700);
+  toast(`${map.headline}`, 4200);
+  setTimeout(play, 900);
 }
 
-/* ================= 10. 나머지 ================= */
+/* ================= 11. 나머지 ================= */
 (function resizer() {
   const h = $('#rzx'), root = document.documentElement.style;
   const saved = localStorage.getItem('mn.rail'); if (saved) root.setProperty('--rail', saved);
@@ -773,10 +783,11 @@ function start(segs, name, audioSrc) {
   });
   h.addEventListener('dblclick', () => { root.setProperty('--rail', '380px'); localStorage.removeItem('mn.rail'); });
 })();
-document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
-  document.body.classList.toggle('tab-src', b.dataset.tab === 'src');
-});
+function showTab(name) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  document.body.classList.toggle('tab-src', name === 'src');
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 function offsets() {
   document.documentElement.style.setProperty('--player',
     document.body.classList.contains('noaudio') ? '0px' : '56px');

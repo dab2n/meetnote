@@ -129,6 +129,30 @@ at은 그 주장이 오간 구간이다. 뒤 시각은 그 주장이 끝나고 �
 모든 출력은 한국어."""
 
 
+REVIEW = """너는 방금 만들어진 IBIS 정리 맵을 원문과 대조해 고친다.
+초안은 한 번 읽고 쓴 것이라 아래 다섯 가지에서 틀린다. 원문을 다시 훑으며 하나씩 확인해라.
+
+1. 결론 오탐 — 가장 자주 틀린다.
+   decision으로 적힌 것을 원문에서 찾아, 참석자들이 실제로 합의하고 넘어갔는지 확인해라.
+   말한 사람이 확신 없이 던졌거나("~하는 게 맞는 건지", "감이 안 와"),
+   상대가 "해봐야지", "고민해 볼게"로 받았거나, 아무도 답하지 않았으면 open이다.
+   조건·검증이 붙어 있으면 conditional이다. 반대로 명확히 합의했는데 open으로 적힌 것도 고쳐라.
+
+2. 섹션 — 잡담·안부·일정 확인만 있는 섹션은 지워라. 같은 주제가 두 섹션으로 쪼개져 있으면 합쳐라.
+   원문에서 실제로 길게 다퉜는데 빠진 쟁점이 있으면 섹션을 추가해라.
+
+3. parent — 각 노드가 실제로 무엇에 반응한 것인지 원문에서 확인해라.
+   시간이 가깝다는 이유로 엉뚱한 주장에 붙어 있으면 옮겨라.
+
+4. conflicts — 정말 하나를 고르면 다른 하나를 버려야 하는 쌍만 남겨라.
+   보완 관계이거나 단순히 순서가 다른 것은 지워라.
+
+5. 문구·화자·시각 — title이 발언을 그대로 옮긴 것이면 명사형으로 고쳐라.
+   who가 그 말을 한 사람이 맞는지, at 구간이 그 주장이 오간 곳이 맞는지 원문에서 확인해라.
+
+고칠 곳이 없으면 그대로 두어라. 지어내서 채우지 마라. 전체 맵을 같은 형식으로 다시 출력한다."""
+
+
 # ---------- 전사문 ----------
 
 HEAD = re.compile(r"^(\S{1,10})\s+((?:\d{1,2}:)?\d{1,2}:\d{2})\s*$")
@@ -168,23 +192,47 @@ def as_prompt(segs: list[dict]) -> str:
 
 # ---------- 생성 ----------
 
-def generate(segs: list[dict], hint: str = "") -> dict:
-    import anthropic
+def _key() -> str | None:
+    """환경변수가 없으면 데스크탑 설정(.meetnote.json)에서 찾는다."""
+    import os
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    conf = Path(__file__).parent / ".meetnote.json"
+    if conf.exists():
+        try:
+            return json.loads(conf.read_text()).get("api_key") or None
+        except Exception:
+            pass
+    return None
 
-    body = as_prompt(segs)
-    ask = (f"<meeting>{hint}</meeting>\n" if hint else "") + \
-          f"<transcript>\n{body}\n</transcript>\n\n" \
-          "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라."
-    with anthropic.Anthropic().messages.stream(
+
+def _ask(system: str, user: str) -> dict:
+    import anthropic
+    client = anthropic.Anthropic(api_key=_key()) if _key() else anthropic.Anthropic()
+    with client.messages.stream(
         model=MODEL,
         max_tokens=32000,
-        system=SYSTEM,
+        system=system,
         thinking={"type": "adaptive"},
         output_config={"effort": "high", "format": {"type": "json_schema", "schema": SCHEMA}},
-        messages=[{"role": "user", "content": ask}],
+        messages=[{"role": "user", "content": user}],
     ) as stream:
         msg = stream.get_final_message()
     return json.loads(next(b.text for b in msg.content if b.type == "text"))
+
+
+def generate(segs: list[dict], hint: str = "", review: bool = True, log=print) -> dict:
+    """초안 한 번, 원문 대조 한 번. 두 번째 패스에서 결론 오탐이 주로 잡힌다."""
+    body = as_prompt(segs)
+    head = (f"<meeting>{hint}</meeting>\n" if hint else "") + f"<transcript>\n{body}\n</transcript>\n\n"
+    log("  초안 만드는 중…")
+    draft = _ask(SYSTEM, head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.")
+    if not review:
+        return draft
+    log(f"  원문과 대조하는 중… (초안 논의 {len(draft.get('sections', []))}개)")
+    return _ask(SYSTEM + "\n\n" + REVIEW,
+                head + "<draft>\n" + json.dumps(draft, ensure_ascii=False) + "\n</draft>\n\n"
+                "위 초안을 원문과 대조해 고쳐라.")
 
 
 # ---------- 검증 ----------
@@ -271,7 +319,8 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
 
 # ---------- 쓰기 ----------
 
-def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "", hint: str = "") -> tuple[Path, list[str]]:
+def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "",
+          hint: str = "", review: bool = True, log=print) -> tuple[Path, list[str]]:
     """전사문 하나 -> <id>.transcript.json + <id>.ibis.json + index.json 갱신."""
     segs = parse(text)
     if len(segs) < 5:
@@ -280,7 +329,7 @@ def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "",
     (docs_data / f"{mid}.transcript.json").write_text(
         json.dumps({"segments": segs}, ensure_ascii=False), encoding="utf-8")
 
-    m, warn = verify(generate(segs, hint), segs, {"id": mid, "date": date, "audio": audio})
+    m, warn = verify(generate(segs, hint, review, log), segs, {"id": mid, "date": date, "audio": audio})
     out = docs_data / f"{mid}.ibis.json"
     out.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
     reindex(docs_data)
@@ -312,14 +361,17 @@ def main():
     ap.add_argument("--audio", default="", help="docs 기준 음성 경로 (예: audio/2026-06-15.m4a)")
     ap.add_argument("--hint", default="", help="프로젝트·참석자 등 한 줄 배경")
     ap.add_argument("--docs", type=Path, default=Path(__file__).parent / "docs/data")
+    ap.add_argument("--no-review", action="store_true", help="원문 대조 패스를 건너뛴다 (빠르고 싸지만 결론 오탐이 는다)")
     a = ap.parse_args()
 
     mid = a.id or re.sub(r"\.(transcript|txt|json)$", "", a.transcript.stem)
     try:
-        out, warn = write(a.transcript.read_text(errors="replace"), a.docs, mid, a.date, a.audio, a.hint)
+        out, warn = write(a.transcript.read_text(errors="replace"), a.docs, mid,
+                          a.date, a.audio, a.hint, review=not a.no_review)
     except Exception as e:
         if "authentication" in str(e).lower() or "api_key" in str(e).lower():
-            sys.exit("ANTHROPIC_API_KEY가 필요합니다. 키를 넣고 다시 실행하세요.\n"
+            sys.exit("ANTHROPIC_API_KEY가 필요합니다.\n"
+                     "환경변수로 넣거나, 패널의 ⚙︎에서 키를 저장하세요 (.meetnote.json).\n"
                      "(전사 JSON은 이미 저장돼 있습니다)")
         raise
     m = json.loads(out.read_text())

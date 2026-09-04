@@ -143,6 +143,18 @@
   <button id="add" class="glass"><span class="bulb">+</span>회의 파일 (mp3 · txt)</button>
   <button class="link" id="opennotes">🗂 회의록 열기</button>
   <button class="link" id="openrec">지난 회의 기록</button>
+  <button class="link" id="opencfg">⚙︎ API 키</button>
+</div>
+
+<div id="cfg" class="hidden">
+  <p class="kv">Anthropic API 키 <span id="keystate"></span></p>
+  <input id="apikey" type="password" placeholder="sk-ant-…" spellcheck="false" autocomplete="off">
+  <p class="hint">이 맥에만 저장됩니다(.meetnote.json). 전사는 온디바이스라 키가 필요 없고,
+    요약·회의 전개 정리에만 씁니다. console.anthropic.com 에서 발급합니다.</p>
+  <div class="two">
+    <button class="link" data-r="1">↩︎ 취소</button>
+    <button class="glass" id="savekey">저장</button>
+  </div>
 </div>
 
 <div id="recording" class="hidden">
@@ -205,9 +217,9 @@
 
 <script>
 const SERVER = "http://127.0.0.1:8787";
-const PANELS = ["idle", "recording", "ready", "dest", "working", "done", "records", "error"];
+const PANELS = ["idle", "recording", "ready", "dest", "working", "done", "records", "error", "cfg"];
 const BG = { recording:"rec", ready:"done", dest:"done", working:"done", done:"done",
-             records:"done", error:"done" };
+             records:"done", error:"done", cfg:"done" };
 const FILE = { word:"summary.docx", ppt:"summary.pptx", figjam:"diagram.mmd + summary.md" };
 const NAME = { word:"Word 문서", ppt:"PPT 슬라이드", figjam:"FigJam 도식" };
 const $ = (id) => document.getElementById(id);
@@ -336,6 +348,22 @@ $("fix").onclick = () => nat("settings");
 $("close").onclick = () => nat("close");
 $("go").onclick = go;
 $("opennotes").onclick = () => fetch(`${SERVER}/notes`, { method:"POST" });
+
+$("opencfg").onclick = async () => {
+  const c = await fetch(`${SERVER}/conf`).then((r) => r.json()).catch(() => ({}));
+  $("keystate").textContent = c.has_key ? "· 저장됨" : "· 없음";
+  $("apikey").value = "";
+  show("cfg");
+  nat("focus");
+  $("apikey").focus();
+  fit();
+};
+$("savekey").onclick = async () => {
+  const api_key = $("apikey").value.trim();
+  if (api_key) await fetch(`${SERVER}/conf`, { method:"POST", body: JSON.stringify({ api_key }) }).catch(()=>{});
+  show("idle");
+};
+$("apikey").onkeydown = (e) => { if (e.key === "Enter") $("savekey").click(); };
 $("openrec").onclick = $("openrec2").onclick = () => show("records");
 document.querySelectorAll("[data-t]").forEach((b) => (b.onclick = () => chooseTarget(b.dataset.t)));
 document.querySelectorAll("[data-back]").forEach((b) => (b.onclick = () => show("ready", cur)));

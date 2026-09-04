@@ -2,7 +2,7 @@
 
     python server.py        # http://127.0.0.1:8787
 """
-import json, subprocess, sys, threading, traceback
+import json, os, subprocess, sys, threading, traceback
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -20,6 +20,18 @@ MAX_BYTES = 500 * 1024 * 1024  # 익스텐션이 보낸다고 무한정 받아�
 
 
 TEXT_EXTS = {".txt", ".md"}
+
+
+def conf() -> dict:
+    """데스크탑 설정. 각자 자기 API 키를 여기에 저장한다."""
+    try:
+        return json.loads(CONF.read_text())
+    except Exception:
+        return {}
+
+
+if conf().get("api_key") and not os.environ.get("ANTHROPIC_API_KEY"):
+    os.environ["ANTHROPIC_API_KEY"] = conf()["api_key"]
 
 
 def staged(path: str):
@@ -74,7 +86,7 @@ def process(src: Path, target: str, board: str = ""):
         traceback.print_exc()
         msg = f"{type(e).__name__}: {e}"
         if "authentication" in msg.lower() or "api_key" in msg.lower():
-            msg = "요약하려면 ANTHROPIC_API_KEY가 필요합니다.\n키를 넣고 서버를 다시 켜세요.\n(전사문은 이미 저장돼 있습니다)"
+            msg = "요약하려면 Anthropic API 키가 필요합니다.\n패널의 ⚙︎에서 키를 넣어 주세요.\n(전사문은 이미 저장돼 있습니다)"
         JOBS.setdefault(key, {}).update(error=msg, done=True, stage="실패")
         print(f"[{key}] 실패. out/ 안의 중간 결과를 확인하세요.", flush=True)
 
@@ -92,8 +104,9 @@ def publish(key: str, src: Path, text: str):
                             "-c:a", "aac", "-b:a", "32k", "-ac", "1", "-ar", "22050",
                             "-movflags", "+faststart", str(dst)])
         audio = f"audio/{key}.m4a" if r.returncode == 0 else ""
-    out, warn = ibis.write(text, DOCS / "data", key,
-                           date=datetime.now().strftime("%Y.%m.%d"), audio=audio)
+    out, warn = ibis.write(text, DOCS / "data", key, audio=audio,
+                           date=datetime.now().strftime("%Y.%m.%d"),
+                           log=lambda m: report(key, "회의 전개 정리", 0.5, note=m.strip()))
     for w in warn:
         print(f"[{key}] ! {w}", flush=True)
     print(f"[{key}] 전개 정리 -> {out}", flush=True)
@@ -153,7 +166,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/records":
             return self._json(200, {"records": records()})
         if path == "/conf":
-            return self._json(200, json.loads(CONF.read_text()) if CONF.exists() else {})
+            c = dict(conf())
+            c["has_key"] = bool(c.pop("api_key", "") or os.environ.get("ANTHROPIC_API_KEY"))
+            return self._json(200, c)   # 키 자체는 패널로 돌려주지 않는다
         if path == "/" or path.startswith("/notes"):
             return self.serve_docs(path)
         if path == "/panel":  # 네이티브 고정 패널(pin)이 띄우는 UI
@@ -216,11 +231,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if u.path == "/local":
             return self.do_LOCAL()
-        if u.path == "/conf":     # 마지막에 쓴 FigJam 보드 URL 같은 것
+        if u.path == "/conf":     # FigJam 보드 URL, API 키 같은 설정
             size = int(self.headers.get("Content-Length") or 0)
-            CONF.write_text(json.dumps(json.loads(self.rfile.read(size) or b"{}"),
-                                       ensure_ascii=False))
-            return self._json(200, {"ok": True})
+            patch = json.loads(self.rfile.read(size) or b"{}")
+            c = conf() | {k: v for k, v in patch.items() if v != ""}
+            CONF.write_text(json.dumps(c, ensure_ascii=False))
+            CONF.chmod(0o600)                       # 키가 들어 있다
+            if c.get("api_key"):
+                os.environ["ANTHROPIC_API_KEY"] = c["api_key"]
+            return self._json(200, {"ok": True, "has_key": bool(c.get("api_key"))})
         if u.path == "/open":     # 기록에서 파일 열기
             size = int(self.headers.get("Content-Length") or 0)
             src = staged(json.loads(self.rfile.read(size) or b"{}").get("path", ""))

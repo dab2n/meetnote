@@ -1,0 +1,12 @@
+{
+  "meetings": [
+    {
+      "id": "2026-06-15",
+      "title": "NEWTON UX·ID·BX 통합 회의",
+      "date": "2026.06.15",
+      "duration": "82:50",
+      "sections": 15,
+      "map": "data/2026-06-15.ibis.json"
+    }
+  ]
+}

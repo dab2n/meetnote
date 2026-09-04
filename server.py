@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import ibis
 import meetnote
 
 PORT = 8787
@@ -30,7 +31,7 @@ def staged(path: str):
 # 진행 상황. 패널이 1초마다 긁어간다. 프로세스 하나뿐이라 dict면 충분하다.
 # ponytail: 재시작하면 날아간다. 이력이 필요하면 각 디렉터리에 job.json으로 떨구면 된다.
 JOBS = {}
-STAGES = [("전사", 0, 62), ("요약", 62, 90), ("문서 만들기", 90, 100)]
+STAGES = [("전사", 0, 55), ("요약", 55, 78), ("회의 전개 정리", 78, 92), ("문서 만들기", 92, 100)]
 
 
 def report(key, stage, frac=0.0, **extra):
@@ -59,6 +60,9 @@ def process(src: Path, target: str, board: str = ""):
         s = meetnote.summarize(text)
         report(key, "요약", 1, title=s.get("title", ""))
 
+        report(key, "회의 전개 정리", 0.1)
+        publish(key, src, text)
+
         report(key, "문서 만들기", 0.2)
         dest = meetnote.export(s, src.parent, target)
         JOBS[key].update(pct=100, stage="완료", done=True, dest=dest)
@@ -73,6 +77,26 @@ def process(src: Path, target: str, board: str = ""):
             msg = "요약하려면 ANTHROPIC_API_KEY가 필요합니다.\n키를 넣고 서버를 다시 켜세요.\n(전사문은 이미 저장돼 있습니다)"
         JOBS.setdefault(key, {}).update(error=msg, done=True, stage="실패")
         print(f"[{key}] 실패. out/ 안의 중간 결과를 확인하세요.", flush=True)
+
+
+def publish(key: str, src: Path, text: str):
+    """뷰어(docs/)에 이 회의를 올린다. 전사문에 시각이 없으면 건너뛴다."""
+    if len(ibis.parse(text)) < 5:
+        print(f"[{key}] 전개 정리 건너뜀 — 전사문에 ‘이름 00:00’ 시각이 없습니다", flush=True)
+        return
+    audio = ""
+    if src.suffix.lower() not in TEXT_EXTS:      # 뷰어가 스트리밍할 수 있는 크기로
+        dst = DOCS / "audio" / f"{key}.m4a"
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        r = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-i", str(src),
+                            "-c:a", "aac", "-b:a", "32k", "-ac", "1", "-ar", "22050",
+                            "-movflags", "+faststart", str(dst)])
+        audio = f"audio/{key}.m4a" if r.returncode == 0 else ""
+    out, warn = ibis.write(text, DOCS / "data", key,
+                           date=datetime.now().strftime("%Y.%m.%d"), audio=audio)
+    for w in warn:
+        print(f"[{key}] ! {w}", flush=True)
+    print(f"[{key}] 전개 정리 -> {out}", flush=True)
 
 
 def records(limit=12):

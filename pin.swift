@@ -455,10 +455,24 @@ func transcribeFile(_ src: URL, to dst: URL) async throws {
     let dur = max(1, Double(file.length) / file.fileFormat.sampleRate)
 
     let analyzer = SpeechAnalyzer(modules: [t])
+    // 뷰어가 음성·노드를 시각으로 잇기 때문에 전사문에 타임스탬프를 남긴다.
+    // 형식은 "화자 mm:ss" + 다음 줄부터 발언. (온디바이스 전사는 화자 분리를 하지 않는다)
     let collect = Task { () -> String in
         var out = ""
+        var last = -99.0
         for try await r in t.results where r.isFinal {
-            out += String(r.text.characters)
+            let piece = String(r.text.characters).trimmingCharacters(in: .whitespaces)
+            let at = CMTimeGetSeconds(r.range.start)
+            if piece.isEmpty == false {
+                if at - last >= 20 || out.isEmpty {
+                    let s = Int(at.rounded())
+                    out += String(format: "\n\n화자 %d:%02d\n", s / 60, s % 60)
+                    last = at
+                } else {
+                    out += " "
+                }
+                out += piece
+            }
             print("P \(min(0.99, CMTimeGetSeconds(r.range.end) / dur))")
             fflush(stdout)
         }

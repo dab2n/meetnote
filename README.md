@@ -145,9 +145,28 @@ launchctl load ~/Library/LaunchAgents/com.meetnote.pin.plist
 - **노드를 누르면** 그 주장이 실제로 나온 원문 구간이 왼쪽에서 주황색으로 하이라이트되고 그 시각의 음성으로 이동한다
 - 왼쪽 원문 패널은 손잡이를 끌어 너비 조절(더블클릭 초기화), 900px 아래에서는 하단 탭으로 바뀐다
 
-### 정리 맵(`docs/data/<id>.ibis.json`)
+### 정리 맵 만들기 (`ibis.py`)
 
-노드 문구는 발언 인용이 아니라 **명사형으로 정리한 문장**이다. 자동 요약이 아니라 원문을 읽고 작성한다.
+노드 문구는 발언 인용이 아니라 **명사형으로 정리한 문장**이다. 전사문을 Claude에 보내 IBIS 구조로
+받고, 그 뒤에 **검증**을 돌린다 — 모델이 준 시각을 실제 발언 시작점으로 스냅하고, 풀리지 않는
+부모·대립·수렴 참조는 버린다. 깨진 맵을 뷰어에 올리는 것보다 노드 몇 개가 빠지는 편이 낫다.
+
+```bash
+python ibis.py 전사문.txt --id 2026-06-15 --date 2026.06.15 --audio audio/2026-06-15.m4a
+#  docs/data/2026-06-15.ibis.json  ·  논의 15개
+#    1. [0:00–1:05] 회의 진행 순서  (decision)
+#    2. [1:05–7:32] 제품 중심 가치의 재정의  (decision)
+```
+
+`docs/data/<id>.transcript.json`과 `docs/data/index.json`(뷰어의 회의 목록)도 같이 갱신된다.
+`ANTHROPIC_API_KEY`가 필요하다. 패널로 녹음하면 `server.py`가 전사 → 요약 → **회의 전개 정리**
+순서로 돌려 새 회의를 뷰어에 바로 올린다.
+
+전사문은 **`이름 00:00` 형식이어야** 한다 (시각이 있어야 음성·노드·원문을 이을 수 있다).
+온디바이스 전사(`pin --transcribe`)는 화자 분리를 하지 않으므로 `화자 mm:ss`로 시각만 남긴다.
+시각이 없는 전사문은 원문만 열리고 노드는 뜨지 않는다.
+
+### 맵 형식(`docs/data/<id>.ibis.json`)
 
 ```jsonc
 { "meeting": { "title": "...", "audio": "audio/<id>.m4a", "transcript": "data/<id>.transcript.json" },
@@ -186,6 +205,7 @@ python meetnote.py x.mp3 --transcript out/transcript.txt   # 전사 재사용(�
 | | |
 |---|---|
 | `meetnote.py` | 전사 · 요약 · export (CLI 겸용) |
+| `ibis.py` | 전사문 → IBIS 정리 맵 생성 + 검증 (CLI 겸용) |
 | `server.py` | 익스텐션이 던진 오디오를 받아 파이프라인 실행 + 결과물 열기 |
 | `pin.swift` / `pin.sh` | 우상단 고정 항상-위 패널 + 녹음 (AppKit · ScreenCaptureKit · AVAudioEngine) |
 | `panel.html` | 그 패널이 띄우는 UI (`/panel`로 서빙) |

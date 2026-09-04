@@ -47,3 +47,50 @@ def test_staged_경로_가드():
         assert server.staged("") is None
     finally:
         real.unlink(); real.parent.rmdir()
+
+# ---------- ibis: 모델 출력 검증 (API 호출 없음) ----------
+import ibis
+
+T = "\n".join(f"{'김' if (i // 20) % 2 else '이'} {i//60}:{i%60:02d}\n{i}번째 발언입니다." for i in range(0, 300, 20))
+SEGS = ibis.parse(T)
+assert len(SEGS) == 15, len(SEGS)
+
+RAW = {
+    "title": "테스트 회의", "headline": "한 줄",
+    "sections": [
+        {"title": "쟁점 있는 주제", "part": "UX", "t": "0:00", "t1": "2:00", "nodes": [
+            {"id": "i", "kind": "issue", "parent": "", "title": "무엇을 정할 것인가",
+             "who": "이", "t": "0:07", "at": ["0:03", "1:00"], "note": "n"},
+            {"id": "p1", "kind": "position", "parent": "i", "title": "A안", "who": "김",
+             "t": "1:00", "at": ["1:00", "1:40"], "note": "n"},
+            {"id": "c1", "kind": "con", "parent": "없는id", "title": "A안 우려", "who": "이",
+             "t": "1:40", "at": ["1:40", "2:00"], "note": "n"},
+            {"id": "x", "kind": "몰라", "parent": "i", "title": "버려질 노드", "who": "김",
+             "t": "1:00", "at": ["1:00", "1:20"], "note": "n"},
+        ], "conflicts": [["p1", "없는id"], ["i", "p1"]],
+         "resolution": {"kind": "decision", "title": "A안으로", "who": "김", "t": "2:00",
+                        "at": ["2:00", "2:20"], "from": ["p1", "없는id"]}},
+        {"title": "쟁점 없는 주제", "part": "ID", "t": "3:00", "t1": "4:00", "nodes": [
+            {"id": "z", "kind": "position", "parent": "", "title": "고아", "who": "김",
+             "t": "3:00", "at": ["3:00", "3:20"], "note": "n"}], "conflicts": [],
+         "resolution": {"kind": "open", "title": "미정", "who": "김", "t": "3:20",
+                        "at": ["3:20", "4:00"], "from": []}},
+    ],
+    "carry": [],
+}
+
+m, warn = ibis.verify(RAW, SEGS, {"id": "t1", "date": "2026.06.15"})
+sec = m["sections"][0]
+starts = {s["t"] for s in SEGS}
+assert len(m["sections"]) == 1, "쟁점 없는 섹션은 버려야 한다"
+assert [n["id"] for n in sec["nodes"]] == ["i", "p1", "c1"], "알 수 없는 kind는 버려야 한다"
+assert sec["nodes"][2]["parent"] == "i", "없는 부모는 쟁점으로 되돌려야 한다"
+assert sec["conflicts"] == [["i", "p1"]], "풀리지 않는 대립은 버려야 한다"
+assert sec["resolution"]["from"] == ["p1"], "없는 id는 from에서 빼야 한다"
+assert sec["no"] == 1 and sec["t"] == "0:00"
+for n in sec["nodes"] + [sec["resolution"]]:
+    assert ibis.secs(n["t"]) in starts, f"{n['id']} 시각이 실제 발언에 스냅되지 않음"
+    a0, a1 = (ibis.secs(x) for x in n["at"])
+    assert a0 in starts and a1 > a0, f"{n['id']} 구간이 잘못됨"
+assert len(warn) >= 3, warn
+print("ibis 검증 OK ·", len(warn), "건 경고")

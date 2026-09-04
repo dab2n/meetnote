@@ -1,12 +1,16 @@
 {
   "manifest_version": 3,
   "name": "meetnote",
-  "version": "0.2.0",
-  "description": "툴바 아이콘을 누르면 화면에 고정되는 meetnote 패널을 띄운다",
+  "version": "0.3.0",
+  "description": "회의 중인 웹페이지 위에 뜨는 패널. 녹음하면서 논의의 큰 흐름을 노드로 그려 준다.",
+  "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["http://127.0.0.1:8787/*"],
   "background": { "service_worker": "background.js" },
+  "web_accessible_resources": [
+    { "resources": ["panel.css"], "matches": ["<all_urls>"] }
+  ],
   "action": {
-    "default_title": "meetnote 패널 띄우기",
+    "default_title": "meetnote 패널 (열기 · 닫기)",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

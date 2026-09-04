@@ -1,0 +1,63 @@
+/* 뷰어(docs/index.html)와 같은 언어. 단색 배경, 얇은 테두리, 상태는 색과 선으로만. */
+:host, * { box-sizing: border-box; margin: 0; padding: 0; }
+
+.mn {
+  position: fixed; right: 18px; bottom: 18px; z-index: 2147483647;
+  width: 320px; font: 400 13px/1.5 -apple-system, BlinkMacSystemFont, "Pretendard",
+    "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  color: #17181c; background: #fff; border: 1px solid #e3e3e6; border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(20, 22, 28, .16); overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+/* ---------- 접힌 상태의 막대 ---------- */
+.bar { display: flex; align-items: center; gap: 9px; padding: 11px 12px; cursor: grab; user-select: none; }
+.bar:active { cursor: grabbing; }
+.dot { width: 8px; height: 8px; border-radius: 99px; background: #c8c9ce; flex: 0 0 auto; }
+.rec .dot { background: #c53f2d; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .28; } }
+.tm { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.st { font-size: 11.5px; color: #8b8e96; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv { display: flex; align-items: flex-end; gap: 2px; height: 13px; margin-left: 1px; }
+.lv i { width: 2px; height: 2px; border-radius: 2px; background: #c53f2d; transition: height .1s linear; }
+.idle .lv { display: none; }
+.sp { flex: 1; }
+
+.go { height: 26px; padding: 0 11px; border-radius: 99px; font-size: 12px; font-weight: 700;
+  background: #17181c; color: #fff; }
+.rec .go { background: #fff; color: #c53f2d; border: 1px solid #f0cdc7; }
+.fold { width: 24px; height: 24px; border-radius: 7px; color: #8b8e96; font-size: 11px; }
+.fold:hover { background: #f2f2f4; color: #17181c; }
+
+/* ---------- 펼친 몸통 ---------- */
+.body { display: none; border-top: 1px solid #eeeef0; }
+.mn.open .body { display: block; }
+.head { display: flex; align-items: baseline; gap: 6px; padding: 10px 13px 4px; }
+.head b { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: #8b8e96; }
+.head span { margin-left: auto; font-size: 11px; color: #b0b3b9; }
+
+.flow { max-height: 274px; overflow: auto; padding: 4px 13px 10px; }
+.tp { position: relative; padding: 7px 0 7px 19px; cursor: default; }
+.tp:before { content: ""; position: absolute; left: 4px; top: 15px; width: 7px; height: 7px;
+  border-radius: 99px; background: #c8c9ce; }
+.tp:after { content: ""; position: absolute; left: 7px; top: 24px; bottom: -5px; width: 1px; background: #e6e6e9; }
+.tp:last-child:after { display: none; }
+.tp b { display: block; font-size: 13px; font-weight: 750; letter-spacing: -.01em; color: #42444b; }
+.tp i { display: block; margin-top: 2px; font-style: normal; font-size: 11px; color: #a0a3aa;
+  font-variant-numeric: tabular-nums; }
+.tp.now:before { background: #17181c; box-shadow: 0 0 0 3px rgba(23, 24, 28, .1); }
+.tp.now b { color: #17181c; font-weight: 800; }
+.empty { padding: 16px 4px 20px; font-size: 12px; color: #a0a3aa; }
+
+.live { margin: 0 13px 11px; padding: 9px 11px; border-radius: 11px; background: #f5f5f7;
+  font-size: 12px; line-height: 1.6; color: #6b6f78; min-height: 36px; }
+.live.on { color: #17181c; }
+.acts { display: flex; gap: 6px; padding: 0 13px 13px; }
+.acts button { flex: 1; height: 30px; border-radius: 9px; border: 1px solid #e3e3e6;
+  font-size: 11.5px; font-weight: 700; color: #42444b; }
+.acts button:hover { background: #f7f7f8; }
+.acts button.pri { background: #17181c; color: #fff; border-color: #17181c; }
+.acts button:disabled { opacity: .4; cursor: default; }
+.msg { padding: 0 13px 12px; font-size: 11.5px; line-height: 1.6; color: #a0a3aa; }
+.msg.warn { color: #c53f2d; }

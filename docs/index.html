@@ -78,7 +78,12 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .dc .vs span{padding-left:12px;position:relative;line-height:1.45}
 .dc .vs span:before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:2px;background:var(--blue)}
 .dc .vs span+span:before{background:var(--red)}
-.dc.k-fun .met{margin-top:6px;display:flex;gap:8px;font-size:11px;color:#7b5cd6;font-weight:700}
+.dc.k-fun .dk{display:flex;align-items:center;gap:6px}
+.dc.k-fun .rk{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border-radius:5px;
+  background:#7b5cd6;color:#fff;font-size:10px;font-weight:800;letter-spacing:0}
+.dc.k-fun .fq{margin-top:7px;padding-left:9px;border-left:2px solid #ded6f5;
+  font-size:12px;line-height:1.5;color:#6b6f78}
+.dc.k-fun.top{border-color:#c9bcf0;background:#faf8ff}
 .empty{padding:24px 12px;text-align:center;font-size:12px;color:var(--dim)}
 
 /* 원문 */
@@ -130,6 +135,7 @@ body.view-cards .stage{display:none}
 .e-raise{stroke:#b4b7bd}                            .l-raise{fill:#8b8e96}
 .e-pro{stroke:var(--green)}                         .l-pro{fill:var(--green)}
 .e-con{stroke:var(--red);stroke-dasharray:6 5}      .l-con{fill:var(--red)}
+.e-concern{stroke:#b8564a;stroke-dasharray:2 4}     .l-concern{fill:#b8564a}
 .e-condition{stroke:var(--amber);stroke-dasharray:3 4} .l-condition{fill:var(--amber)}
 .e-resolve{stroke:var(--gold);stroke-width:2px}     .l-resolve{fill:var(--gold)}
 .e-conflict{stroke:var(--red);stroke-width:2px;stroke-dasharray:7 5} .l-conflict{fill:var(--red)}
@@ -179,6 +185,8 @@ body.view-cards .stage{display:none}
 .node.pro .k{color:var(--green)}
 .node.con{border-color:var(--red);border-style:dashed}
 .node.con .k{color:var(--red)}
+.node.concern{border-color:#b8564a;border-style:dotted}
+.node.concern .k{color:#b8564a}
 .node.condition{border-color:var(--amber);border-style:dashed}
 .node.condition .k{color:var(--amber)}
 .node.open{width:252px;border-color:#b6b9bf;border-style:dotted;background:#f4f4f6}
@@ -221,6 +229,7 @@ body.view-cards .cards{display:block}
 .sc li.position:before{background:var(--blue)} .sc li.position>span{color:var(--blue)}
 .sc li.pro:before{background:var(--green)} .sc li.pro>span{color:var(--green)}
 .sc li.con:before{background:var(--red)} .sc li.con>span{color:var(--red)}
+.sc li.concern:before{background:#b8564a} .sc li.concern>span{color:#b8564a}
 .sc li.condition:before{background:var(--amber)} .sc li.condition>span{color:var(--amber)}
 .sc li.open:before{background:#9aa0a8} .sc li.open>span{color:#6f747c}
 .sc .cf{margin-top:9px;padding:8px 11px;border-radius:10px;border:1.5px dashed var(--red);
@@ -347,7 +356,8 @@ body.noaudio .player{display:none}
       <span><span class="sw" style="background:#17181c"></span><b>쟁점</b></span>
       <span><i style="border-color:#2f6bdd;border-top-width:3px"></i><b>주장</b></span>
       <span><i style="border-color:#1c7a4e"></i><b>근거·동의</b></span>
-      <span><i style="border-color:#c53f2d;border-top-style:dashed"></i><b>반론·우려</b></span>
+      <span><i style="border-color:#c53f2d;border-top-style:dashed"></i><b>반론</b></span>
+      <span><i style="border-color:#b8564a;border-top-style:dotted"></i><b>우려</b></span>
       <span><i style="border-color:#c07d22;border-top-style:dashed"></i><b>조건</b></span>
       <span><i style="border-color:#c53f2d;border-top-style:dashed"></i><b>↔ 대립</b></span>
       <span><span class="sw" style="background:#e2562a"></span><b>확정</b></span>
@@ -409,10 +419,12 @@ let TRANS = [], SEGN = [], NODES = [], EDGES = [], FRAMES = [], REVEAL = [], FUN
 let bounds = { x0: 0, y0: 0, w: 1, h: 1 };
 let view = { x: 0, y: 0, z: .8 }, curSeg = -1, curLine = null, audioOK = false, avatar = {}, selected = null;
 
-const KIND_KO = { issue: '쟁점', position: '주장', pro: '근거·동의', con: '반론·우려',
+const KIND_KO = { issue: '쟁점', position: '주장', pro: '근거·동의', con: '반론', concern: '우려',
   condition: '조건', open: '미결', decision: '결론 · 확정', conditional: '결론 · 조건부' };
-const EDGE_KO = { raise: '주장', pro: '근거', con: '반론', condition: '조건', resolve: '결론', conflict: '대립' };
-const EDGE_OF = { position: 'raise', pro: 'pro', con: 'con', condition: 'condition', open: 'condition', issue: 'raise' };
+const EDGE_KO = { raise: '주장', pro: '근거', con: '반론', concern: '우려', condition: '조건',
+  resolve: '결론', conflict: '대립' };
+const EDGE_OF = { position: 'raise', pro: 'pro', con: 'con', concern: 'concern',
+  condition: 'condition', open: 'condition', issue: 'raise' };
 
 /* ================= 1. 전사 파싱 ================= */
 const RE_HEAD = /^(\S{1,10})\s+((?:\d{1,2}:)?\d{1,2}:\d{2})\s*$/;
@@ -468,11 +480,77 @@ function funMoments(segs) {
     c.win.forEach(s => s.l.forEach(l => { LAUGH.lastIndex = 0; if (LAUGH.test(l) && l.length > 5) lines.push([l, s.s]); }));
     lines.sort((x, y) => x[0].length - y[0].length);
     const hit = lines[0] || [c.win[0].l[0] || '', c.win[0].s];
-    c.title = hit[0].length > 58 ? hit[0].slice(0, 57) + '…' : hit[0];
+    c.quote = hit[0].length > 58 ? hit[0].slice(0, 57) + '…' : hit[0];
+    c.title = '웃음과 반응이 몰린 순간';
     c.who = hit[1];
     out.push(c);
   });
   return out.sort((a, b) => a.t - b.t);
+}
+
+/* 음성이 있으면 실제로 얼마나 커지고 얼마나 오래 이어졌는지로 순위를 매긴다.
+   음성이 없는 배포에서는 웃음 표현이 몰린 정도로 대신한다. */
+let ENV = null;
+async function loudness(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const raw = await r.arrayBuffer();
+    if (raw.byteLength > 90e6) return null;
+    const ab = await new OfflineAudioContext(1, 1, 4000).decodeAudioData(raw);
+    const d = ab.getChannelData(0), sr = ab.sampleRate, n = Math.ceil(ab.duration);
+    const env = new Float32Array(n);
+    for (let s = 0; s < n; s++) {
+      let sum = 0, c = 0;
+      const a = Math.floor(s * sr), b = Math.min(Math.floor((s + 1) * sr), d.length);
+      for (let i = a; i < b; i += 4) { sum += d[i] * d[i]; c++; }
+      env[s] = Math.sqrt(sum / (c || 1));
+    }
+    return env;
+  } catch { return null; }
+}
+/* 음성이 없을 때의 대체 기준 — 그 구간에 웃음 표현과 짧은 반응이 얼마나 몰렸나 */
+function intensity(a, b) {
+  let laughs = 0, reacts = 0; const who = new Set();
+  TRANS.forEach(s => {
+    if (s.t < a || s.t > b) return;
+    const x = s.l.join(' ');
+    LAUGH.lastIndex = 0;
+    laughs += (x.match(LAUGH) || []).length;
+    if (x.length < 34 && AGREE.test(x.trim())) reacts++;
+    who.add(s.s);
+  });
+  return laughs * 3 + reacts * 2 + who.size * 1.6;
+}
+function rankFun() {
+  if (!FUN.length) return;
+  let base = 0;
+  if (ENV) {
+    const sorted = [...ENV].filter(v => v > 0).sort((a, b) => a - b);
+    base = sorted[Math.floor(sorted.length * .55)] || 1e-6;
+  }
+  FUN.forEach(f => {
+    if (ENV) {
+      const a = Math.max(0, Math.floor(f.t)), b = Math.min(ENV.length, Math.ceil(f.t1));
+      let peak = 0, run = 0, best = 0;
+      for (let i = a; i < b; i++) {
+        peak = Math.max(peak, ENV[i]);
+        if (ENV[i] > base * 1.45) { run++; best = Math.max(best, run); } else run = 0;
+      }
+      f.db = 20 * Math.log10((peak || 1e-6) / base);
+      f.loud = best;
+      f.score = f.db * 1.4 + best;
+    } else {
+      f.loud = 0;
+      f.score = intensity(f.t, f.t1);
+    }
+  });
+  [...FUN].sort((a, b) => b.score - a.score).forEach((f, i) => {
+    f.rank = i + 1;
+    f.basis = i ? '웃음이 터진 순간'
+      : ENV ? '가장 크게 웃은 순간' : '반응이 가장 몰린 순간';
+    f.meta = ENV ? `소리 +${f.db.toFixed(1)}dB · ${f.loud}초 이어짐` : '';
+  });
 }
 
 /* ================= 3. IBIS 맵 → 그래프 ================= */
@@ -523,12 +601,9 @@ function build(map) {
     order.forEach(n => reveal.push({ node: n }));
   });
 
-  for (let i = 1; i < frames.length; i++) {
-    const prev = frames[i - 1].nodes[frames[i - 1].nodes.length - 1];
-    const next = frames[i].nodes.find(n => n.kind === 'issue') || frames[i].nodes[0];
-    if (prev && next) edges.push({ a: prev, b: next, kind: 'flow' });
-  }
-  return { nodes, edges: edges.filter(e => e.a && e.b), frames, reveal };
+  /* 노드는 같은 논의 주제(섹션) 안에서만 잇는다. 섹션끼리는 선으로 잇지 않는다 —
+     서로 다른 쟁점의 노드를 연결하면 없는 인과가 있는 것처럼 읽힌다. */
+  return { nodes, edges: edges.filter(e => e.a && e.b && e.a.sec === e.b.sec), frames, reveal };
 }
 
 /* ================= 4. 섹션 배치 ================= */
@@ -559,7 +634,8 @@ function layout(g) {
 }
 
 /* ================= 5. 그리기 ================= */
-const ARROW = { raise: '#b4b7bd', pro: '#1c7a4e', con: '#c53f2d', condition: '#c07d22', resolve: '#e2562a', conflict: '#c53f2d', flow: '#c2c4c9' };
+const ARROW = { raise: '#b4b7bd', pro: '#1c7a4e', con: '#c53f2d', concern: '#b8564a',
+  condition: '#c07d22', resolve: '#e2562a', conflict: '#c53f2d', flow: '#c2c4c9' };
 const RESDOT = { decision: '#e2562a', conditional: '#e8873f', open: '#9aa0a8' };
 function defs() {
   const d = svgEl('defs');
@@ -690,7 +766,7 @@ const GROUPS = [
 ];
 let group = 'decision';
 function digestItems(g) {
-  if (g === 'fun') return FUN;
+  if (g === 'fun') return [...FUN].sort((a, b) => a.rank - b.rank);
   if (g === 'conflict') {
     const out = [];
     (MAP ? MAP.sections : []).forEach(s => (s.conflictPairs || []).forEach(p => out.push({ sec: s, pair: p })));
@@ -712,10 +788,11 @@ function renderDigest() {
 
   if (group === 'fun') {
     items.forEach(f => {
-      const d = el('div', 'dc k-fun',
-        `<div class="dk">웃음 · 반응이 몰린 순간</div><h5>${esc(f.title)}</h5>`
-        + `<div class="met"><span>😄 ${f.laughs}</span><span>👥 ${f.people}명</span><span>💬 반응 ${f.reacts}</span></div>`
-        + `<div class="dm">${esc(f.who || '')} · ${mmss(f.t)}–${mmss(f.t1)}</div>`);
+      const d = el('div', 'dc k-fun' + (f.rank === 1 ? ' top' : ''),
+        `<div class="dk"><span class="rk">${f.rank}</span>${esc(f.basis)}</div>`
+        + `<h5>${esc(f.title)}</h5>`
+        + (f.quote ? `<div class="fq">“${esc(f.quote)}”</div>` : '')
+        + `<div class="dm">${mmss(f.t)}–${mmss(f.t1)}${f.meta ? ' · ' + esc(f.meta) : ''}</div>`);
       d.onclick = () => highlightRange(f.t, f.t1, true);
       w.append(d);
     });
@@ -1044,14 +1121,27 @@ function start(segs, map, name, audioSrc) {
   avatar = {}; [...new Set(segs.map(s => s.s))].forEach((p, i) => avatar[p] = AVCOLOR[i % AVCOLOR.length]);
   $('#fname').textContent = name;
   document.body.classList.remove('idle'); drop.classList.remove('over');
-  lineTimes(); FUN = funMoments(segs);
+  lineTimes();
+  FUN = (map && map.highlights || []).length
+    ? map.highlights.map(h => ({ title: h.title, quote: h.quote, t: secs(h.t), t1: secs(h.t1) }))
+    : funMoments(segs);
+  ENV = null; rankFun();
 
   if (map) { const g = build(map); layout(g); render(g); }
   else { NODES = []; EDGES = []; FRAMES = []; REVEAL = []; render({ nodes: [], edges: [], frames: [] }); }
   renderTranscript(); renderCards(); group = 'decision'; renderDigest(); marks();
 
   audioOK = false; document.body.classList.add('noaudio'); offsets();
-  if (audioSrc) { au.src = audioSrc; au.onerror = () => { audioOK = false; document.body.classList.add('noaudio'); offsets(); }; }
+  if (audioSrc) {
+    au.src = audioSrc;
+    au.onerror = () => { audioOK = false; document.body.classList.add('noaudio'); offsets(); };
+    loudness(audioSrc).then(env => {                 /* 화면을 막지 않게 뒤에서 */
+      if (!env) return;
+      ENV = env; rankFun();
+      if (group === 'fun') renderDigest();
+      marks();
+    });
+  }
 
   clearTimeout(timer); step = 0; paused = false; $('#pause').textContent = '❚❚ 일시정지';
   if (!map) {

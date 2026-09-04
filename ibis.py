@@ -8,7 +8,7 @@ import json, re, sys
 from pathlib import Path
 
 MODEL = "claude-opus-5"
-KINDS = ["issue", "position", "pro", "con", "condition", "open"]
+KINDS = ["issue", "position", "pro", "con", "concern", "condition", "open"]
 RES_KINDS = ["decision", "conditional", "open"]
 
 NODE = {
@@ -69,6 +69,21 @@ SCHEMA = {
                 "additionalProperties": False,
             },
         },
+        "highlights": {
+            "type": "array",
+            "description": "웃음·감탄이 터진 순간. 3~6개. 없으면 빈 배열.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string",
+                              "description": "무슨 말이 나와서 웃었는지 상황으로 쓴 한 줄. 반드시 '~한 순간'으로 끝낸다. 사람 이름은 쓰지 않는다."},
+                    "quote": {"type": "string", "description": "그 순간 실제로 나온 짧은 문장 하나"},
+                    "t": {"type": "string"}, "t1": {"type": "string"},
+                },
+                "required": ["title", "quote", "t", "t1"],
+                "additionalProperties": False,
+            },
+        },
         "carry": {
             "type": "array",
             "description": "결론이 안 난 채 다음 회의로 넘어가는 쟁점",
@@ -82,7 +97,7 @@ SCHEMA = {
             },
         },
     },
-    "required": ["title", "headline", "sections", "carry"],
+    "required": ["title", "headline", "sections", "highlights", "carry"],
     "additionalProperties": False,
 }
 
@@ -92,14 +107,21 @@ SYSTEM = """너는 회의 기록을 IBIS(Issue-Based Information System) 구조�
 ## 구조
 - section = 하나의 메인 논의 주제. 8~16개. 잡담·일정 확인·인사·안부는 섹션으로 만들지 않는다.
   주제가 뒤에서 다시 돌아왔으면 하나의 섹션으로 합치고 t~t1을 그 범위로 잡는다.
-- 섹션 안의 노드는 정확히 이 다섯 가지다.
+- 섹션 안의 노드는 이 일곱 가지다.
   - issue    : 그 주제에서 답해야 했던 물음. 섹션마다 반드시 하나. parent는 빈 문자열.
   - position : 그 물음에 대한 답, 즉 주장·제안·방향. parent는 issue.
   - pro      : 어떤 주장을 뒷받침하는 근거나 동의. parent는 그 주장.
-  - con      : 어떤 주장에 대한 반론·우려·걸림돌. parent는 그 주장(또는 issue 자체에 대한 외부 반문).
+  - con      : 그 주장을 그대로 받아들일 수 없다는 반대. 채택되면 주장이 바뀌거나 철회된다.
+  - concern  : 반대까지는 아니지만 걸리는 점·부담·불확실성. 주장은 살아 있다.
   - condition: 그 주장이 성립하려면 충족돼야 하는 조건. parent는 그 주장.
   - open     : 그 주장 안에서 정하지 못하고 남은 것. parent는 그 주장.
+- **con과 concern을 맥락으로 갈라라.** "그건 안 된다 / 그러면 못 쓴다"는 con,
+  "그렇게 하면 ~가 늘어나서 걱정이다 / ~가 될지 모르겠다"는 concern이다.
+  둘을 뭉뚱그리면 카드만 보고는 무엇이 무너졌는지 알 수 없다.
 - parent는 반드시 그 노드가 실제로 반응한 대상이다. 시간 순서만 보고 아무 데나 붙이지 않는다.
+- **연결은 같은 섹션 안에서만 만든다.** 다른 쟁점의 노드끼리는 잇지 않는다.
+  섹션이 다르면 논의가 다른 것이고, 이어 붙이면 없는 인과가 있는 것처럼 읽힌다.
+  같은 섹션 안에서도 실제로 그 말에 반응한 것이 아니면 붙이지 않는다.
 - 섹션당 노드 4~9개. 모든 발언을 노드로 만들지 않는다. 논의를 움직인 것만 남긴다.
 
 ## conflicts
@@ -114,13 +136,31 @@ SYSTEM = """너는 회의 기록을 IBIS(Issue-Based Information System) 구조�
 그 자리에서 아무도 답하지 않은 질문도 open이다. 결론을 만들어내려고 애쓰지 마라.
 from에는 그 결론으로 수렴한 노드 id만 넣는다.
 
-## 문구
-- title은 전부 명사형으로 정리한 문장이다. 발언을 그대로 옮기지 않는다.
+## 문구 — 카드만 읽고도 무슨 말인지 알 수 있어야 한다
+title은 발언을 그대로 옮기지 않고, 종류에 맞는 **서술형 한 문장**으로 정리한다. 명사 나열 금지.
+  - issue    : "…를 어떻게 할 것인가", "…인가, …인가" 형태의 물음
+  - position : "~한다" / "~하자" — 무엇을 하겠다는 문장
+  - pro      : "…라서 …하다" — 왜 그 주장이 받쳐지는지
+  - con      : "…면 …할 수 없다" — 왜 그대로는 안 되는지
+  - concern  : "…가 걸린다" / "…가 우려된다" — 무엇이 마음에 걸리는지
+  - condition: "…해야 …할 수 있다" — 무엇이 충족돼야 하는지
+  - open     : "…는 정하지 못했다" — 무엇이 남았는지
+  - resolution: "~하기로 한다" / "~는 정하지 못했다"
+  나쁨: "팀플레이용 타인 감지에 따른 센서 증가"
+  좋음: "팀플레이용 타인 감지를 넣으면 센서가 늘어나는 점이 걸린다"
   나쁨: "차라리 그때는 이어폰으로만 하는 게 맞는 건지"
-  좋음: "스킬 발동의 프로젝션 표현 미정"
+  좋음: "발동 순간을 지면에 어떻게 그릴지는 정하지 못했다"
 - note는 그렇게 말한 근거를 한 문장으로 쓴다. 원문을 다시 붙여넣지 않는다.
 - 전사문에 없는 내용은 만들지 않는다. 전사가 뭉개진 부분은 노드로 만들지 않는다.
 - who는 전사문에 나온 화자 이름 그대로.
+
+## highlights
+웃음·감탄이 터진 대목을 3~6개 고른다. 여러 사람이 짧게 겹쳐 말하거나 "웃기다·미쳤다·대박" 같은
+반응이 몰린 곳이다. 안건과 무관한 잡담이어도 상관없다.
+title은 무슨 말이 나와서 웃었는지를 상황으로 쓰고 반드시 "~한 순간"으로 끝낸다. 사람 이름은 쓰지 않는다.
+  나쁨: "나 또라이인 줄 알았어"
+  좋음: "발표 첫 장에 무서운 팀 사진을 박자는 말이 나온 순간"
+quote는 그 순간 실제로 나온 짧은 문장 하나를 그대로 옮긴다.
 
 ## 시각
 t와 at은 전사문에 실제로 찍힌 타임스탬프에서 고른다. 지어내지 않는다.
@@ -131,6 +171,10 @@ at은 그 주장이 오간 구간이다. 뒤 시각은 그 주장이 끝나고 �
 
 REVIEW = """너는 방금 만들어진 IBIS 정리 맵을 원문과 대조해 고친다.
 초안은 한 번 읽고 쓴 것이라 아래 다섯 가지에서 틀린다. 원문을 다시 훑으며 하나씩 확인해라.
+
+0. 종류와 문구.
+   con으로 적힌 것이 정말 "그대로는 못 쓴다"는 반대인지, 아니면 걸리는 점을 말한 concern인지 원문에서 확인해라.
+   title이 명사 나열이면 그 종류에 맞는 서술형 문장으로 고쳐라 (주장은 "~한다", 우려는 "~가 걸린다").
 
 1. 결론 오탐 — 가장 자주 틀린다.
    decision으로 적힌 것을 원문에서 찾아, 참석자들이 실제로 합의하고 넘어갔는지 확인해라.
@@ -143,6 +187,7 @@ REVIEW = """너는 방금 만들어진 IBIS 정리 맵을 원문과 대조해 �
 
 3. parent — 각 노드가 실제로 무엇에 반응한 것인지 원문에서 확인해라.
    시간이 가깝다는 이유로 엉뚱한 주장에 붙어 있으면 옮겨라.
+   다른 섹션의 노드를 가리키고 있으면 그 노드를 옳은 섹션으로 옮기거나 지워라.
 
 4. conflicts — 정말 하나를 고르면 다른 하나를 버려야 하는 쌍만 남겨라.
    보완 관계이거나 단순히 순서가 다른 것은 지워라.
@@ -313,6 +358,7 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
                     "transcript": f"data/{meta['id']}.transcript.json"},
         "headline": raw.get("headline", ""),
         "sections": sections,
+        "highlights": [h for h in raw.get("highlights", []) if h.get("title") and h.get("quote")],
         "carry": raw.get("carry", []),
     }, warn
 

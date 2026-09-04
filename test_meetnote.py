@@ -94,3 +94,21 @@ for n in sec["nodes"] + [sec["resolution"]]:
     assert a0 in starts and a1 > a0, f"{n['id']} 구간이 잘못됨"
 assert len(warn) >= 3, warn
 print("ibis 검증 OK ·", len(warn), "건 경고")
+
+# ---------- 표준(SPEC.md) 검사기 ----------
+import json, pathlib
+REF = pathlib.Path(__file__).parent / "docs/data/2026-06-15.ibis.json"
+if REF.exists():
+    ref = json.loads(REF.read_text())
+    rsegs = json.loads((REF.parent / "2026-06-15.transcript.json").read_text())["segments"]
+    assert ibis.audit(ref, rsegs) == [], "표본(NEWTON)이 표준을 통과해야 한다"
+
+    bad = json.loads(json.dumps(ref))
+    bad["sections"][0]["nodes"][1]["title"] = "타인 감지에 따른 센서 증가"     # 명사 나열
+    bad["highlights"][0]["title"] = "웃긴 말이 나왔다"                          # ~순간 아님
+    bad["sections"][1]["conflicts"] = [[n["id"] for n in bad["sections"][1]["nodes"][:2]]]
+    got = ibis.audit(bad, rsegs)
+    assert any("‘~한다 / ~하자’" in x for x in got), got
+    assert any("순간" in x for x in got), got
+    assert any("대립" in x for x in got), got
+    print("표준 검사기 OK · 표본 통과, 심어둔 위반", len(got), "건 검출")

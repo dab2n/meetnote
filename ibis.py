@@ -101,117 +101,38 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
+SPEC = (Path(__file__).parent / "SPEC.md").read_text(encoding="utf-8")
+
 SYSTEM = """너는 회의 기록을 IBIS(Issue-Based Information System) 구조로 정리한다.
 전사문을 읽고, 무엇이 쟁점이었고 누가 어떤 주장을 했고 무엇이 부딪혔고 어떻게 닫혔는지를 그린다.
 
-## 구조
-- section = 하나의 메인 논의 주제. 8~16개. 잡담·일정 확인·인사·안부는 섹션으로 만들지 않는다.
-  주제가 뒤에서 다시 돌아왔으면 하나의 섹션으로 합치고 t~t1을 그 범위로 잡는다.
-- 섹션 안의 노드는 이 일곱 가지다.
-  - issue    : 그 주제에서 답해야 했던 물음. 섹션마다 반드시 하나. parent는 빈 문자열.
-  - position : 그 물음에 대한 답, 즉 주장·제안·방향. parent는 issue.
-  - pro      : 어떤 주장을 뒷받침하는 근거나 동의. parent는 그 주장.
-  - con      : 그 주장을 그대로 받아들일 수 없다는 반대. 채택되면 주장이 바뀌거나 철회된다.
-  - concern  : 반대까지는 아니지만 걸리는 점·부담·불확실성. 주장은 살아 있다.
-  - condition: 그 주장이 성립하려면 충족돼야 하는 조건. parent는 그 주장.
-  - open     : 그 주장 안에서 정하지 못하고 남은 것. parent는 그 주장.
-- **con과 concern을 맥락으로 갈라라.** "그건 안 된다 / 그러면 못 쓴다"는 con,
-  "그렇게 하면 ~가 늘어나서 걱정이다 / ~가 될지 모르겠다"는 concern이다.
-  둘을 뭉뚱그리면 카드만 보고는 무엇이 무너졌는지 알 수 없다.
-- parent는 반드시 그 노드가 실제로 반응한 대상이다. 시간 순서만 보고 아무 데나 붙이지 않는다.
-- **연결은 같은 섹션 안에서만 만든다.** 다른 쟁점의 노드끼리는 잇지 않는다.
-  섹션이 다르면 논의가 다른 것이고, 이어 붙이면 없는 인과가 있는 것처럼 읽힌다.
-  같은 섹션 안에서도 실제로 그 말에 반응한 것이 아니면 붙이지 않는다.
-- 섹션당 노드 4~9개. 모든 발언을 노드로 만들지 않는다. 논의를 움직인 것만 남긴다.
+아래 표준을 그대로 지킨다. 이 표준은 기계로 검사되고, 어긴 항목은 되돌아온다.
 
-## conflicts — 아주 좁게 잡는다. 대부분의 회의에는 하나도 없다.
-**서로 다른 사람이** 반대되는 입장을 들고 **동시에 버텼을 때만** 대립이다.
-세 가지를 모두 만족해야 한다.
-  1. 말한 사람이 서로 다르다 (한 사람이 두 안을 놓고 고민한 것은 대립이 아니다)
-  2. 두 입장이 양립할 수 없다 (하나를 고르면 다른 하나를 버려야 한다)
-  3. 그 자리에서 바로 접히지 않고 서로 근거를 대며 버텼다
-
-대립이 **아닌** 것들 — 이쪽이 훨씬 흔하다.
-  - 대안이 여럿 나왔지만 고르지 못하고 넘어간 경우 → conflicts가 아니라 resolution을 open으로
-  - 누가 제안했는데 나머지가 바로 동의한 경우 → 그냥 주장과 근거다
-  - 제안한 사람이 스스로 철회한 경우 → 주장과 그 주장에 붙은 con이다
-  - 기존 방향을 새 방향으로 갈아탄 경우 → 갈아타는 데 이견이 없었다면 대립이 아니다
-  - 우려·조건이 붙은 경우 → concern·condition이지 대립이 아니다
-  - 외부(자문·인터뷰)에서 나온 반문을 그 자리에서 답한 경우 → issue에 붙은 con이다
-
-애매하면 넣지 마라. 대립이 없는 섹션은 빈 배열로 둔다. 억지로 만든 대립 하나가
-정말 갈렸던 대목을 덮는다.
-
-## resolution — 여기서 가장 많이 틀린다
-- decision   : 참석자들이 실제로 합의하고 넘어갔을 때만. "그렇게 가자", "무조건 넣어야 돼", 상대가 동의로 받은 경우.
-- conditional: 방향은 유지하되 조건·검증이 붙은 경우.
-- open       : 정하지 못하고 넘어간 경우.
-확신 없이 던진 말과 "해봐야지", "감이 안 와", "고민해 볼게" 로 넘어간 것은 결론이 아니라 open이다.
-그 자리에서 아무도 답하지 않은 질문도 open이다. 결론을 만들어내려고 애쓰지 마라.
-from에는 그 결론으로 수렴한 노드 id만 넣는다.
-
-## 문구 — 카드만 읽고도 무슨 말인지 알 수 있어야 한다
-title은 발언을 그대로 옮기지 않고, 종류에 맞는 **서술형 한 문장**으로 정리한다. 명사 나열 금지.
-  - issue    : "…를 어떻게 할 것인가", "…인가, …인가" 형태의 물음
-  - position : "~한다" / "~하자" — 무엇을 하겠다는 문장
-  - pro      : "…라서 …하다" — 왜 그 주장이 받쳐지는지
-  - con      : "…면 …할 수 없다" — 왜 그대로는 안 되는지
-  - concern  : "…가 걸린다" / "…가 우려된다" — 무엇이 마음에 걸리는지
-  - condition: "…해야 …할 수 있다" — 무엇이 충족돼야 하는지
-  - open     : "…는 정하지 못했다" — 무엇이 남았는지
-  - resolution: "~하기로 한다" / "~는 정하지 못했다"
-  나쁨: "팀플레이용 타인 감지에 따른 센서 증가"
-  좋음: "팀플레이용 타인 감지를 넣으면 센서가 늘어나는 점이 걸린다"
-  나쁨: "차라리 그때는 이어폰으로만 하는 게 맞는 건지"
-  좋음: "발동 순간을 지면에 어떻게 그릴지는 정하지 못했다"
-- note는 그렇게 말한 근거를 한 문장으로 쓴다. 원문을 다시 붙여넣지 않는다.
-- 전사문에 없는 내용은 만들지 않는다. 전사가 뭉개진 부분은 노드로 만들지 않는다.
-- who는 전사문에 나온 화자 이름 그대로.
-
-## highlights
-웃음·감탄이 터진 대목을 3~6개 고른다. 여러 사람이 짧게 겹쳐 말하거나 "웃기다·미쳤다·대박" 같은
-반응이 몰린 곳이다. 안건과 무관한 잡담이어도 상관없다.
-title은 무슨 말이 나와서 웃었는지를 상황으로 쓰고 반드시 "~한 순간"으로 끝낸다. 사람 이름은 쓰지 않는다.
-  나쁨: "나 또라이인 줄 알았어"
-  좋음: "발표 첫 장에 무서운 팀 사진을 박자는 말이 나온 순간"
-quote는 그 순간 실제로 나온 짧은 문장 하나를 그대로 옮긴다.
-
-## 시각
-t와 at은 전사문에 실제로 찍힌 타임스탬프에서 고른다. 지어내지 않는다.
-at은 그 주장이 오간 구간이다. 뒤 시각은 그 주장이 끝나고 다음 이야기로 넘어간 지점.
+""" + SPEC + """
 
 모든 출력은 한국어."""
 
-
 REVIEW = """너는 방금 만들어진 IBIS 정리 맵을 원문과 대조해 고친다.
-초안은 한 번 읽고 쓴 것이라 아래 다섯 가지에서 틀린다. 원문을 다시 훑으며 하나씩 확인해라.
+초안은 한 번 읽고 쓴 것이라 아래에서 틀린다. 원문을 다시 훑으며 하나씩 확인해라.
 
-0. 종류와 문구.
-   con으로 적힌 것이 정말 "그대로는 못 쓴다"는 반대인지, 아니면 걸리는 점을 말한 concern인지 원문에서 확인해라.
-   title이 명사 나열이면 그 종류에 맞는 서술형 문장으로 고쳐라 (주장은 "~한다", 우려는 "~가 걸린다").
-
-1. 결론 오탐 — 가장 자주 틀린다.
-   decision으로 적힌 것을 원문에서 찾아, 참석자들이 실제로 합의하고 넘어갔는지 확인해라.
-   말한 사람이 확신 없이 던졌거나("~하는 게 맞는 건지", "감이 안 와"),
-   상대가 "해봐야지", "고민해 볼게"로 받았거나, 아무도 답하지 않았으면 open이다.
-   조건·검증이 붙어 있으면 conditional이다. 반대로 명확히 합의했는데 open으로 적힌 것도 고쳐라.
-
-2. 섹션 — 잡담·안부·일정 확인만 있는 섹션은 지워라. 같은 주제가 두 섹션으로 쪼개져 있으면 합쳐라.
-   원문에서 실제로 길게 다퉜는데 빠진 쟁점이 있으면 섹션을 추가해라.
-
-3. parent — 각 노드가 실제로 무엇에 반응한 것인지 원문에서 확인해라.
-   시간이 가깝다는 이유로 엉뚱한 주장에 붙어 있으면 옮겨라.
-   다른 섹션의 노드를 가리키고 있으면 그 노드를 옳은 섹션으로 옮기거나 지워라.
-
-4. conflicts — 남아 있는 쌍마다 원문에서 세 가지를 확인해라.
-   말한 사람이 서로 다른가, 양립이 불가능한가, 그 자리에서 바로 접히지 않고 버텼는가.
-   하나라도 아니면 지워라. 대안만 여럿 나오고 못 골랐던 것이면 지우고 resolution을 open으로 내려라.
-   대립이 하나도 남지 않는 것이 정상이다. 채워 넣지 마라.
-
-5. 문구·화자·시각 — title이 발언을 그대로 옮긴 것이면 명사형으로 고쳐라.
-   who가 그 말을 한 사람이 맞는지, at 구간이 그 주장이 오간 곳이 맞는지 원문에서 확인해라.
+0. 종류와 문구. con으로 적힌 것이 정말 "그대로는 못 쓴다"는 반대인지, 걸리는 점을 말한 concern인지 확인해라.
+   title이 명사 나열이거나 발언 인용이면 표준 2절의 형태로 고쳐라.
+1. 결론 오탐 — 가장 자주 틀린다. decision으로 적힌 것을 원문에서 찾아 실제로 합의하고 넘어갔는지 확인해라.
+   "해봐야지 / 감이 안 와"로 넘어갔거나 아무도 답하지 않았으면 open이다. 조건이 붙었으면 conditional이다.
+2. 섹션 — 잡담만 있는 섹션은 지워라. 같은 주제가 쪼개져 있으면 합쳐라. 길게 다퉜는데 빠진 쟁점이 있으면 추가해라.
+3. parent — 각 노드가 실제로 무엇에 반응한 것인지 확인해라. 다른 섹션을 가리키면 옮기거나 지워라.
+4. conflicts — 표준 4절의 세 조건을 원문에서 확인해라. 하나라도 아니면 지워라.
+   대안만 여럿 나오고 못 골랐으면 지우고 resolution을 open으로 내려라. 하나도 안 남는 것이 정상이다.
+5. who·at — 그 말을 한 사람이 맞는지, 구간이 맞는지 원문에서 확인해라.
 
 고칠 곳이 없으면 그대로 두어라. 지어내서 채우지 마라. 전체 맵을 같은 형식으로 다시 출력한다."""
+
+REPAIR = """방금 만든 맵이 표준 검사에서 아래 항목을 어겼다.
+**어긴 항목만** 고치고 나머지는 그대로 둔다. 고칠 때도 원문에 없는 내용을 만들지 않는다.
+전체 맵을 같은 형식으로 다시 출력한다.
+
+위반 목록:
+"""
 
 
 # ---------- 전사문 ----------
@@ -291,18 +212,28 @@ def _ask(system: str, user: str) -> dict:
     return json.loads(next(b.text for b in msg.content if b.type == "text"))
 
 
-def generate(segs: list[dict], hint: str = "", review: bool = True, log=print) -> dict:
-    """초안 한 번, 원문 대조 한 번. 두 번째 패스에서 결론 오탐이 주로 잡힌다."""
+def generate(segs: list[dict], hint: str = "", review: bool = True, log=print, tries: int = 2) -> dict:
+    """초안 → 원문 대조 → 표준 검사 → 어긴 항목만 수리. 검사를 통과할 때까지 최대 tries번."""
     body = as_prompt(segs)
     head = (f"<meeting>{hint}</meeting>\n" if hint else "") + f"<transcript>\n{body}\n</transcript>\n\n"
     log("  초안 만드는 중…")
-    draft = _ask(SYSTEM, head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.")
-    if not review:
-        return draft
-    log(f"  원문과 대조하는 중… (초안 논의 {len(draft.get('sections', []))}개)")
-    return _ask(SYSTEM + "\n\n" + REVIEW,
-                head + "<draft>\n" + json.dumps(draft, ensure_ascii=False) + "\n</draft>\n\n"
-                "위 초안을 원문과 대조해 고쳐라.")
+    m = _ask(SYSTEM, head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.")
+
+    if review:
+        log(f"  원문과 대조하는 중… (초안 논의 {len(m.get('sections', []))}개)")
+        m = _ask(SYSTEM + "\n\n" + REVIEW,
+                 head + "<draft>\n" + json.dumps(m, ensure_ascii=False) + "\n</draft>\n\n"
+                 "위 초안을 원문과 대조해 고쳐라.")
+
+    for i in range(tries):
+        bad = audit(m, segs)
+        if not bad:
+            log("  표준 검사 통과")
+            break
+        log(f"  표준 검사 {len(bad)}건 위반 → 그 항목만 고치는 중… ({i + 1}/{tries})")
+        m = _ask(SYSTEM + "\n\n" + REPAIR + "\n".join("- " + x for x in bad),
+                 head + "<map>\n" + json.dumps(m, ensure_ascii=False) + "\n</map>")
+    return m
 
 
 # ---------- 검증 ----------
@@ -388,6 +319,95 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
     }, warn
 
 
+# ---------- 표준 검사 ----------
+# SPEC.md 를 기계로 검사한다. 프롬프트가 지키라고 한 것을 여기서 실제로 확인한다.
+# 사람이 판단해야 하는 것(팽팽했는가, 정말 합의였는가)은 검사하지 않고 프롬프트·대조 패스에 맡긴다.
+
+END = {                                   # 종류별 종결 형태 (SPEC 2절)
+    "issue": (r"(인가|것인가|는가|을까|ㄹ까|까)[?]?$", "물음 형태로"),
+    "position": (r"(다|자)$", "‘~한다 / ~하자’로"),
+    "pro": (r"다$", "‘~다’로 끝나는 서술형으로"),
+    "con": (r"다$", "‘~면 ~할 수 없다’처럼 서술형으로"),
+    "concern": (r"다$", "‘~가 걸린다 / ~가 우려된다’로"),
+    "condition": (r"다$", "‘~해야 ~할 수 있다’로"),
+    "open": (r"다$", "‘~는 정하지 못했다’로"),
+    "decision": (r"다$", "‘~하기로 한다’로"),
+    "conditional": (r"다$", "‘~하되 ~를 조건으로 한다’로"),
+}
+
+
+def audit(m: dict, segs: list[dict] | None = None) -> list[str]:
+    """표준 위반 목록. 비어 있으면 통과."""
+    v, secs_ = [], m.get("sections", [])
+    body = " ".join(" ".join(s["l"]) for s in segs) if segs else ""
+    people = {s["s"] for s in segs} if segs else set()
+
+    if not 6 <= len(secs_) <= 16:
+        v.append(f"[구조] 섹션이 {len(secs_)}개다. 6~16개여야 한다")
+    if len(m.get("headline", "")) < 20:
+        v.append("[구조] headline이 비었거나 너무 짧다")
+
+    dec = 0
+    for sec in secs_:
+        tag = f"논의 {sec.get('no')} ({sec.get('title', '')[:16]})"
+        nodes = sec.get("nodes", [])
+        ids = {n["id"] for n in nodes}
+        kinds = [n["kind"] for n in nodes]
+        if kinds.count("issue") != 1:
+            v.append(f"{tag} 쟁점(issue)이 {kinds.count('issue')}개다. 정확히 하나여야 한다")
+        if "position" not in kinds:
+            v.append(f"{tag} 주장(position)이 하나도 없다")
+        if not 4 <= len(nodes) <= 9:
+            v.append(f"{tag} 노드가 {len(nodes)}개다. 4~9개여야 한다")
+
+        for n in nodes + [dict(sec.get("resolution", {}), id=f"{sec.get('no')}-res")]:
+            k, t = n.get("kind"), (n.get("title") or "").strip()
+            if not k or not t:
+                continue
+            where = f"{tag} {n['id']}"
+            if not 12 <= len(t) <= 60:
+                v.append(f"{where} 제목이 {len(t)}자다. 12~60자여야 한다 — “{t[:26]}”")
+            pat, how = END.get(k, (None, None))
+            if pat and not re.search(pat, t):
+                v.append(f"{where} {k} 제목을 {how} 써야 한다 — “{t[:30]}”")
+            if body and len(t) > 14 and t.rstrip(".") in body:
+                v.append(f"{where} 제목이 발언 그대로다. 정리한 문장으로 바꿔야 한다 — “{t[:30]}”")
+            if n.get("parent") and n["parent"] not in ids:
+                v.append(f"{where} parent가 이 섹션에 없다")
+
+        r = sec.get("resolution") or {}
+        if r.get("kind") == "decision":
+            dec += 1
+        if not r.get("from"):
+            v.append(f"{tag} 결론에 수렴한 노드(from)가 비었다")
+
+        for pair in sec.get("conflicts", []):
+            a, b = [next((n for n in nodes if n["id"] == x), None) for x in pair]
+            if not a or not b:
+                v.append(f"{tag} 대립이 이 섹션에 없는 노드를 가리킨다")
+                continue
+            if a.get("who") == b.get("who"):
+                v.append(f"{tag} 대립인데 말한 사람이 같다({a.get('who')}). 대립이 아니다")
+            if not (a["kind"] == b["kind"] == "position"):
+                v.append(f"{tag} 대립은 주장끼리만 맺는다 ({a['kind']} ↔ {b['kind']})")
+
+    if secs_ and dec > len(secs_) * 2 / 3:
+        v.append(f"[결론] 확정이 {dec}/{len(secs_)}개다. 3분의 2를 넘으면 대개 오탐이다")
+
+    hs = m.get("highlights", [])
+    if hs and not 3 <= len(hs) <= 6:
+        v.append(f"[하이라이트] {len(hs)}개다. 3~6개여야 한다")
+    for i, h in enumerate(hs):
+        t = (h.get("title") or "").strip()
+        if not t.endswith("순간"):
+            v.append(f"[하이라이트 {i + 1}] 제목이 ‘~한 순간’으로 끝나야 한다 — “{t[:30]}”")
+        if any(p in t for p in people):
+            v.append(f"[하이라이트 {i + 1}] 제목에 사람 이름이 들어갔다 — “{t[:30]}”")
+        if not (h.get("quote") or "").strip():
+            v.append(f"[하이라이트 {i + 1}] quote가 비었다")
+    return v
+
+
 # ---------- 쓰기 ----------
 
 def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "",
@@ -401,6 +421,7 @@ def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "",
         json.dumps({"segments": segs}, ensure_ascii=False), encoding="utf-8")
 
     m, warn = verify(generate(segs, hint, review, log), segs, {"id": mid, "date": date, "audio": audio})
+    warn += ["[표준] " + x for x in audit(m, segs)]      # 수리 뒤에도 남은 것
     out = docs_data / f"{mid}.ibis.json"
     out.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
     reindex(docs_data)
@@ -426,7 +447,8 @@ def reindex(docs_data: Path):
 def main():
     import argparse
     ap = argparse.ArgumentParser(description="전사문을 IBIS 정리 맵으로 만든다")
-    ap.add_argument("transcript", type=Path, help="'이름 00:00' 형식의 전사 txt")
+    ap.add_argument("transcript", type=Path, help="'이름 00:00' 형식의 전사 txt (--audit 이면 검사할 맵)")
+    ap.add_argument("--audit", action="store_true", help="이미 있는 맵을 표준(SPEC.md)으로 검사만 한다")
     ap.add_argument("--id", help="회의 id (기본: 파일명)")
     ap.add_argument("--date", default="", help="2026.06.15")
     ap.add_argument("--audio", default="", help="docs 기준 음성 경로 (예: audio/2026-06-15.m4a)")
@@ -434,6 +456,16 @@ def main():
     ap.add_argument("--docs", type=Path, default=Path(__file__).parent / "docs/data")
     ap.add_argument("--no-review", action="store_true", help="원문 대조 패스를 건너뛴다 (빠르고 싸지만 결론 오탐이 는다)")
     a = ap.parse_args()
+
+    if a.audit:
+        m = json.loads(a.transcript.read_text(encoding="utf-8"))
+        tp = a.transcript.parent / (m["meeting"]["transcript"].split("/")[-1])
+        segs = json.loads(tp.read_text(encoding="utf-8"))["segments"] if tp.exists() else None
+        bad = audit(m, segs)
+        print(f"{a.transcript.name} · 논의 {len(m['sections'])}개 · 위반 {len(bad)}건")
+        for x in bad:
+            print("  ✗", x)
+        sys.exit(1 if bad else 0)
 
     mid = a.id or re.sub(r"\.(transcript|txt|json)$", "", a.transcript.stem)
     try:

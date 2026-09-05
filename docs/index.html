@@ -493,6 +493,7 @@ body.noaudio .player{display:none}
   </div>
 </div>
 <input type="file" id="fi" multiple accept=".txt,.json,audio/*" hidden>
+<input type="file" id="att" multiple hidden>
 <div class="sheet" id="sheet"><div class="box">
   <h3>Anthropic API 키</h3>
   <p>정리 맵은 이 브라우저에서 직접 만들어집니다. 키는 <b>이 브라우저에만</b> 저장되고
@@ -1790,11 +1791,23 @@ function blank(state) {
   }
   $('#bt').textContent = '이 회의는 아직 정리 맵이 없습니다';
   $('#bp').innerHTML = '쟁점 → 주장 → 반론·근거 → 결론까지, <b>이 자리에서 만듭니다.</b>';
-  if (!key()) {
+  if (!key() && !LOCALSRV) {
     const b = el('button', null, 'API 키 넣기'); b.onclick = () => sheet(true);
     run.append(b);
     $('#bs').innerHTML = '키는 이 브라우저에만 저장됩니다. 정리를 위해 전사문이 Anthropic으로 전송됩니다.';
-  } else {
+  }
+  if (LOCALSRV) {                     /* 내 맥의 서버에서 열렸다 — 구독으로 도는 경로 */
+    const d = el('button', key() ? 'ghost' : null, '데스크탑에서 만들기 · 추가 비용 없음');
+    d.onclick = deskMake;
+    const f = el('button', 'ghost', '＋ 회의자료');
+    f.onclick = () => $('#att').click();
+    run.append(d, f);
+    if (ATTACH.length) $('#bs').innerHTML = `회의자료 ${ATTACH.length}개 첨부됨 · ${ATTACH.map(x => esc(x.name)).join(', ')}`
+      + '<br>이 맥의 Claude Code 로 돕니다. 구독으로 도는 것이라 API 청구가 붙지 않습니다.';
+    else $('#bs').innerHTML = '이 맥의 Claude Code 로 돕니다. <b>구독으로 도는 것이라 API 청구가 붙지 않습니다.</b>'
+      + '<br>회의자료(pdf·이미지·문서)를 붙이면 함께 읽고 정리합니다.';
+  }
+  if (key() && !LOCALSRV) {
     const go = sample => {
       console.log('[meetnote] 버튼 눌림 · sample =', sample);
       $('#blog').textContent = '';
@@ -1933,6 +1946,51 @@ function toastEl(html, onClick) {
   t.querySelector('em').onclick = () => { onClick(); t.classList.remove('on'); };
   clearTimeout(t._t); t._t = setTimeout(() => { t.classList.remove('on'); t.style.pointerEvents = 'none'; }, 12000);
 }
+
+/* 데스크탑(로컬 서버) 경로 — 이 맥의 Claude Code 가 만든다 */
+const LOCALSRV = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+let ATTACH = [];
+async function deskMake() {
+  if (!RAWSEGS) return;
+  document.body.classList.add('making');
+  $('#blog').textContent = ''; blank('running');
+  blog('데스크탑으로 넘기는 중…');
+  const id = ((RAWNAME || 'meeting').replace(/\.[^.]+$/, '') || 'meeting').slice(0, 40);
+  const text = RAWSEGS.map(s => `${s.s} ${mmss(s.t)}\n${s.l.join('\n')}`).join('\n\n');
+  try {
+    const files = await Promise.all(ATTACH.map(f => new Promise(res => {
+      const r = new FileReader();
+      r.onload = () => res({ name: f.name, data: r.result.split(',')[1] });
+      r.readAsDataURL(f);
+    })));
+    const r = await fetch('/ibis', { method: 'POST', body: JSON.stringify({ text, id, files,
+      date: new Date().toLocaleDateString('ko-KR').replace(/\.\s?/g, '.').replace(/\.$/, '') }) });
+    if (!r.ok) throw new Error(await r.text());
+    const { key: jk } = await r.json();
+    let line = blog('정리하는 중'), t0 = Date.now();
+    for (;;) {
+      await new Promise(z => setTimeout(z, 1500));
+      const j = (await (await fetch('/jobs')).json())[jk] || {};
+      const s = Math.round((Date.now() - t0) / 1000);
+      const txt = `${j.note || '정리하는 중'} · ${(s / 60 | 0)}:${String(s % 60).padStart(2, '0')}`;
+      line.textContent = txt; $('#livebar').textContent = txt;
+      if (j.error) throw new Error(j.error);
+      if (j.done) {
+        clearInterval(ticking);
+        (j.warn || []).forEach(w => blog('· ' + w, 'err'));
+        blog(`완료 · 논의 ${j.sections}개 · 추가 비용 없음`, '');
+        document.body.classList.remove('making');
+        await meetings();
+        return load(`data/${j.id}.ibis.json`);
+      }
+    }
+  } catch (e) {
+    document.body.classList.remove('making');
+    fail('데스크탑에서 만들기', e);
+    blank();
+  }
+}
+$('#att').onchange = e => { ATTACH = [...e.target.files]; blank(); };
 
 /* 설정 시트 */
 function sheet(on) {

@@ -43,7 +43,8 @@ def staged(path: str):
 # 진행 상황. 패널이 1초마다 긁어간다. 프로세스 하나뿐이라 dict면 충분하다.
 # ponytail: 재시작하면 날아간다. 이력이 필요하면 각 디렉터리에 job.json으로 떨구면 된다.
 JOBS = {}
-STAGES = [("전사", 0, 55), ("요약", 55, 78), ("회의 전개 정리", 78, 92), ("문서 만들기", 92, 100)]
+STAGES = [("전사", 0, 55), ("요약", 55, 78), ("회의 전개 정리", 78, 92), ("문서 만들기", 92, 100),
+          ("정리 맵", 0, 100)]
 
 
 def report(key, stage, frac=0.0, **extra):
@@ -110,6 +111,37 @@ def publish(key: str, src: Path, text: str):
     for w in warn:
         print(f"[{key}] ! {w}", flush=True)
     print(f"[{key}] 전개 정리 -> {out}", flush=True)
+
+
+def make_map(key: str, text: str, mid: str, date: str, files: list):
+    """이 맥의 Claude Code 로 정리 맵을 만든다. 구독으로 도는 것이라 API 청구가 따로 붙지 않는다."""
+    import shutil, tempfile
+    JOBS[key] = {"stage": "정리 맵", "pct": 3, "done": False, "error": "", "note": "시작합니다"}
+    tmp = Path(tempfile.mkdtemp(prefix="mn-attach-"))
+    try:
+        attach = []
+        for f in files:                      # 회의자료: 이름 + base64
+            import base64
+            name = Path(f.get("name", "file")).name
+            (tmp / name).write_bytes(base64.b64decode(f.get("data", "")))
+            attach.append(tmp / name)
+        step = {"n": 0}
+
+        def log(m):
+            step["n"] += 1
+            JOBS[key].update(note=m.strip(), pct=min(92, 5 + step["n"] * 22))
+
+        out, warn = ibis.write(text, DOCS / "data", mid, date=date, hint="", log=log,
+                               local=True, attach=attach)
+        m = json.loads(out.read_text())
+        JOBS[key].update(pct=100, done=True, stage="정리 맵", note=f"논의 {len(m['sections'])}개",
+                         sections=len(m["sections"]), warn=warn, id=mid)
+        print(f"[{key}] 정리 맵 -> {out} (논의 {len(m['sections'])}개)", flush=True)
+    except Exception as e:
+        traceback.print_exc()
+        JOBS.setdefault(key, {}).update(error=f"{type(e).__name__}: {e}", done=True, stage="실패")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def records(limit=12):
@@ -231,6 +263,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if u.path == "/local":
             return self.do_LOCAL()
+        if u.path == "/ibis":     # 뷰어가 "데스크탑에서 만들기" 를 눌렀을 때
+            size = int(self.headers.get("Content-Length") or 0)
+            if size > MAX_BYTES:
+                return self._json(413, {"error": "너무 큽니다"})
+            b = json.loads(self.rfile.read(size) or b"{}")
+            text, mid = b.get("text", ""), (b.get("id") or "meeting")[:40]
+            if len(text) < 200:
+                return self._json(400, {"error": "전사문이 너무 짧습니다"})
+            key = datetime.now().strftime("%Y%m%d-%H%M%S") + "-map"
+            threading.Thread(target=make_map, args=(key, text, mid, b.get("date", ""),
+                                                    b.get("files") or []), daemon=True).start()
+            return self._json(202, {"ok": True, "key": key})
         if u.path == "/conf":     # FigJam 보드 URL, API 키 같은 설정
             size = int(self.headers.get("Content-Length") or 0)
             patch = json.loads(self.rfile.read(size) or b"{}")

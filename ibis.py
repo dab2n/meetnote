@@ -127,6 +127,19 @@ REVIEW = """너는 방금 만들어진 IBIS 정리 맵을 원문과 대조해 �
 
 고칠 곳이 없으면 그대로 두어라. 지어내서 채우지 마라. 전체 맵을 같은 형식으로 다시 출력한다."""
 
+JSON_ONLY = """
+
+출력은 아래 형태의 JSON 하나뿐이다. 설명·코드펜스·머리말을 붙이지 마라.
+{"title","headline",
+ "sections":[{"title","part","t","t1",
+   "nodes":[{"id","kind","parent","title","who","t","at":[시작,끝],"note"}],
+   "conflicts":[[id,id]],
+   "resolution":{"kind","title","who","t","at":[시작,끝],"from":[id]}}],
+ "highlights":[{"title","quote","t","t1"}],
+ "carry":[{"label","part","note"}]}
+kind 는 issue·position·pro·con·concern·condition·open 중 하나,
+resolution.kind 는 decision·conditional·open 중 하나. 시각은 "mm:ss" 또는 "h:mm:ss"."""
+
 REPAIR = """방금 만든 맵이 표준 검사에서 아래 항목을 어겼다.
 **어긴 항목만** 고치고 나머지는 그대로 둔다. 고칠 때도 원문에 없는 내용을 만들지 않는다.
 전체 맵을 같은 형식으로 다시 출력한다.
@@ -197,6 +210,33 @@ def _key() -> str | None:
     return None
 
 
+def _cli(system: str, user: str, attach: list[Path] | None = None) -> dict:
+    """이 맥에 깔린 Claude Code 로 돌린다. 구독으로 쓰는 것이라 API 청구가 따로 붙지 않는다.
+    회의자료를 붙이면 CLI 가 그 파일을 직접 읽는다."""
+    import subprocess, tempfile
+    note = ""
+    cmd = ["claude", "-p", "--output-format", "json", "--model", "opus",
+           "--permission-mode", "dontAsk"]
+    if attach:
+        for f in attach:
+            cmd += ["--add-dir", str(f.parent.resolve())]
+        cmd += ["--allowedTools", "Read"]
+        note = ("\n\n<materials>\n회의자료가 함께 있다. Read 로 열어 회의 내용과 대조해라.\n"
+                + "\n".join(str(f.resolve()) for f in attach) + "\n</materials>")
+    cmd += ["--append-system-prompt", system, user + note]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"claude CLI 실패: {(r.stderr or r.stdout)[:400]}")
+    out = json.loads(r.stdout)
+    if out.get("is_error"):
+        raise RuntimeError(f"claude CLI 오류: {str(out.get('result'))[:300]}")
+    text = out.get("result") or ""
+    m = re.search(r"\{.*\}", text, re.S)          # 앞뒤에 말이 붙어 와도 JSON 만 집는다
+    if not m:
+        raise RuntimeError(f"JSON 을 찾지 못했습니다: {text[:300]}")
+    return json.loads(m.group(0))
+
+
 def _ask(system: str, user: str) -> dict:
     import anthropic
     client = anthropic.Anthropic(api_key=_key()) if _key() else anthropic.Anthropic()
@@ -212,18 +252,22 @@ def _ask(system: str, user: str) -> dict:
     return json.loads(next(b.text for b in msg.content if b.type == "text"))
 
 
-def generate(segs: list[dict], hint: str = "", review: bool = True, log=print, tries: int = 2) -> dict:
-    """초안 → 원문 대조 → 표준 검사 → 어긴 항목만 수리. 검사를 통과할 때까지 최대 tries번."""
+def generate(segs: list[dict], hint: str = "", review: bool = True, log=print, tries: int = 2,
+             local: bool = False, attach: list[Path] | None = None) -> dict:
+    """초안 → 원문 대조 → 표준 검사 → 어긴 항목만 수리. 검사를 통과할 때까지 최대 tries번.
+
+    local=True 면 API 대신 이 맥의 Claude Code 로 돌린다 (구독으로 쓰는 것이라 추가 청구 없음)."""
+    run = (lambda sy, us: _cli(sy, us, attach)) if local else _ask
     body = as_prompt(segs)
     head = (f"<meeting>{hint}</meeting>\n" if hint else "") + f"<transcript>\n{body}\n</transcript>\n\n"
     log("  초안 만드는 중…")
-    m = _ask(SYSTEM, head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.")
+    m = run(SYSTEM + JSON_ONLY, head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.")
 
     if review:
         log(f"  원문과 대조하는 중… (초안 논의 {len(m.get('sections', []))}개)")
-        m = _ask(SYSTEM + "\n\n" + REVIEW,
-                 head + "<draft>\n" + json.dumps(m, ensure_ascii=False) + "\n</draft>\n\n"
-                 "위 초안을 원문과 대조해 고쳐라.")
+        m = run(SYSTEM + JSON_ONLY + "\n\n" + REVIEW,
+                head + "<draft>\n" + json.dumps(m, ensure_ascii=False) + "\n</draft>\n\n"
+                "위 초안을 원문과 대조해 고쳐라.")
 
     for i in range(tries):
         bad = audit(m, segs)
@@ -231,8 +275,8 @@ def generate(segs: list[dict], hint: str = "", review: bool = True, log=print, t
             log("  표준 검사 통과")
             break
         log(f"  표준 검사 {len(bad)}건 위반 → 그 항목만 고치는 중… ({i + 1}/{tries})")
-        m = _ask(SYSTEM + "\n\n" + REPAIR + "\n".join("- " + x for x in bad),
-                 head + "<map>\n" + json.dumps(m, ensure_ascii=False) + "\n</map>")
+        m = run(SYSTEM + JSON_ONLY + "\n\n" + REPAIR + "\n".join("- " + x for x in bad),
+                head + "<map>\n" + json.dumps(m, ensure_ascii=False) + "\n</map>")
     return m
 
 
@@ -411,7 +455,8 @@ def audit(m: dict, segs: list[dict] | None = None) -> list[str]:
 # ---------- 쓰기 ----------
 
 def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "",
-          hint: str = "", review: bool = True, log=print) -> tuple[Path, list[str]]:
+          hint: str = "", review: bool = True, log=print,
+          local: bool = False, attach: list[Path] | None = None) -> tuple[Path, list[str]]:
     """전사문 하나 -> <id>.transcript.json + <id>.ibis.json + index.json 갱신."""
     segs = parse(text)
     if len(segs) < 5:
@@ -420,7 +465,8 @@ def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "",
     (docs_data / f"{mid}.transcript.json").write_text(
         json.dumps({"segments": segs}, ensure_ascii=False), encoding="utf-8")
 
-    m, warn = verify(generate(segs, hint, review, log), segs, {"id": mid, "date": date, "audio": audio})
+    m, warn = verify(generate(segs, hint, review, log, local=local, attach=attach), segs,
+                     {"id": mid, "date": date, "audio": audio})
     warn += ["[표준] " + x for x in audit(m, segs)]      # 수리 뒤에도 남은 것
     out = docs_data / f"{mid}.ibis.json"
     out.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -455,6 +501,10 @@ def main():
     ap.add_argument("--hint", default="", help="프로젝트·참석자 등 한 줄 배경")
     ap.add_argument("--docs", type=Path, default=Path(__file__).parent / "docs/data")
     ap.add_argument("--no-review", action="store_true", help="원문 대조 패스를 건너뛴다 (빠르고 싸지만 결론 오탐이 는다)")
+    ap.add_argument("--local", action="store_true",
+                    help="API 대신 이 맥의 Claude Code 로 돌린다 (구독으로 쓰므로 추가 청구 없음)")
+    ap.add_argument("--attach", type=Path, nargs="*", default=[],
+                    help="회의자료(pdf·이미지·문서). --local 일 때 CLI 가 직접 읽는다")
     a = ap.parse_args()
 
     if a.audit:
@@ -470,7 +520,8 @@ def main():
     mid = a.id or re.sub(r"\.(transcript|txt|json)$", "", a.transcript.stem)
     try:
         out, warn = write(read_text(a.transcript), a.docs, mid,
-                          a.date, a.audio, a.hint, review=not a.no_review)
+                          a.date, a.audio, a.hint, review=not a.no_review,
+                          local=a.local, attach=list(a.attach))
     except Exception as e:
         if "authentication" in str(e).lower() or "api_key" in str(e).lower():
             sys.exit("ANTHROPIC_API_KEY가 필요합니다.\n"

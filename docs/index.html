@@ -1750,8 +1750,14 @@ function blank(state) {
     run.append(b);
     $('#bs').innerHTML = '키는 이 브라우저에만 저장됩니다. 정리를 위해 전사문이 Anthropic으로 전송됩니다.';
   } else {
-    const b = el('button', null, '정리 맵 만들기'); b.onclick = () => makeMap(false);
-    const t = el('button', 'ghost', '앞 15분만 시험'); t.onclick = () => makeMap(true);
+    const go = sample => {
+      console.log('[meetnote] 버튼 눌림 · sample =', sample);
+      $('#blog').textContent = '';
+      blog('시작합니다…');
+      try { makeMap(sample); } catch (e) { fail('시작', e); }
+    };
+    const b = el('button', null, '정리 맵 만들기'); b.onclick = () => go(false);
+    const t = el('button', 'ghost', '앞 15분만 시험'); t.onclick = () => go(true);
     const c = el('button', 'ghost', '키 바꾸기'); c.onclick = () => sheet(true);
     run.append(b, t, c);
     const short = RAWSEGS ? RAWSEGS.filter(x => x.t < 900).length : 0;
@@ -1760,6 +1766,17 @@ function blank(state) {
       + `<br>실행할 때마다 각자의 키로 과금됩니다. 처음이라면 먼저 시험해 보세요.`;
   }
 }
+/* 조용히 죽는 일이 없게 — 잡히지 않은 예외도 화면에 남긴다 */
+function fail(where, e) {
+  clearInterval(ticking);
+  const msg = (e && (e.message || e.reason && e.reason.message || e.reason)) || e || '알 수 없음';
+  console.error('[meetnote] ' + where, e);
+  try { blog(`${where} 실패 · ${msg}`.slice(0, 300), 'err'); } catch {}
+  toast(`${esc(where)} 실패 · ${esc(String(msg).slice(0, 140))}`, 9000);
+}
+addEventListener('unhandledrejection', e => fail('처리되지 않은 오류', e));
+addEventListener('error', e => fail('스크립트 오류', e));
+
 let ticking = null;
 function tick(line, label) {   /* 첫 응답까지 몇 분씩 조용해서, 살아 있다는 표시가 필요하다 */
   const t0 = Date.now();
@@ -1785,10 +1802,10 @@ async function makeMap(sample) {
   toast(sample ? '앞 15분만으로 시험합니다 · 진행 상황은 오른쪽에 뜹니다'
                : '정리 맵을 만듭니다 · 몇 분 걸립니다', 4000);
   console.log('[meetnote] 생성 시작 · 발언', segs.length);
-  $('#blog').textContent = ''; blank('running');
-  const id = (RAWNAME.replace(/\.[^.]+$/, '') || 'meeting').slice(0, 40) + (sample ? '-시험' : '');
-  const head = `<transcript>\n${segs.map(s => `${s.s} ${mmss(s.t)}\n${s.l.join('\n')}`).join('\n\n')}\n</transcript>\n\n`;
+  blank('running');
   try {
+    const id = ((RAWNAME || 'meeting').replace(/\.[^.]+$/, '') || 'meeting').slice(0, 40) + (sample ? '-시험' : '');
+    const head = `<transcript>\n${segs.map(s => `${s.s} ${mmss(s.t)}\n${s.l.join('\n')}`).join('\n\n')}\n</transcript>\n\n`;
     if (!SPEC) SPEC = await (await fetch('SPEC.md', NOCACHE)).text();
     const sys = HEAD_SYS + SPEC + '\n\n모든 출력은 한국어.';
     let line = blog('초안 만드는 중');
@@ -1823,10 +1840,7 @@ async function makeMap(sample) {
     mount(map, segs, RAWNAME);
     saveBtn(map);
   } catch (e) {
-    clearInterval(ticking);
-    console.error('[meetnote] 실패', e);
-    toast('만들지 못했습니다 · ' + esc(e.message.slice(0, 120)), 8000);
-    blog('실패 · ' + e.message, 'err');
+    fail('정리 맵 만들기', e);
     $('#bt').textContent = '정리 맵을 만들지 못했습니다';
     $('#bp').textContent = '키가 맞는지, 크레딧이 남았는지 확인해 주세요.';
     const b = el('button', null, '다시 시도'); b.onclick = () => makeMap(sample);

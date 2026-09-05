@@ -127,6 +127,15 @@ REVIEW = """너는 방금 만들어진 IBIS 정리 맵을 원문과 대조해 �
 
 고칠 곳이 없으면 그대로 두어라. 지어내서 채우지 마라. 전체 맵을 같은 형식으로 다시 출력한다."""
 
+SELF = """
+
+출력하기 전에 스스로 원문과 한 번 더 대조해라. 특히 이 넷을 확인해라.
+1. decision 으로 적은 것이 실제로 합의하고 넘어간 것인가 — "해봐야지 / 감이 안 와"면 open 이다
+2. con 으로 적은 것이 정말 반대인가, 걸리는 점을 말한 concern 인가
+3. parent 가 그 노드가 실제로 반응한 대상인가, 다른 섹션을 가리키지 않는가
+4. conflicts 가 표준 4절의 세 조건을 모두 만족하는가 — 하나도 없는 것이 정상이다
+대조까지 마친 결과만 출력한다."""
+
 JSON_ONLY = """
 
 출력은 아래 형태의 JSON 하나뿐이다. 설명·코드펜스·머리말을 붙이지 마라.
@@ -224,9 +233,11 @@ def _cli(system: str, user: str, attach: list[Path] | None = None) -> dict:
         note = ("\n\n<materials>\n회의자료가 함께 있다. Read 로 열어 회의 내용과 대조해라.\n"
                 + "\n".join(str(f.resolve()) for f in attach) + "\n</materials>")
     cmd += ["--append-system-prompt", system, user + note]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    # stdin 을 닫아 주지 않으면 호출마다 3초를 기다리다 실패한다
+    r = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
     if r.returncode != 0:
-        raise RuntimeError(f"claude CLI 실패: {(r.stderr or r.stdout)[:400]}")
+        raise RuntimeError(f"claude CLI 실패(rc={r.returncode}): "
+                           f"{(r.stderr or '')[:300]} / {(r.stdout or '')[:300]}")
     out = json.loads(r.stdout)
     if out.get("is_error"):
         raise RuntimeError(f"claude CLI 오류: {str(out.get('result'))[:300]}")
@@ -258,10 +269,13 @@ def generate(segs: list[dict], hint: str = "", review: bool = True, log=print, t
 
     local=True 면 API 대신 이 맥의 Claude Code 로 돌린다 (구독으로 쓰는 것이라 추가 청구 없음)."""
     run = (lambda sy, us: _cli(sy, us, attach)) if local else _ask
+    if local:
+        review = False          # CLI 는 호출당 몇 분이라 초안 안에서 스스로 대조하게 한다
     body = as_prompt(segs)
     head = (f"<meeting>{hint}</meeting>\n" if hint else "") + f"<transcript>\n{body}\n</transcript>\n\n"
     log("  초안 만드는 중…")
-    m = run(SYSTEM + JSON_ONLY, head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.")
+    m = run(SYSTEM + JSON_ONLY + (SELF if local else ""),
+            head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.")
 
     if review:
         log(f"  원문과 대조하는 중… (초안 논의 {len(m.get('sections', []))}개)")
@@ -490,11 +504,52 @@ def reindex(docs_data: Path):
                                           encoding="utf-8")
 
 
+def read_cmd(a):
+    """전사문을 구간별로 찍는다. 맵을 손으로 쓸 때 원문을 나눠 읽기 위한 것."""
+    segs = parse(read_text(a.transcript))
+    lo = secs(a.range[0]) if a.range else 0
+    hi = secs(a.range[1]) if a.range and len(a.range) > 1 else 10 ** 9
+    n = 0
+    for x in segs:
+        if lo <= x["t"] <= hi:
+            n += 1
+            print(f"{mmss(x['t'])} {x['s']}: " + " ".join(x["l"])[:a.width])
+    print(f"\n— 발언 {n}개 / 전체 {len(segs)}개 · 길이 {mmss(segs[-1]['t'])}", file=sys.stderr)
+
+
+def finalize(a):
+    """손으로 쓴 초안(json)을 표준에 맞춰 마무리한다.
+    시각 스냅 · 참조 정리 · 번호 재부여 · 전사문 저장 · 목록 갱신 · 표준 검사."""
+    segs = parse(read_text(a.transcript))
+    raw = json.loads(read_text(a.draft))
+    m, warn = verify(raw, segs, {"id": a.id, "date": a.date, "audio": a.audio})
+    a.docs.mkdir(parents=True, exist_ok=True)
+    (a.docs / f"{a.id}.transcript.json").write_text(
+        json.dumps({"segments": segs}, ensure_ascii=False), encoding="utf-8")
+    out = a.docs / f"{a.id}.ibis.json"
+    out.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
+    reindex(a.docs)
+    bad = audit(m, segs)
+    print(f"{out} · 논의 {len(m['sections'])}개 · 하이라이트 {len(m.get('highlights', []))}개 · 위반 {len(bad)}건")
+    for s_ in m["sections"]:
+        print(f"  {s_['no']:>2}. [{s_['t']}–{s_['t1']}] {s_['title']}  ({s_['resolution']['kind']})")
+    for w in warn:
+        print(f"  ! {w}", file=sys.stderr)
+    for b in bad:
+        print(f"  ✗ {b}", file=sys.stderr)
+    return 1 if bad else 0
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser(description="전사문을 IBIS 정리 맵으로 만든다")
-    ap.add_argument("transcript", type=Path, help="'이름 00:00' 형식의 전사 txt (--audit 이면 검사할 맵)")
+    ap.add_argument("transcript", type=Path,
+                    help="'이름 00:00' 형식의 전사 txt (--audit 이면 검사할 맵)")
     ap.add_argument("--audit", action="store_true", help="이미 있는 맵을 표준(SPEC.md)으로 검사만 한다")
+    ap.add_argument("--read", action="store_true", help="전사문을 구간별로 찍는다 (손으로 정리할 때)")
+    ap.add_argument("--range", nargs="*", default=None, metavar="시각", help="--read 구간 (예: --range 10:00 25:00)")
+    ap.add_argument("--width", type=int, default=150, help="--read 한 줄 길이")
+    ap.add_argument("--draft", type=Path, help="손으로 쓴 초안 json 을 표준에 맞춰 마무리한다")
     ap.add_argument("--id", help="회의 id (기본: 파일명)")
     ap.add_argument("--date", default="", help="2026.06.15")
     ap.add_argument("--audio", default="", help="docs 기준 음성 경로 (예: audio/2026-06-15.m4a)")
@@ -507,6 +562,11 @@ def main():
                     help="회의자료(pdf·이미지·문서). --local 일 때 CLI 가 직접 읽는다")
     a = ap.parse_args()
 
+    if a.read:
+        read_cmd(a); sys.exit(0)
+    if a.draft:
+        a.id = a.id or a.draft.stem.replace(".draft", "")
+        sys.exit(finalize(a))
     if a.audit:
         m = json.loads(a.transcript.read_text(encoding="utf-8"))
         tp = a.transcript.parent / (m["meeting"]["transcript"].split("/")[-1])

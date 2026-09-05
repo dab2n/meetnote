@@ -145,6 +145,28 @@ launchctl load ~/Library/LaunchAgents/com.meetnote.pin.plist
 - **노드를 누르면** 그 주장이 실제로 나온 원문 구간이 왼쪽에서 주황색으로 하이라이트되고 그 시각의 음성으로 이동한다
 - 왼쪽 원문 패널은 손잡이를 끌어 너비 조절(더블클릭 초기화), 900px 아래에서는 하단 탭으로 바뀐다
 
+### 정리 맵 만들기 — 대화로 (`/newmap`)
+
+가장 정확한 경로다. Claude Code 세션에서 전사문을 주고 **`/newmap`** 이라고 하면
+`.claude/skills/newmap/SKILL.md` 의 절차대로 만든다. 추가 비용이 붙지 않는다.
+
+```
+/newmap ~/Downloads/0612_회의.txt
+```
+
+절차는 셋으로 나뉜다. **판단은 사람(모델)이, 기계 작업은 `ibis.py` 가 한다.**
+
+```bash
+python ibis.py <전사문> --read --range 0:00 20:00      # 1. 구간별로 나눠 읽는다
+#   → 읽고 초안 <id>.draft.json 을 SPEC 형식으로 쓴다
+python ibis.py <전사문> --draft <id>.draft.json --id <id> --date 2026.06.12
+#   → 2. 시각 스냅 · 참조 정리 · 번호 재부여 · 전사문 저장 · index.json 갱신 · 표준 검사
+#   → 3. 위반이 뜨면 초안을 고쳐 다시. 0건이 될 때까지
+```
+
+`--read` 는 전사문을 구간별로 찍어 주고, `--draft` 는 손으로 쓴 초안을 표준에 맞춰 마무리한다.
+시각은 대략 적어도 된다 — 실제 발언 시작점으로 스냅된다.
+
 ### 정리 맵 만들기 — 내 맥에서 (추가 비용 없음)
 
 **이미 쓰고 있는 Claude Code 로 돌린다.** 구독으로 도는 것이라 API 청구가 따로 붙지 않는다.

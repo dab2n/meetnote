@@ -7,6 +7,14 @@
       "duration": "82:50",
       "sections": 14,
       "map": "data/2026-06-15.ibis.json"
+    },
+    {
+      "id": "2026-05-30",
+      "title": "스포츠 주제 1차 검토 회의",
+      "date": "2026.05.30",
+      "duration": "1:53:55",
+      "sections": 11,
+      "map": "data/2026-05-30.ibis.json"
     }
   ]
 }

@@ -1,6 +1,14 @@
 {
   "meetings": [
     {
+      "id": "새로운 노트 (3)",
+      "title": "NEWTON 최종 발표 전 파트 통합 회의",
+      "date": "2026.9.6",
+      "duration": "1:22:34",
+      "sections": 15,
+      "map": "data/새로운 노트 (3).ibis.json"
+    },
+    {
       "id": "2026-06-15",
       "title": "NEWTON UX·ID·BX 통합 회의",
       "date": "2026.06.15",

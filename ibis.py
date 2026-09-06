@@ -149,6 +149,102 @@ JSON_ONLY = """
 kind 는 issue·position·pro·con·concern·condition·open 중 하나,
 resolution.kind 는 decision·conditional·open 중 하나. 시각은 "mm:ss" 또는 "h:mm:ss"."""
 
+INCREMENT = """회의가 진행 중이다. 지금까지의 정리 맵과, 그 뒤에 새로 오간 대화가 주어진다.
+**새 대화만 반영해 맵을 고친다.** 전체를 다시 쓰지 않는다.
+
+## 무엇을 돌려주나
+바뀐 것만 changes 에 담는다. 아무것도 바뀌지 않았으면 빈 배열을 돌려준다.
+
+- 기존 논의에 붙는 경우 → 그 논의의 `no` 를 그대로 쓰고, **추가하거나 고칠 노드만** nodes 에 담는다.
+  id 가 기존 노드와 같으면 교체, 없던 id 면 추가다. 손대지 않을 노드는 담지 마라.
+  결론이 바뀌었으면 resolution 도 함께 담는다.
+- 새 논의가 시작된 경우 → `no` 를 0 으로 두고 섹션 전체를 담는다.
+
+## 지켜야 할 것
+- **기존 노드의 id 는 절대 바꾸지 않는다.** 새 노드의 id 는 그 섹션에서 쓰이지 않은 것으로 만든다.
+- `"lock": true` 가 붙은 노드는 사람이 직접 고친 것이다. **건드리지 마라.**
+- 새 대화가 짧거나 잡담이면 아무것도 바꾸지 않는 것이 정답이다. 억지로 채우지 마라.
+- 결론은 성급하게 내리지 마라. 아직 오가는 중이면 open 으로 둔다.
+- 문구·종류·대립 기준은 위 표준을 그대로 따른다.
+
+출력은 이 형태의 JSON 하나뿐이다. 설명을 붙이지 마라.
+{"changes":[{"no":3,"nodes":[{"id","kind","parent","title","who","t","at":[시작,끝],"note"}],
+             "resolution":{"kind","title","who","t","at":[시작,끝],"from":[id]}},
+            {"no":0,"title","part","t","t1","nodes":[...],"conflicts":[[id,id]],"resolution":{...}}],
+ "carry":[{"label","part","note"}]}"""
+
+
+def as_map_text(m: dict) -> str:
+    """현재 맵을 프롬프트에 넣을 형태로. 사람이 고친 노드는 lock 을 달아 보호한다."""
+    out = []
+    for sec in m.get("sections", []):
+        out.append(f'논의 {sec["no"]} [{sec["t"]}–{sec["t1"]}] {sec["part"]} · {sec["title"]}')
+        for n in sec.get("nodes", []):
+            lock = " (lock)" if n.get("lock") else ""
+            par = f" ←{n['parent']}" if n.get("parent") else ""
+            out.append(f'  {n["id"]}{par} [{n["kind"]}]{lock} {n["title"]} — {n.get("who","")} {n["t"]}')
+        r = sec.get("resolution") or {}
+        if r:
+            out.append(f'  결론 [{r.get("kind")}] {r.get("title")}')
+        for c in sec.get("conflicts", []):
+            out.append(f'  대립 {c[0]} ↔ {c[1]}')
+    return "\n".join(out) or "(아직 없음)"
+
+
+def merge(m: dict, delta: dict) -> dict:
+    """증분 결과를 현재 맵에 적용한다. 사람이 잠근 노드는 지킨다."""
+    by_no = {s["no"]: s for s in m["sections"]}
+    for ch in delta.get("changes", []):
+        no = ch.get("no") or 0
+        if no and no in by_no:
+            sec = by_no[no]
+            idx = {n["id"]: i for i, n in enumerate(sec["nodes"])}
+            for n in ch.get("nodes", []):
+                if not n.get("id") or n.get("kind") not in KINDS or not n.get("title"):
+                    continue
+                if n["id"] in idx:
+                    if sec["nodes"][idx[n["id"]]].get("lock"):
+                        continue                      # 사람이 고친 것은 덮지 않는다
+                    sec["nodes"][idx[n["id"]]] = n
+                else:
+                    sec["nodes"].append(n)
+            if ch.get("resolution") and not (sec.get("resolution") or {}).get("lock"):
+                sec["resolution"] = ch["resolution"]
+            if ch.get("conflicts") is not None:
+                sec["conflicts"] = ch["conflicts"]
+        elif ch.get("title") and ch.get("nodes"):
+            m["sections"].append({k: ch.get(k) for k in
+                                  ("title", "part", "t", "t1", "nodes", "conflicts", "resolution")})
+    if delta.get("carry"):
+        m["carry"] = delta["carry"]
+    return m
+
+
+def step(m: dict, dialog: str, segs: list[dict], local: bool = True) -> tuple[dict, dict]:
+    """새 대화 한 덩어리를 반영한다. (갱신된 맵, 원본 델타)"""
+    ask_ = (lambda sy, us: _cli(sy, us)) if local else _ask
+    user = (f"<map>\n{as_map_text(m)}\n</map>\n\n"
+            f"<new_dialog>\n{dialog}\n</new_dialog>\n\n"
+            "새 대화만 반영해 바뀐 것을 돌려줘라.")
+    delta = ask_(SYSTEM + "\n\n" + INCREMENT, user)
+    merged, _ = verify(merge(json.loads(json.dumps(m)), delta), segs,
+                       {"id": m["id"], "date": m["meeting"].get("date", ""),
+                        "audio": m["meeting"].get("audio", "")})
+    return merged, delta
+
+
+def seed(m: dict, until: int, segs: list[dict]) -> dict:
+    """기존 맵을 시각으로 잘라 '지금까지의 맵'을 만든다. 호출 없이 공짜."""
+    keep = [s for s in m["sections"] if secs(s["t"]) < until]
+    out = json.loads(json.dumps(m))
+    out["sections"] = keep
+    out["highlights"] = [h for h in m.get("highlights", []) if secs(h["t"]) < until]
+    cut = [x for x in segs if x["t"] < until] or segs[:5]
+    out, _ = verify(out, cut, {"id": m["id"], "date": m["meeting"].get("date", ""),
+                               "audio": m["meeting"].get("audio", "")})
+    return out
+
+
 REPAIR = """방금 만든 맵이 표준 검사에서 아래 항목을 어겼다.
 **어긴 항목만** 고치고 나머지는 그대로 둔다. 고칠 때도 원문에 없는 내용을 만들지 않는다.
 전체 맵을 같은 형식으로 다시 출력한다.

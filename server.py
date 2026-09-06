@@ -113,6 +113,21 @@ def publish(key: str, src: Path, text: str):
     print(f"[{key}] 전개 정리 -> {out}", flush=True)
 
 
+STEPS = {}
+
+
+def run_step(key: str, b: dict):
+    """리허설 한 걸음. 현재 맵 + 새 대화 -> 바뀐 것만."""
+    try:
+        segs = b.get("segments") or []
+        m, delta = ibis.step(b["map"], b.get("dialog", ""), segs, local=True)
+        STEPS[key] = {"done": True, "map": m, "delta": delta,
+                      "changed": len(delta.get("changes") or [])}
+    except Exception as e:
+        traceback.print_exc()
+        STEPS[key] = {"done": True, "error": f"{type(e).__name__}: {e}"}
+
+
 def make_map(key: str, text: str, mid: str, date: str, files: list):
     """이 맥의 Claude Code 로 정리 맵을 만든다. 구독으로 도는 것이라 API 청구가 따로 붙지 않는다."""
     import shutil, tempfile
@@ -202,6 +217,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if path == "/jobs":
             return self._json(200, JOBS)
+        if path == "/steps":
+            return self._json(200, STEPS)
         if path == "/records":
             return self._json(200, {"records": records()})
         if path == "/conf":
@@ -270,6 +287,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if u.path == "/local":
             return self.do_LOCAL()
+        if u.path == "/step":     # 리허설: 새 대화 한 덩어리를 현재 맵에 반영
+            size = int(self.headers.get("Content-Length") or 0)
+            b = json.loads(self.rfile.read(size) or b"{}")
+            key = b.get("key") or datetime.now().strftime("%H%M%S")
+            STEPS[key] = {"done": False, "error": ""}
+            threading.Thread(target=run_step, args=(key, b), daemon=True).start()
+            return self._json(202, {"ok": True, "key": key})
         if u.path == "/ibis":     # 뷰어가 "데스크탑에서 만들기" 를 눌렀을 때
             size = int(self.headers.get("Content-Length") or 0)
             if size > MAX_BYTES:

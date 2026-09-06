@@ -412,6 +412,7 @@ body.noaudio .player{display:none}
   <button class="tbtn only-run" id="pause">❚❚ 일시정지</button>
   <button class="tbtn only-run" id="speed">2×</button>
   <button class="tbtn only-run" id="replay">↻ 다시</button>
+  <button class="tbtn" id="rehearse" hidden>▶︎ 리허설</button>
   <button class="tbtn" id="opencfg" title="API 키">⚙︎</button>
   <button class="tbtn pri" id="newfile">＋ 파일</button>
 </header>
@@ -518,7 +519,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260906-180612';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260906-231800';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -1605,7 +1606,7 @@ $('#bar').onclick = e => {
   const b = e.currentTarget.getBoundingClientRect();
   seekTo((e.clientX - b.left) / b.width * (au.duration || dur()));
 };
-au.ontimeupdate = () => mark(au.currentTime, false);
+au.ontimeupdate = () => { mark(au.currentTime, false); if (REH) rehTime(au.currentTime); };
 const dur = () => au.duration || (TRANS.length ? TRANS[TRANS.length - 1].t + 30 : 1);
 function marks() {
   const w = $('#marks'); w.textContent = '';
@@ -1754,6 +1755,7 @@ function mount(map, segs, name, audioSrc) {
 
   loadLocal();
   document.body.classList.toggle('nomap', !map);
+  $('#rehearse').hidden = !(map && LOCALSRV);
   if (map) { const g = build(map); layout(g); render(g); applyEdits(); NODES.forEach(paintNode); }
   else { NODES = []; EDGES = []; FRAMES = []; REVEAL = []; render({ nodes: [], edges: [], frames: [] }); }
   renderTranscript(); renderCards(); group = 'decision'; renderDigest(); marks();
@@ -1972,6 +1974,106 @@ function toastEl(html, onClick) {
   t.querySelector('em').onclick = () => { onClick(); t.classList.remove('on'); };
   clearTimeout(t._t); t._t = setTimeout(() => { t.classList.remove('on'); t.style.pointerEvents = 'none'; }, 12000);
 }
+
+/* ── 리허설 ──────────────────────────────────────────────
+   음성을 재생하면서, 지나간 발언만 새 대화로 흘려 넣어 맵을 고쳐 나간다.
+   실시간 회의를 아직 못 하니 녹음으로 그 상황을 재현하는 것이다. */
+let REH = null;
+function rehearsal(fromSec) {
+  if (!MAP || !TRANS.length) return;
+  const full = JSON.parse(JSON.stringify(MAP));
+  REH = {
+    from: fromSec, at: fromSec, buf: [], busy: false, steps: 0, chars: 0,
+    map: null, full,
+    idx: TRANS.findIndex(s => s.t >= fromSec),
+  };
+  if (REH.idx < 0) REH.idx = TRANS.length;
+  /* 시드: 기존 맵을 시각으로 잘라 쓴다 — 호출 없이 공짜 */
+  REH.map = {
+    ...full,
+    sections: full.sections.filter(x => secs(x.t) < fromSec),
+    highlights: (full.highlights || []).filter(h => secs(h.t) < fromSec),
+  };
+  REH.map.sections.forEach((x, i) => x.no = i + 1);
+  mount(REH.map, TRANS, RAWNAME || (MAP.meeting && MAP.meeting.title) || '리허설', MAP.meeting && MAP.meeting.audio);
+  step = REVEAL.length;
+  NODES.forEach(n => n.dom.classList.add('in'));
+  FRAMES.forEach(f => f.dom.classList.add('in'));
+  EDGES.forEach(e => { e.path.classList.add('on'); if (e.text) e.text.classList.add('on'); });
+  fit(false);
+  document.body.classList.add('making');
+  $('#livebar').textContent = `리허설 · ${mmss(fromSec)}부터 · 시드 논의 ${REH.map.sections.length}개`;
+  seekTo(fromSec, true);
+  if (audioOK) au.play().catch(() => {});
+  else { REH.tick = setInterval(() => rehTime(REH.at + 1), 1000); }   /* 음성이 없으면 가상 시계 */
+}
+function rehStop() {
+  if (REH && REH.tick) clearInterval(REH.tick);
+  REH = null;
+  document.body.classList.remove('making');
+  $('#livebar').textContent = '';
+  $('#rehearse').textContent = '▶︎ 리허설';
+}
+const REH_CHARS = 260;               /* 이만큼 쌓이면 한 걸음 */
+function rehTime(t) {
+  if (!REH) return;
+  REH.at = t;
+  while (REH.idx < TRANS.length && TRANS[REH.idx].t <= t) {
+    const s = TRANS[REH.idx++];
+    REH.buf.push(s); REH.chars += s.l.join('').length;
+  }
+  if (!REH.busy) {
+    $('#livebar').textContent = `리허설 ${mmss(t)} · 모인 말 ${REH.chars}자`
+      + ` / ${REH_CHARS}자마다 갱신 · 지금까지 ${REH.steps}번 고침`;
+  }
+  if (!REH.busy && REH.chars >= REH_CHARS) rehStep();
+  if (REH.idx >= TRANS.length && !REH.busy && !REH.chars) {
+    $('#livebar').textContent = `리허설 끝 · ${REH.steps}번 고침 · 논의 ${FRAMES.length}개`;
+  }
+}
+async function rehStep() {
+  const buf = REH.buf, chars = REH.chars;
+  REH.buf = []; REH.chars = 0; REH.busy = true;
+  const dialog = buf.map(s => `${s.s} ${mmss(s.t)}\n${s.l.join('\n')}`).join('\n\n');
+  const t0 = Date.now();
+  const draw = setInterval(() => {
+    const e = Math.round((Date.now() - t0) / 1000);
+    $('#livebar').textContent = `리허설 ${mmss(REH.at)} · 새 대화 ${chars}자 반영 중 · ${e}초`;
+  }, 1000);
+  try {
+    const r = await fetch('/step', { method: 'POST', body: JSON.stringify({
+      map: REH.map, dialog, segments: TRANS }) });
+    const { key } = await r.json();
+    let j;
+    for (;;) {
+      await new Promise(z => setTimeout(z, 1500));
+      j = (await (await fetch('/steps')).json())[key] || {};
+      if (j.done) break;
+    }
+    clearInterval(draw);
+    if (j.error) throw new Error(j.error);
+    REH.map = j.map; REH.steps++;
+    const before = FRAMES.length;
+    mount(REH.map, TRANS, RAWNAME || '리허설', MAP && MAP.meeting && MAP.meeting.audio);
+    step = REVEAL.length;
+    NODES.forEach(n => n.dom.classList.add('in'));
+    FRAMES.forEach(f => f.dom.classList.add('in'));
+    EDGES.forEach(e => { e.path.classList.add('on'); if (e.text) e.text.classList.add('on'); });
+    fit(false);
+    blog(`${mmss(REH.at)} · 바뀐 곳 ${j.changed}군데 · 논의 ${before}→${FRAMES.length}`, '');
+  } catch (e) {
+    clearInterval(draw);
+    console.error('[meetnote] 리허설 한 걸음 실패', e);
+    $('#livebar').textContent = '리허설 · 한 걸음 실패 · ' + String(e.message).slice(0, 60);
+  }
+  REH.busy = false;
+}
+$('#rehearse').onclick = () => {
+  if (REH) return rehStop();
+  const t = Math.round(au.currentTime || 0) || (TRANS.length ? Math.round(TRANS[Math.floor(TRANS.length / 5)].t) : 0);
+  $('#rehearse').textContent = '■ 리허설 중지';
+  rehearsal(t);
+};
 
 /* 데스크탑(로컬 서버) 경로 — 이 맥의 Claude Code 가 만든다 */
 const LOCALSRV = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);

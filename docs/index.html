@@ -519,7 +519,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260906-232051';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260906-233227';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -1699,9 +1699,13 @@ async function meetings() {
 }
 meetings();
 
+const enc = u => u.split('/').map(encodeURIComponent).join('/');
 async function load(url) {
-  const map = await (await fetch(url, NOCACHE)).json();
-  const segs = map.segments || (await (await fetch(map.meeting.transcript, NOCACHE)).json()).segments;
+  const r = await fetch(enc(url), NOCACHE);
+  if (!r.ok) throw new Error(`${r.status} · ${url}`);
+  const map = await r.json();
+  const segs = map.segments
+    || (await (await fetch(enc(map.meeting.transcript), NOCACHE)).json()).segments;
   start(segs, map, map.meeting.title + ' · ' + map.meeting.date, map.meeting.audio);
 }
 /* 클로바노트·일부 도구는 UTF-16으로 떨어뜨린다. BOM을 보고 골라 읽는다. */
@@ -1964,7 +1968,7 @@ async function makeMap() {
 function saveBtn(map) {
   toastEl(`<b>맵을 저장해 두시겠어요?</b> 내려받아 docs/data/ 에 넣으면 링크로 공유됩니다.`, () => {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(map, null, 2)], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(plain(map), null, 2)], { type: 'application/json' }));
     a.download = map.id + '.ibis.json'; a.click();
   });
 }
@@ -1975,13 +1979,40 @@ function toastEl(html, onClick) {
   clearTimeout(t._t); t._t = setTimeout(() => { t.classList.remove('on'); t.style.pointerEvents = 'none'; }, 12000);
 }
 
+/* 렌더링이 맵에 심어 둔 참조(frame·sec·dom·p·kids)를 걷어낸 저장용 사본.
+   그대로 JSON.stringify 하면 순환 구조로 터진다. */
+function plain(m) {
+  const node = n => {
+    const o = { id: n.id, kind: n.kind, title: n.title, who: n.who || '',
+      t: n.t, at: (n.at || []).map(x => typeof x === 'number' ? mmss(x) : x), note: n.note || '' };
+    if (n.parent) o.parent = n.parent;
+    if (n.lock || n.edited) o.lock = true;
+    return o;
+  };
+  return {
+    id: m.id, meeting: Object.assign({}, m.meeting),
+    headline: m.headline || '',
+    highlights: (m.highlights || []).map(h => ({ title: h.title, quote: h.quote,
+      t: typeof h.t === 'number' ? mmss(h.t) : h.t, t1: typeof h.t1 === 'number' ? mmss(h.t1) : h.t1 })),
+    sections: (m.sections || []).map(s2 => ({
+      no: s2.no, title: s2.title, part: s2.part, t: s2.t, t1: s2.t1,
+      nodes: (s2.nodes || []).map(node),
+      conflicts: (s2.conflicts || []).map(c => c.slice(0, 2)),
+      resolution: s2.resolution ? Object.assign(node(Object.assign({ id: 'r' }, s2.resolution)),
+        { kind: s2.resolution.kind, from: (s2.resolution.from || []).slice(),
+          id: undefined, parent: undefined }) : null,
+    })),
+    carry: (m.carry || []).map(c => ({ label: c.label, part: c.part, note: c.note })),
+  };
+}
+
 /* ── 리허설 ──────────────────────────────────────────────
    음성을 재생하면서, 지나간 발언만 새 대화로 흘려 넣어 맵을 고쳐 나간다.
    실시간 회의를 아직 못 하니 녹음으로 그 상황을 재현하는 것이다. */
 let REH = null;
 function rehearsal(fromSec) {
   if (!TRANS.length) return;
-  const full = MAP ? JSON.parse(JSON.stringify(MAP)) : {      /* 맵이 없으면 빈 상태에서 */
+  const full = MAP ? plain(MAP) : {                          /* 맵이 없으면 빈 상태에서 */
     id: (RAWNAME || 'live').replace(/\.[^.]+$/, '').slice(0, 40),
     meeting: { title: RAWNAME || '리허설', date: '', duration: '', audio: '', transcript: '' },
     headline: '진행 중', highlights: [], sections: [], carry: [],
@@ -2023,6 +2054,8 @@ function rehStop() {
 const REH_CHARS = 500;
 function rehTime(t) {
   if (!REH) return;
+  /* 뒤로 감으면 읽던 자리가 앞서 있어 영영 안 모인다 — 그 시각으로 다시 맞춘다 */
+  if (t < REH.at - 1) { const i = TRANS.findIndex(s => s.t >= t); REH.idx = i < 0 ? TRANS.length : i; }
   REH.at = t;
   while (REH.idx < TRANS.length && TRANS[REH.idx].t <= t) {
     const s = TRANS[REH.idx++];
@@ -2048,7 +2081,7 @@ async function rehStep() {
   }, 1000);
   try {
     const r = await fetch('/step', { method: 'POST', body: JSON.stringify({
-      map: REH.map, dialog, segments: TRANS }) });
+      map: plain(REH.map), dialog, segments: TRANS }) });
     const { key } = await r.json();
     let j;
     for (;;) {

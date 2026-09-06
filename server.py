@@ -6,7 +6,7 @@ import json, os, subprocess, sys, threading, traceback
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 import ibis
 import meetnote
@@ -243,6 +243,7 @@ class Handler(BaseHTTPRequestHandler):
     def serve_docs(self, path):
         """docs/ 를 그대로 서빙한다. 오디오 탐색을 위해 Range만 최소로 받아준다."""
         rel = path[len("/notes"):] if path.startswith("/notes") else path
+        rel = unquote(rel)                    # 파일명에 공백·괄호가 있으면 인코딩되어 온다
         f = (DOCS / rel.lstrip("/")).resolve()
         if f.is_dir():
             f = f / "index.html"

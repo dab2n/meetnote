@@ -518,6 +518,18 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
+const BUILD = '20260906-101500';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+/* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
+(async () => {
+  try {
+    const v = (await (await fetch('version.txt', { cache: 'no-store' })).text()).trim();
+    if (v && v !== BUILD && !sessionStorage.getItem('mn.reload.' + v)) {
+      sessionStorage.setItem('mn.reload.' + v, '1');
+      location.reload();
+    }
+  } catch {}
+})();
+
 const OX = 300, OY = 1000, LOD = .34;
 /* 정리 맵이 바뀌었는데 캐시된 옛 파일이 뜨는 일이 없게 매번 재검증한다 */
 const NOCACHE = { cache: 'no-cache' };
@@ -1758,7 +1770,13 @@ function mount(map, segs, name, audioSrc) {
   }
 
   clearTimeout(timer); step = 0; paused = false; $('#pause').textContent = '❚❚ 일시정지';
-  if (!map) { blank(); if (innerWidth <= 900) showTab('src'); return; }
+  if (!map) {
+    blank();
+    if (innerWidth <= 900) showTab('src');
+    if (LOCALSRV) deskMake();            /* 내 맥 — 구독으로 바로 만든다 */
+    else if (key()) makeMap();           /* 키가 있으면 바로 만든다 */
+    return;
+  }
   fit(true);
   toast(map.headline, 4200);
   setTimeout(play, 900);
@@ -1780,98 +1798,55 @@ const blog = (msg, cls) => {
 };
 function blank(state) {
   const run = $('#brun'); run.textContent = '';
-  const chars = RAWSEGS ? RAWSEGS.reduce((a, s) => a + s.l.join('').length, 0) : 0;
-  /* 대략치. 한국어는 1.5자쯤이 1토큰이고, 출력에는 JSON뿐 아니라 사고 토큰도 함께 과금된다.
-     입력 $5/1M · 출력 $25/1M 기준, 호출은 최소 2회(초안·대조) 최대 4회(수리 2회까지). */
-  const cost = calls => {
-    const tin = chars / 1.5 + 2500;                 /* 전사문 + 표준 */
-    const tout = Math.min(30000, Math.max(6000, tin * 0.6));   /* JSON + 사고 토큰 */
-    return (calls * (tin * 5 + tout * 25) / 1e6).toFixed(2);
-  };
   if (state === 'running') {
     $('#bt').textContent = '정리 맵을 만드는 중입니다';
-    $('#bp').textContent = '초안 → 원문 대조 → 표준 검사 순서로 돕니다. 몇 분 걸립니다.';
+    $('#bp').textContent = '쟁점 → 주장 → 반론·근거 → 결론 순서로 쌓입니다. 도착하는 대로 화면에 올라갑니다.';
     $('#bs').textContent = '';
     return;
   }
-  $('#bt').textContent = '이 회의는 아직 정리 맵이 없습니다';
-  $('#bp').innerHTML = '쟁점 → 주장 → 반론·근거 → 결론까지, <b>이 자리에서 만듭니다.</b>';
-  if (!key() && !LOCALSRV) {
-    const b = el('button', null, 'API 키 넣기'); b.onclick = () => sheet(true);
-    run.append(b);
-    $('#bs').innerHTML = '키는 이 브라우저에만 저장됩니다. 정리를 위해 전사문이 Anthropic으로 전송됩니다.';
-  }
-  if (LOCALSRV) {                     /* 내 맥의 서버에서 열렸다 — 구독으로 도는 경로 */
-    const d = el('button', key() ? 'ghost' : null, '데스크탑에서 만들기 · 추가 비용 없음');
-    d.onclick = deskMake;
-    const f = el('button', 'ghost', '＋ 회의자료');
-    f.onclick = () => $('#att').click();
+  if (LOCALSRV) {                        /* 내 맥의 서버 — 구독 안에서 돈다 */
+    $('#bt').textContent = '정리 맵을 만듭니다';
+    $('#bp').innerHTML = '이 맥의 <b>Claude Code</b>로 돕니다. 쓰고 계신 구독 안에서 돌아 <b>추가 비용이 없습니다.</b>';
+    const d = el('button', null, '지금 만들기'); d.onclick = deskMake;
+    const f = el('button', 'ghost', '＋ 회의자료'); f.onclick = () => $('#att').click();
     run.append(d, f);
-    if (ATTACH.length) $('#bs').innerHTML = `회의자료 ${ATTACH.length}개 첨부됨 · ${ATTACH.map(x => esc(x.name)).join(', ')}`
-      + '<br>이 맥의 Claude Code 로 돕니다. 구독으로 도는 것이라 API 청구가 붙지 않습니다.';
-    else $('#bs').innerHTML = '이 맥의 Claude Code 로 돕니다. <b>구독으로 도는 것이라 API 청구가 붙지 않습니다.</b>'
-      + '<br>회의자료(pdf·이미지·문서)를 붙이면 함께 읽고 정리합니다.';
+    $('#bs').innerHTML = ATTACH.length
+      ? `회의자료 ${ATTACH.length}개 첨부됨 · ${ATTACH.map(x => esc(x.name)).join(', ')}`
+      : '회의자료(pdf·이미지·문서)를 붙이면 함께 읽고 정리합니다.';
+    return;
   }
-  if (key() && !LOCALSRV) {
-    const go = sample => {
-      console.log('[meetnote] 버튼 눌림 · sample =', sample);
-      $('#blog').textContent = '';
-      blog('시작합니다…');
-      try { makeMap(sample); } catch (e) { fail('시작', e); }
-    };
-    const b = el('button', null, '정리 맵 만들기'); b.onclick = () => go(false);
-    const t = el('button', 'ghost', '앞 15분만 시험'); t.onclick = () => go(true);
-    const c = el('button', 'ghost', '키 바꾸기'); c.onclick = () => sheet(true);
-    run.append(b, t, c);
-    const short = RAWSEGS ? RAWSEGS.filter(x => x.t < 900).length : 0;
-    $('#bs').innerHTML = `발언 ${RAWSEGS ? RAWSEGS.length : 0}개 · ${Math.round(chars / 1000)}천 자`
-      + `<br>전체는 <b>대략 $${cost(2)}~$${cost(4)}</b> (수리 단계까지 가면 위쪽), `
-      + `앞 15분만(발언 ${short}개)이면 그보다 훨씬 적습니다.`
-      + `<br><b>실행할 때마다 넣어 둔 키의 계정으로 과금됩니다.</b> 구독과는 별개입니다.`;
-  }
-}
-/* 조용히 죽는 일이 없게 — 잡히지 않은 예외도 화면에 남긴다 */
-function fail(where, e) {
-  clearInterval(ticking);
-  const msg = (e && (e.message || e.reason && e.reason.message || e.reason)) || e || '알 수 없음';
-  console.error('[meetnote] ' + where, e);
-  try { blog(`${where} 실패 · ${msg}`.slice(0, 300), 'err'); } catch {}
-  toast(`${esc(where)} 실패 · ${esc(String(msg).slice(0, 140))}`, 9000);
-}
-addEventListener('unhandledrejection', e => fail('처리되지 않은 오류', e));
-addEventListener('error', e => fail('스크립트 오류', e));
-
-let ticking = null;
-function tick(line, label) {   /* 첫 응답까지 몇 분씩 조용해서, 살아 있다는 표시가 필요하다 */
-  const t0 = Date.now();
-  let extra = '';
-  clearInterval(ticking);
-  const draw = () => {
-    const s = Math.round((Date.now() - t0) / 1000);
-    const txt = `${label} · ${(s / 60 | 0)}:${String(s % 60).padStart(2, '0')}${extra}`;
-    line.textContent = txt; $('#livebar').textContent = txt;
+  /* 공개 링크 — 브라우저는 내 맥의 서버에 닿을 수 없다(https→http 차단) */
+  $('#bt').textContent = '이 링크에서는 정리 맵을 만들 수 없습니다';
+  $('#bp').innerHTML = '내 맥에서 <b>http://127.0.0.1:8787/notes/</b> 로 열면 '
+    + '구독 안에서 만들어집니다. 이 공개 링크는 만들어진 회의를 <b>보고 나누는</b> 용도입니다.';
+  const k = el('button', key() ? 'ghost' : null, key() ? 'API 키로 만들기' : 'API 키로 만들기');
+  k.onclick = () => (key() ? makeMap() : sheet(true));
+  const c = el('button', 'ghost', key() ? '키 바꾸기' : '키 넣기');
+  c.onclick = () => sheet(true);
+  run.append(k, c);
+  const chars = RAWSEGS ? RAWSEGS.reduce((a, s2) => a + s2.l.join('').length, 0) : 0;
+  const cost = calls => {
+    const tin = chars / 1.5 + 2500, tout = Math.min(30000, Math.max(6000, tin * 0.6));
+    return (calls * (tin * 5 + tout * 25) / 1e6).toFixed(2);
   };
-  draw(); ticking = setInterval(draw, 1000);
-  return n => { extra = ` · ${Math.round(n / 100) / 10}천 자 받는 중`; draw(); };
+  $('#bs').innerHTML = `이 경로는 <b>구독이 아니라 API 키 계정으로 따로 청구</b>됩니다 `
+    + `(이 회의 기준 대략 $${cost(2)}~$${cost(4)}). 구독으로 쓰려면 위의 로컬 주소로 여세요.`;
 }
-async function makeMap(sample) {
+async function makeMap() {
   let segs = RAWSEGS;
   if (!segs) return toast('전사문이 없습니다', 3000);
   if (!key()) { sheet(true); return; }
-  if (sample) segs = segs.filter(x => x.t < 900);
-  if (segs.length < 5) return toast('시험할 발언이 너무 적습니다', 3000);
 
   document.body.classList.remove('view-cards');
   document.querySelectorAll('.seg2 button').forEach(x => x.classList.toggle('on', x.dataset.view === 'map'));
   if (innerWidth <= 900) showTab('graph');
-  toast(sample ? '앞 15분만으로 시험합니다 · 진행 상황은 오른쪽에 뜹니다'
-               : '정리 맵을 만듭니다 · 몇 분 걸립니다', 4000);
+  toast('정리 맵을 만듭니다 · 몇 분 걸립니다', 4000);
   console.log('[meetnote] 생성 시작 · 발언', segs.length);
   USED = { in: 0, out: 0, calls: 0 };
   document.body.classList.add('making');
   blank('running');
   try {
-    const id = ((RAWNAME || 'meeting').replace(/\.[^.]+$/, '') || 'meeting').slice(0, 40) + (sample ? '-시험' : '');
+    const id = ((RAWNAME || 'meeting').replace(/\.[^.]+$/, '') || 'meeting').slice(0, 40);
     const head = `<transcript>\n${segs.map(s => `${s.s} ${mmss(s.t)}\n${s.l.join('\n')}`).join('\n\n')}\n</transcript>\n\n`;
     if (!SPEC) SPEC = await (await fetch('SPEC.md', NOCACHE)).text();
     const sys = HEAD_SYS + SPEC + '\n\n모든 출력은 한국어.';
@@ -1933,7 +1908,7 @@ async function makeMap(sample) {
     fail('정리 맵 만들기', e);
     $('#bt').textContent = '정리 맵을 만들지 못했습니다';
     $('#bp').textContent = '키가 맞는지, 크레딧이 남았는지 확인해 주세요.';
-    const b = el('button', null, '다시 시도'); b.onclick = () => makeMap(sample);
+    const b = el('button', null, '다시 시도'); b.onclick = () => (LOCALSRV ? deskMake() : makeMap());
     const c = el('button', 'ghost', '키 바꾸기'); c.onclick = () => sheet(true);
     $('#brun').textContent = ''; $('#brun').append(b, c);
   }

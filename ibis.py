@@ -222,10 +222,12 @@ def _key() -> str | None:
 def _cli(system: str, user: str, attach: list[Path] | None = None) -> dict:
     """이 맥에 깔린 Claude Code 로 돌린다. 구독으로 쓰는 것이라 API 청구가 따로 붙지 않는다.
     회의자료를 붙이면 CLI 가 그 파일을 직접 읽는다."""
-    import subprocess, tempfile
+    import shutil, subprocess, tempfile
     note = ""
+    # MCP 서버·저장소 스캔이 세션마다 붙어 몇 분씩 잡아먹는다. 빈 디렉터리에서 최소로 띄운다.
+    work = Path(tempfile.mkdtemp(prefix="mn-run-"))
     cmd = ["claude", "-p", "--output-format", "json", "--model", "opus",
-           "--permission-mode", "dontAsk"]
+           "--permission-mode", "dontAsk", "--strict-mcp-config"]
     if attach:
         for f in attach:
             cmd += ["--add-dir", str(f.parent.resolve())]
@@ -234,13 +236,14 @@ def _cli(system: str, user: str, attach: list[Path] | None = None) -> dict:
                 + "\n".join(str(f.resolve()) for f in attach) + "\n</materials>")
     cmd += ["--append-system-prompt", system, user + note]
     # stdin 을 닫아 주지 않으면 호출마다 3초를 기다리다 실패한다
-    r = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    r = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL, cwd=work)
     if r.returncode != 0:
         raise RuntimeError(f"claude CLI 실패(rc={r.returncode}): "
                            f"{(r.stderr or '')[:300]} / {(r.stdout or '')[:300]}")
     out = json.loads(r.stdout)
     if out.get("is_error"):
         raise RuntimeError(f"claude CLI 오류: {str(out.get('result'))[:300]}")
+    shutil.rmtree(work, ignore_errors=True)
     text = out.get("result") or ""
     m = re.search(r"\{.*\}", text, re.S)          # 앞뒤에 말이 붙어 와도 JSON 만 집는다
     if not m:

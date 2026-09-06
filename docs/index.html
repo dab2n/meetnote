@@ -519,7 +519,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260906-231800';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260906-231849';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -2014,7 +2014,9 @@ function rehStop() {
   $('#livebar').textContent = '';
   $('#rehearse').textContent = '▶︎ 리허설';
 }
-const REH_CHARS = 260;               /* 이만큼 쌓이면 한 걸음 */
+/* 한 걸음이 1분 남짓 걸린다. 임계를 너무 낮게 잡으면 재생 속도를 못 따라간다.
+   NEWTON 기준 말이 분당 400자쯤 쌓이므로 500자면 대략 보조를 맞춘다. */
+const REH_CHARS = 500;
 function rehTime(t) {
   if (!REH) return;
   REH.at = t;

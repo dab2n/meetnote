@@ -551,15 +551,16 @@ END = {                                   # 종류별 종결 형태 (SPEC 2절)
 }
 
 
-def audit(m: dict, segs: list[dict] | None = None) -> list[str]:
-    """표준 위반 목록. 비어 있으면 통과."""
+def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> list[str]:
+    """표준 위반 목록. 비어 있으면 통과.
+    partial=True 면 아직 만들어지는 중인 맵이라 전체 규모 규칙(섹션 수·확정 비율)은 보지 않는다."""
     v, secs_ = [], m.get("sections", [])
     body = " ".join(" ".join(s["l"]) for s in segs) if segs else ""
     people = {s["s"] for s in segs} if segs else set()
 
-    if not 6 <= len(secs_) <= 16:
+    if not partial and not 6 <= len(secs_) <= 16:
         v.append(f"[구조] 섹션이 {len(secs_)}개다. 6~16개여야 한다")
-    if segs and secs_:                      # 잘게 쪼개면 주제가 아니라 발언 목록이 된다
+    if not partial and segs and secs_:                      # 잘게 쪼개면 주제가 아니라 발언 목록이 된다
         mins = (segs[-1]["t"] - segs[0]["t"]) / 60
         if mins / len(secs_) < 4:
             v.append(f"[구조] {mins:.0f}분을 섹션 {len(secs_)}개로 쪼갰다"
@@ -611,11 +612,11 @@ def audit(m: dict, segs: list[dict] | None = None) -> list[str]:
             if not (a["kind"] == b["kind"] == "position"):
                 v.append(f"{tag} 대립은 주장끼리만 맺는다 ({a['kind']} ↔ {b['kind']})")
 
-    if secs_ and dec > len(secs_) * 2 / 3:
+    if not partial and secs_ and dec > len(secs_) * 2 / 3:
         v.append(f"[결론] 확정이 {dec}/{len(secs_)}개다. 3분의 2를 넘으면 대개 오탐이다")
 
     hs = m.get("highlights", [])
-    if hs and not 3 <= len(hs) <= 6:
+    if not partial and hs and not 3 <= len(hs) <= 6:
         v.append(f"[하이라이트] {len(hs)}개다. 3~6개여야 한다")
     for i, h in enumerate(hs):
         t = (h.get("title") or "").strip()

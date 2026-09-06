@@ -912,6 +912,11 @@ function auditMap(m, segs) {
   const body = segs.map(s => s.l.join(' ')).join(' ');
   const people = new Set(segs.map(s => s.s));
   if (secs_.length < 6 || secs_.length > 16) v.push(`[구조] 섹션이 ${secs_.length}개다. 6~16개여야 한다`);
+  if (segs.length && secs_.length) {        /* 잘게 쪼개면 주제가 아니라 발언 목록이 된다 */
+    const mins = (segs[segs.length - 1].t - segs[0].t) / 60;
+    if (mins / secs_.length < 4) v.push(`[구조] ${mins.toFixed(0)}분을 섹션 ${secs_.length}개로 쪼갰다`
+      + `(평균 ${(mins / secs_.length).toFixed(1)}분). 섹션 하나가 평균 5분은 되어야 한다`);
+  }
   if ((m.headline || '').length < 20) v.push('[구조] headline이 비었거나 너무 짧다');
   let dec = 0;
   secs_.forEach(sec => {

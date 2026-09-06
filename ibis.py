@@ -402,6 +402,11 @@ def audit(m: dict, segs: list[dict] | None = None) -> list[str]:
 
     if not 6 <= len(secs_) <= 16:
         v.append(f"[구조] 섹션이 {len(secs_)}개다. 6~16개여야 한다")
+    if segs and secs_:                      # 잘게 쪼개면 주제가 아니라 발언 목록이 된다
+        mins = (segs[-1]["t"] - segs[0]["t"]) / 60
+        if mins / len(secs_) < 4:
+            v.append(f"[구조] {mins:.0f}분을 섹션 {len(secs_)}개로 쪼갰다"
+                     f"(평균 {mins / len(secs_):.1f}분). 섹션 하나가 평균 5분은 되어야 한다")
     if len(m.get("headline", "")) < 20:
         v.append("[구조] headline이 비었거나 너무 짧다")
 

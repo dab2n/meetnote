@@ -519,7 +519,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260906-231849';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260906-232051';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -1755,7 +1755,7 @@ function mount(map, segs, name, audioSrc) {
 
   loadLocal();
   document.body.classList.toggle('nomap', !map);
-  $('#rehearse').hidden = !(map && LOCALSRV);
+  $('#rehearse').hidden = !LOCALSRV;
   if (map) { const g = build(map); layout(g); render(g); applyEdits(); NODES.forEach(paintNode); }
   else { NODES = []; EDGES = []; FRAMES = []; REVEAL = []; render({ nodes: [], edges: [], frames: [] }); }
   renderTranscript(); renderCards(); group = 'decision'; renderDigest(); marks();
@@ -1776,7 +1776,7 @@ function mount(map, segs, name, audioSrc) {
   if (!map) {
     blank();
     if (innerWidth <= 900) showTab('src');
-    if (LOCALSRV) deskMake();            /* 내 맥 — 구독으로 바로 만든다 */
+    if (LOCALSRV && !REH) deskMake();     /* 내 맥 — 구독으로 바로 만든다 */
     else if (key()) makeMap();           /* 키가 있으면 바로 만든다 */
     return;
   }
@@ -1980,8 +1980,12 @@ function toastEl(html, onClick) {
    실시간 회의를 아직 못 하니 녹음으로 그 상황을 재현하는 것이다. */
 let REH = null;
 function rehearsal(fromSec) {
-  if (!MAP || !TRANS.length) return;
-  const full = JSON.parse(JSON.stringify(MAP));
+  if (!TRANS.length) return;
+  const full = MAP ? JSON.parse(JSON.stringify(MAP)) : {      /* 맵이 없으면 빈 상태에서 */
+    id: (RAWNAME || 'live').replace(/\.[^.]+$/, '').slice(0, 40),
+    meeting: { title: RAWNAME || '리허설', date: '', duration: '', audio: '', transcript: '' },
+    headline: '진행 중', highlights: [], sections: [], carry: [],
+  };
   REH = {
     from: fromSec, at: fromSec, buf: [], busy: false, steps: 0, chars: 0,
     map: null, full,
@@ -2072,7 +2076,8 @@ async function rehStep() {
 }
 $('#rehearse').onclick = () => {
   if (REH) return rehStop();
-  const t = Math.round(au.currentTime || 0) || (TRANS.length ? Math.round(TRANS[Math.floor(TRANS.length / 5)].t) : 0);
+  DESK_ABORT = true;                    /* 전체 생성이 돌고 있으면 화면은 리허설로 넘긴다 */
+  const t = MAP ? (Math.round(au.currentTime || 0) || Math.round(TRANS[Math.floor(TRANS.length / 5)].t)) : 0;
   $('#rehearse').textContent = '■ 리허설 중지';
   rehearsal(t);
 };
@@ -2080,8 +2085,10 @@ $('#rehearse').onclick = () => {
 /* 데스크탑(로컬 서버) 경로 — 이 맥의 Claude Code 가 만든다 */
 const LOCALSRV = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
 let ATTACH = [];
+let DESK_ABORT = false;
 async function deskMake() {
   if (!RAWSEGS) return;
+  DESK_ABORT = false;
   document.body.classList.add('making');
   $('#blog').textContent = ''; blank('running');
   blog('데스크탑으로 넘기는 중…');
@@ -2102,6 +2109,7 @@ async function deskMake() {
     const live = { title: '', headline: '만드는 중…', sections: [], highlights: [], carry: [] };
     for (;;) {
       await new Promise(z => setTimeout(z, 1500));
+      if (DESK_ABORT) { document.body.classList.remove('making'); return; }
       const j = (await (await fetch('/jobs')).json())[jk] || {};
       const s = Math.round((Date.now() - t0) / 1000);
       const txt = `${j.note || '초안 만드는 중'} · ${(s / 60 | 0)}:${String(s % 60).padStart(2, '0')} / ${guess}`;

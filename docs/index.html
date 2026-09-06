@@ -518,7 +518,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260906-101500';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260906-134213';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -767,6 +767,7 @@ const SCHEMA = {
 let SPEC = '';
 let USED = { in: 0, out: 0, calls: 0 };
 const spend = () => (USED.in * 5 + USED.out * 25) / 1e6;
+const chars0 = () => (RAWSEGS || []).reduce((a, s2) => a + s2.l.join('').length, 0);
 const HEAD_SYS = `너는 회의 기록을 IBIS(Issue-Based Information System) 구조로 정리한다.
 전사문을 읽고, 무엇이 쟁점이었고 누가 어떤 주장을 했고 무엇이 부딪혔고 어떻게 닫혔는지를 그린다.
 
@@ -1801,7 +1802,7 @@ function blank(state) {
   if (state === 'running') {
     $('#bt').textContent = '정리 맵을 만드는 중입니다';
     $('#bp').textContent = '쟁점 → 주장 → 반론·근거 → 결론 순서로 쌓입니다. 도착하는 대로 화면에 올라갑니다.';
-    $('#bs').textContent = '';
+    $('#bs').textContent = eta(chars0()) + ' · 회의 시간 순서대로 논의가 하나씩 올라옵니다';
     return;
   }
   if (LOCALSRV) {                        /* 내 맥의 서버 — 구독 안에서 돈다 */
@@ -1843,6 +1844,7 @@ async function makeMap() {
   toast('정리 맵을 만듭니다 · 몇 분 걸립니다', 4000);
   console.log('[meetnote] 생성 시작 · 발언', segs.length);
   USED = { in: 0, out: 0, calls: 0 };
+  const T0 = Date.now();
   document.body.classList.add('making');
   blank('running');
   try {
@@ -1866,7 +1868,7 @@ async function makeMap() {
       } catch (err) { console.warn('[meetnote] 부분 렌더 건너뜀', err); }
     };
     let m = await ask(sys, head + '이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.',
-      tick(line, '초안 만드는 중'), grow);
+      tick(line, '초안 만드는 중', eta(chars0())), grow);
     clearInterval(ticking); line.className = ''; line.textContent = `초안 완료 · 논의 ${(m.sections || []).length}개`;
     console.log('[meetnote] 초안', m);
     document.body.classList.add('nomap');       /* 대조 단계 동안 다시 진행 화면으로 */
@@ -1874,7 +1876,7 @@ async function makeMap() {
 
     line = blog('원문과 대조하는 중');
     m = await ask(sys + REVIEW, head + '<draft>\n' + JSON.stringify(m) + '\n</draft>\n\n위 초안을 원문과 대조해 고쳐라.',
-      tick(line, '원문과 대조하는 중'));
+      tick(line, '원문과 대조하는 중', eta(chars0() * .6)));
     clearInterval(ticking); line.className = ''; line.textContent = '원문 대조 완료';
 
     let map = tidy(m, segs, { id, date: new Date().toLocaleDateString('ko-KR').replace(/\.\s?/g, '.').replace(/\.$/, '') });
@@ -1893,6 +1895,7 @@ async function makeMap() {
     left.forEach(x => blog('남은 위반 · ' + x, 'err'));
 
     document.body.classList.remove('making');
+    noteRate(chars0(), Math.round((Date.now() - T0) / 1000));
     try { localStorage.setItem(hashOf(segs), JSON.stringify(map)); } catch {}
     meetings();
     blog(`실제로 쓴 토큰 · 입력 ${(USED.in / 1000).toFixed(1)}K · 출력 ${(USED.out / 1000).toFixed(1)}K`
@@ -1947,18 +1950,36 @@ async function deskMake() {
       date: new Date().toLocaleDateString('ko-KR').replace(/\.\s?/g, '.').replace(/\.$/, '') }) });
     if (!r.ok) throw new Error(await r.text());
     const { key: jk } = await r.json();
-    let line = blog('정리하는 중'), t0 = Date.now();
+    const chars = chars0(), guess = eta(chars);
+    let line = blog('초안 만드는 중'), t0 = Date.now(), shown = 0;
+    const live = { title: '', headline: '만드는 중…', sections: [], highlights: [], carry: [] };
     for (;;) {
       await new Promise(z => setTimeout(z, 1500));
       const j = (await (await fetch('/jobs')).json())[jk] || {};
       const s = Math.round((Date.now() - t0) / 1000);
-      const txt = `${j.note || '정리하는 중'} · ${(s / 60 | 0)}:${String(s % 60).padStart(2, '0')}`;
+      const txt = `${j.note || '초안 만드는 중'} · ${(s / 60 | 0)}:${String(s % 60).padStart(2, '0')} / ${guess}`;
       line.textContent = txt; $('#livebar').textContent = txt;
+
+      const parts = j.parts || [];              /* 도착한 논의를 회의 시간순으로 쌓는다 */
+      while (shown < parts.length) {
+        live.sections.push(parts[shown++]);
+        try {
+          const partial = tidy(live, RAWSEGS, { id: 'live', date: '' });
+          document.body.classList.remove('nomap');
+          const g = build(partial); layout(g); render(g);
+          NODES.forEach(n => n.dom.classList.add('in'));
+          FRAMES.forEach(f => f.dom.classList.add('in'));
+          EDGES.forEach(e => { e.path.classList.add('on'); if (e.text) e.text.classList.add('on'); });
+          step = REVEAL.length; fit(false);
+        } catch (err) { console.warn('[meetnote] 부분 렌더 건너뜀', err); }
+      }
       if (j.error) throw new Error(j.error);
       if (j.done) {
         clearInterval(ticking);
+        noteRate(chars, s);
         (j.warn || []).forEach(w => blog('· ' + w, 'err'));
-        blog(`완료 · 논의 ${j.sections}개 · 추가 비용 없음`, '');
+        document.body.classList.add('nomap');
+        blog(`완료 · 논의 ${j.sections}개 · ${(s / 60 | 0)}분 ${s % 60}초 · 추가 비용 없음`, '');
         document.body.classList.remove('making');
         await meetings();
         return load(`data/${j.id}.ibis.json`);

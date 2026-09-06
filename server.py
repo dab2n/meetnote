@@ -126,13 +126,20 @@ def make_map(key: str, text: str, mid: str, date: str, files: list):
             (tmp / name).write_bytes(base64.b64decode(f.get("data", "")))
             attach.append(tmp / name)
         step = {"n": 0}
+        parts = []
+        JOBS[key]["parts"] = parts
 
         def log(m):
             step["n"] += 1
             JOBS[key].update(note=m.strip(), pct=min(92, 5 + step["n"] * 22))
 
+        def on_section(sec):                 # 오는 대로 뷰어가 가져갈 수 있게 쌓아 둔다
+            parts.append(sec)
+            JOBS[key].update(note=f"논의 {len(parts)} · " + str(sec.get("title", ""))[:24],
+                             pct=min(88, 8 + len(parts) * 6))
+
         out, warn = ibis.write(text, DOCS / "data", mid, date=date, hint="", log=log,
-                               local=True, attach=attach)
+                               local=True, attach=attach, on_section=on_section)
         m = json.loads(out.read_text())
         JOBS[key].update(pct=100, done=True, stage="정리 맵", note=f"논의 {len(m['sections'])}개",
                          sections=len(m["sections"]), warn=warn, id=mid)

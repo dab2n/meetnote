@@ -219,15 +219,39 @@ def _key() -> str | None:
     return None
 
 
-def _cli(system: str, user: str, attach: list[Path] | None = None) -> dict:
+def harvest(text: str, frm: int):
+    """스트림 도중 완성된 섹션 객체를 집어낸다. 문자열·이스케이프를 건너뛰며 괄호를 센다."""
+    done, i, depth, start, instr, esc = [], frm, 0, -1, False, False
+    while i < len(text):
+        c = text[i]
+        if instr:
+            if esc: esc = False
+            elif c == "\\": esc = True
+            elif c == '"': instr = False
+        elif c == '"': instr = True
+        elif c == "{":
+            if depth == 0: start = i
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0 and start >= 0:
+                done.append(text[start:i + 1]); start = -1
+        elif c == "]" and depth == 0:
+            return done, i + 1, True
+        i += 1
+    return done, (start if start >= 0 else i), False
+
+
+def _cli(system: str, user: str, attach: list[Path] | None = None, on_section=None) -> dict:
     """이 맥에 깔린 Claude Code 로 돌린다. 구독으로 쓰는 것이라 API 청구가 따로 붙지 않는다.
     회의자료를 붙이면 CLI 가 그 파일을 직접 읽는다."""
     import shutil, subprocess, tempfile
     note = ""
     # MCP 서버·저장소 스캔이 세션마다 붙어 몇 분씩 잡아먹는다. 빈 디렉터리에서 최소로 띄운다.
     work = Path(tempfile.mkdtemp(prefix="mn-run-"))
-    cmd = ["claude", "-p", "--output-format", "json", "--model", "opus",
-           "--permission-mode", "dontAsk", "--strict-mcp-config"]
+    cmd = ["claude", "-p", "--model", "opus", "--permission-mode", "dontAsk", "--strict-mcp-config"]
+    cmd += (["--output-format", "stream-json", "--include-partial-messages", "--verbose"]
+            if on_section else ["--output-format", "json"])
     if attach:
         for f in attach:
             cmd += ["--add-dir", str(f.parent.resolve())]
@@ -236,11 +260,45 @@ def _cli(system: str, user: str, attach: list[Path] | None = None) -> dict:
                 + "\n".join(str(f.resolve()) for f in attach) + "\n</materials>")
     cmd += ["--append-system-prompt", system, user + note]
     # stdin 을 닫아 주지 않으면 호출마다 3초를 기다리다 실패한다
-    r = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL, cwd=work)
-    if r.returncode != 0:
-        raise RuntimeError(f"claude CLI 실패(rc={r.returncode}): "
-                           f"{(r.stderr or '')[:300]} / {(r.stdout or '')[:300]}")
-    out = json.loads(r.stdout)
+    if on_section:                       # 오는 대로 섹션을 흘려보낸다
+        out, acc, cut = None, "", -1
+        p_ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              stdin=subprocess.DEVNULL, text=True, cwd=work)
+        for line in p_.stdout:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                d = json.loads(line)
+            except Exception:
+                continue
+            if d.get("type") == "result":
+                out = d
+            ev = d.get("event")
+            if d.get("type") == "stream_event" and isinstance(ev, dict) \
+                    and ev.get("type") == "content_block_delta":
+                de = ev.get("delta") or {}
+                acc += de.get("text") or de.get("partial_json") or ""
+                if cut == -1:
+                    k = acc.find('"sections"')
+                    if k >= 0:
+                        b = acc.find("[", k)
+                        if b >= 0: cut = b + 1
+                if cut >= 0:
+                    got, nxt, closed = harvest(acc, cut)
+                    for js in got:
+                        try: on_section(json.loads(js))
+                        except Exception: pass
+                    cut = -2 if closed else nxt
+        err = p_.stderr.read()
+        if p_.wait() != 0 or out is None:
+            raise RuntimeError(f"claude CLI 실패: {err[:300]}")
+    else:
+        r = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL, cwd=work)
+        if r.returncode != 0:
+            raise RuntimeError(f"claude CLI 실패(rc={r.returncode}): "
+                               f"{(r.stderr or '')[:300]} / {(r.stdout or '')[:300]}")
+        out = json.loads(r.stdout)
     if out.get("is_error"):
         raise RuntimeError(f"claude CLI 오류: {str(out.get('result'))[:300]}")
     shutil.rmtree(work, ignore_errors=True)
@@ -267,18 +325,18 @@ def _ask(system: str, user: str) -> dict:
 
 
 def generate(segs: list[dict], hint: str = "", review: bool = True, log=print, tries: int = 2,
-             local: bool = False, attach: list[Path] | None = None) -> dict:
+             local: bool = False, attach: list[Path] | None = None, on_section=None) -> dict:
     """초안 → 원문 대조 → 표준 검사 → 어긴 항목만 수리. 검사를 통과할 때까지 최대 tries번.
 
     local=True 면 API 대신 이 맥의 Claude Code 로 돌린다 (구독으로 쓰는 것이라 추가 청구 없음)."""
-    run = (lambda sy, us: _cli(sy, us, attach)) if local else _ask
+    run = (lambda sy, us, live=None: _cli(sy, us, attach, live)) if local else (lambda sy, us, live=None: _ask(sy, us))
     if local:
         review = False          # CLI 는 호출당 몇 분이라 초안 안에서 스스로 대조하게 한다
     body = as_prompt(segs)
     head = (f"<meeting>{hint}</meeting>\n" if hint else "") + f"<transcript>\n{body}\n</transcript>\n\n"
     log("  초안 만드는 중…")
     m = run(SYSTEM + JSON_ONLY + (SELF if local else ""),
-            head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.")
+            head + "이 회의를 IBIS 구조로 정리해라. 결론이 안 난 주제는 억지로 닫지 마라.", on_section)
 
     if review:
         log(f"  원문과 대조하는 중… (초안 논의 {len(m.get('sections', []))}개)")
@@ -478,7 +536,8 @@ def audit(m: dict, segs: list[dict] | None = None) -> list[str]:
 
 def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "",
           hint: str = "", review: bool = True, log=print,
-          local: bool = False, attach: list[Path] | None = None) -> tuple[Path, list[str]]:
+          local: bool = False, attach: list[Path] | None = None,
+          on_section=None) -> tuple[Path, list[str]]:
     """전사문 하나 -> <id>.transcript.json + <id>.ibis.json + index.json 갱신."""
     segs = parse(text)
     if len(segs) < 5:
@@ -487,7 +546,8 @@ def write(text: str, docs_data: Path, mid: str, date: str = "", audio: str = "",
     (docs_data / f"{mid}.transcript.json").write_text(
         json.dumps({"segments": segs}, ensure_ascii=False), encoding="utf-8")
 
-    m, warn = verify(generate(segs, hint, review, log, local=local, attach=attach), segs,
+    m, warn = verify(generate(segs, hint, review, log, local=local, attach=attach,
+                              on_section=on_section), segs,
                      {"id": mid, "date": date, "audio": audio})
     warn += ["[표준] " + x for x in audit(m, segs)]      # 수리 뒤에도 남은 것
     out = docs_data / f"{mid}.ibis.json"

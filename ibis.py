@@ -503,9 +503,11 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
             r = {"kind": "open", "title": "결론 없이 넘어간 주제", "who": nodes[-1]["who"],
                  "t": nodes[-1]["t"], "at": nodes[-1]["at"], "from": [nodes[-1]["id"]]}
         else:
-            ra0 = snap(r["at"][0], starts)
-            ra1 = snap(r["at"][1], starts, lo=ra0 + 1) if len(r["at"]) > 1 else end
-            r = dict(r, t=mmss(snap(r["t"], starts)), at=[mmss(ra0), mmss(max(ra1, ra0 + 1))])
+            at = r.get("at") or [r.get("t") or nodes[-1]["t"], nodes[-1]["at"][1]]   # 구간을 빠뜨리면 마지막 노드까지로 본다
+            ra0 = snap(at[0], starts)
+            ra1 = snap(at[1], starts, lo=ra0 + 1) if len(at) > 1 else end
+            r = dict(r, who=r.get("who") or next((n["who"] for n in nodes if n["id"] in r.get("from", [])), nodes[-1]["who"]),
+                     t=mmss(snap(r.get("t") or at[0], starts)), at=[mmss(ra0), mmss(max(ra1, ra0 + 1))])
             r["from"] = [x for x in r.get("from", []) if x in by_id]
             if not r["from"]:
                 r["from"] = [n["id"] for n in nodes if n["kind"] != "issue"] or [root]

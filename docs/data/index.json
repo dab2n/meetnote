@@ -9,6 +9,14 @@
       "map": "data/새로운 노트 (3).ibis.json"
     },
     {
+      "id": "2026-09-08-ai-interview",
+      "title": "AI 회의록 인터뷰",
+      "date": "2026.09.08",
+      "duration": "1:00:55",
+      "sections": 13,
+      "map": "data/2026-09-08-ai-interview.ibis.json"
+    },
+    {
       "id": "2026-06-15",
       "title": "NEWTON UX·ID·BX 통합 회의",
       "date": "2026.06.15",

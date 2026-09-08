@@ -519,7 +519,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260906-233227';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260908-104339';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -2040,7 +2040,7 @@ function rehearsal(fromSec) {
   $('#livebar').textContent = `리허설 · ${mmss(fromSec)}부터 · 시드 논의 ${REH.map.sections.length}개`;
   seekTo(fromSec, true);
   if (audioOK) au.play().catch(() => {});
-  else { REH.tick = setInterval(() => rehTime(REH.at + 1), 1000); }   /* 음성이 없으면 가상 시계 */
+  else { REH.tick = setInterval(() => rehTime(REH.at + speed), 1000); }  /* 음성이 없으면 가상 시계 — 2×·4× 버튼을 따른다 */
 }
 function rehStop() {
   if (REH && REH.tick) clearInterval(REH.tick);

@@ -288,6 +288,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if u.path == "/local":
             return self.do_LOCAL()
+        if u.path == "/ask":      # 원문 AI 검색 — 이 맥의 Claude Code 구독으로 답한다
+            size = int(self.headers.get("Content-Length") or 0)
+            if size > MAX_BYTES:
+                return self._json(413, {"error": "너무 큽니다"})
+            b = json.loads(self.rfile.read(size) or b"{}")
+            q, segs = (b.get("question") or "").strip()[:500], b.get("segments") or []
+            if not q or not segs:
+                return self._json(400, {"error": "질문과 전사문이 필요합니다"})
+            try:
+                return self._json(200, ibis.ask(q, segs, b.get("map")))
+            except Exception as e:
+                return self._json(500, {"error": str(e)[:300]})
         if u.path == "/step":     # 리허설: 새 대화 한 덩어리를 현재 맵에 반영
             size = int(self.headers.get("Content-Length") or 0)
             b = json.loads(self.rfile.read(size) or b"{}")

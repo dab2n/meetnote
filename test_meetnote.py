@@ -129,3 +129,16 @@ if REF.exists():
     assert ibis.audit(ref, rsegs) == []
     assert nd["g-p0"]["t"] == "18:57", nd["g-p0"]["t"]
     print("근거 검사 OK · 다른 사람 말·지어낸 말·빠진 근거 검출")
+
+# ---------- AI 검색 — 원문에 없는 인용은 버린다 ----------
+if REF.exists():
+    real = ibis._cli
+    ibis._cli = lambda *a, **k: {"answer": "답", "cites": [
+        {"who": "시헌", "t": "45:07", "quote": "허리는 굉장히 안정적인 사출은 가능하지만"},   # 원문 그대로
+        {"who": "일여", "t": "45:07", "quote": "허리는 굉장히 안정적인 사출은 가능하지만"},   # 다른 사람 말
+        {"who": "시헌", "t": "10:00", "quote": "프로젝터는 허리에 다는 게 맞다고 봅니다"}]}   # 지어낸 말
+    got = ibis.ask("왜 무릎인가", rsegs)
+    ibis._cli = real
+    assert [c["who"] for c in got["cites"]] == ["시헌"] and got["dropped"] == 2, got
+    assert got["cites"][0]["t"] == "45:07", got
+    print("AI 검색 OK · 지어낸 인용·다른 사람 인용 버림")

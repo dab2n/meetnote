@@ -133,6 +133,7 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .search input::placeholder{color:var(--dim)}
 #qn{font-size:11px;color:var(--dim);white-space:nowrap}
 #tr{flex:1;overflow:auto;padding:6px 8px 40px}
+[hidden]{display:none!important}   /* .seg{display:grid} 가 hidden 을 이겨서 검색해도 안 숨겨졌다 */
 
 .seg{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 9px;border-radius:11px;cursor:pointer}
 .seg:hover{background:#f8f8f9}
@@ -163,6 +164,25 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 }
 .w.done{color:#9ea2aa}
 @media (prefers-reduced-motion:reduce){.w.lit{animation:none}}
+
+/* AI 검색 — 이 맥의 구독으로 답한다 */
+.qai{height:28px;padding:0 9px;border-radius:8px;font-size:11.5px;font-weight:750;color:var(--ink2);border:1px solid var(--line);white-space:nowrap}
+.rhead.ai .qai{background:var(--ink);color:#fff;border-color:var(--ink)}
+.rhead.ai .search{background:#f1effa}
+.aians{margin:8px 10px 0;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);
+  font-size:12.5px;line-height:1.6;max-height:48%;overflow:auto;flex:none}
+.aians .aq{display:flex;gap:8px;align-items:baseline;font-size:11px;color:var(--dim)}
+.aians .aq b{flex:1;font-weight:650;color:var(--ink2)}
+.aians .ax{cursor:pointer;padding:0 2px}
+.aians .at{margin:7px 0 2px;white-space:pre-wrap;color:var(--ink)}
+.aians .think{display:inline-block;margin-top:7px;font-weight:650;
+  background-image:linear-gradient(100deg,#3f7ce8,#8b5cf6,#d9539b,#e8873f,#2f9e75,#3f7ce8);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 1.6s linear infinite}
+.aians .ci{margin-top:7px;padding:6px 9px 6px 10px;border-left:2px solid var(--gold);border-radius:0 8px 8px 0;background:#fbf8f6;cursor:pointer;font-size:12px}
+.aians .ci:hover{background:#f6efe9}
+.aians .ci i{display:block;font-style:normal;font-size:10.5px;color:var(--dim);margin-bottom:1px}
+.aians .ae{margin-top:7px;color:var(--red)}
+@media (prefers-reduced-motion:reduce){.aians .think{animation:none}}
 
 /* ---------- 캔버스 ---------- */
 .stage{position:relative;overflow:hidden;background:var(--bg);touch-action:none}
@@ -430,7 +450,9 @@ body.noaudio .player{display:none}
         <h2>원문</h2>
         <label class="search">🔎<input id="q" placeholder="발언 검색"></label>
         <span id="qn"></span>
+        <button class="qai" id="qai" hidden title="회의 내용을 AI에게 묻기 (구독으로 답합니다)">✦ AI</button>
       </div>
+      <div class="aians" id="aians" hidden></div>
       <div id="tr"></div>
     </div>
   </aside>
@@ -520,7 +542,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260913-153102';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260913-212914';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -1446,7 +1468,8 @@ document.querySelectorAll('.seg2 button').forEach(b => b.onclick = () => {
 /* ================= 9. 노드 ↔ 원문 ================= */
 /* 근거 구절이 원문 어느 발언의 몇 번째 줄에 있는지. who 가 없으면 누구 말이든 찾는다.
    ibis.py locate() 와 같은 규칙 — 한 줄 안에서, 공백 차이만 눈감는다. */
-const evRe = ev => new RegExp(ev.trim().split(/\s+/).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+'));
+const reEsc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const evRe = ev => new RegExp(ev.trim().split(/\s+/).map(reEsc).join('\\s+'));
 function locate(ev, who, segs, lo = 0, hi = 1e9, slack = 60) {
   if (!ev || ev.trim().length < 4) return null;
   const re = evRe(ev), hits = [];
@@ -1605,26 +1628,72 @@ function renderTranscript() {
   });
   applySearch();
 }
-$('#q').oninput = applySearch;
+$('#q').oninput = () => { if (!$('.rhead').classList.contains('ai')) applySearch(); };
+
+/* ── AI 검색 ──────────────────────────────────────────
+   회의 전사문과 정리 맵을 이 맥의 로컬 서버로 넘기면 Claude Code(구독)가 답한다.
+   서버가 인용을 원문과 대조해 그대로 있는 것만 돌려준다. 인용을 누르면 그 말로 간다. */
+let askSeq = 0;
+$('#qai').onclick = () => {
+  const on = $('.rhead').classList.toggle('ai');
+  $('#q').placeholder = on ? '회의 내용 물어보기 · Enter' : '발언 검색';
+  if (on) { const keep = $('#q').value; $('#q').value = ''; applySearch(); $('#q').value = keep; }
+  else { $('#aians').hidden = true; applySearch(); }
+  $('#q').focus();
+};
+$('#q').onkeydown = e => {
+  if (e.key === 'Enter' && !e.isComposing && $('.rhead').classList.contains('ai')) askAI($('#q').value.trim());
+};
+async function askAI(question) {
+  if (!question || !TRANS.length) return;
+  const box = $('#aians'), my = ++askSeq, t0 = Date.now();
+  box.hidden = false;
+  const head = `<div class="aq"><b>${esc(question)}</b><span class="ax" title="닫기">✕</span></div>`;
+  const wait = () => box.innerHTML = head + `<span class="think">원문을 읽는 중 · ${((Date.now() - t0) / 1000) | 0}초</span>`;
+  wait(); const tk = setInterval(() => my === askSeq && wait(), 1000);
+  box.onclick = e => { if (e.target.closest('.ax')) { askSeq++; box.hidden = true; } };
+  try {
+    const r = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, segments: TRANS.map(s => ({ t: s.t, s: s.s, l: s.l })), map: MAP ? plain(MAP) : null }) });
+    const j = await r.json();
+    if (my !== askSeq) return;                       /* 그 사이 다른 걸 물었거나 닫았다 */
+    if (!r.ok) throw new Error(j.error || r.status);
+    box.innerHTML = head + `<div class="at">${esc(j.answer)}</div>`;
+    j.cites.forEach(c => {
+      const d = el('div', 'ci', `<i>${esc(c.who)} · ${esc(c.t)}</i>“${esc(c.quote)}”`);
+      d.onclick = () => { NODES.forEach(o => o.dom.classList.remove('sel')); showEvidence(c.quote, c.who, secs(c.t)); };
+      box.append(d);
+    });
+  } catch (e) {
+    if (my === askSeq) box.innerHTML = head + `<div class="ae">답을 받지 못했습니다 · ${esc(String(e.message || e)).slice(0, 120)}</div>`;
+  } finally { clearInterval(tk); }
+}
 function applySearch() {
   const q = $('#q').value.trim(), segs = $('#tr').children;
-  if (!q) {
-    [...segs].forEach((d, i) => { d.hidden = false; paint(d, TRANS[i], null); });
-    $('#qn').textContent = ''; return;
-  }
+  /* "부스트 기능" 도 "부스트기능" 도, "ux" 도 "UX" 도 찾는다 */
+  const re = q ? new RegExp(q.replace(/\s+/g, '').split('').map(reEsc).join('\\s*'), 'gi') : null;
   let n = 0;
   [...segs].forEach((d, i) => {
-    const hit = TRANS[i].l.some(l => l.includes(q)) || TRANS[i].s.includes(q);
-    d.hidden = !hit; if (hit) { n++; paint(d, TRANS[i], q); }
+    const s = TRANS[i];
+    const hit = !re || s.s.includes(q) || s.l.some(l => { re.lastIndex = 0; return re.test(l); });
+    d.hidden = !hit; if (hit && re) n++;
+    paint(d, s, hit ? re : null);
   });
-  $('#qn').textContent = n + '건';
+  $('#qn').textContent = q ? n + '건' : '';
 }
-function words(seg, si, li, q) {
-  const p = el('p');
+function words(seg, si, li, re) {
+  const p = el('p'), hits = [];
+  if (re) { re.lastIndex = 0; for (let m; (m = re.exec(seg.l[li])) && m[0];) hits.push([m.index, m.index + m[0].length]); }
+  let c = 0;
   (seg.wt[li] || []).forEach((w, wi) => {
+    const c0 = c; c += w.w.length;
     if (w.sp) { p.append(document.createTextNode(w.w)); return; }
-    const sp = el('span', 'w', q && w.w.includes(q)
-      ? esc(w.w).split(esc(q)).join(`<mark>${esc(q)}</mark>`) : esc(w.w));
+    let html = '', k = 0;                  /* 이 단어에 걸친 일치 구간만 mark 로 감싼다 */
+    hits.forEach(([a, b]) => {
+      const x = Math.max(a, c0) - c0, y = Math.min(b, c) - c0;
+      if (y > x) { html += esc(w.w.slice(k, x)) + `<mark>${esc(w.w.slice(x, y))}</mark>`; k = y; }
+    });
+    const sp = el('span', 'w', html ? html + esc(w.w.slice(k)) : esc(w.w));
     sp.dataset.k = si + '.' + li + '.' + wi;
     sp.dataset.t = w.t0;
     sp.onclick = ev => { ev.stopPropagation(); seekTo(w.t0, true); if (audioOK) au.play().catch(() => {}); };
@@ -1632,9 +1701,9 @@ function words(seg, si, li, q) {
   });
   return p;
 }
-function paint(d, seg, q) {
+function paint(d, seg, re) {
   const si = +d.id.slice(3), ps = d.querySelectorAll('p');
-  seg.l.forEach((line, i) => ps[i].replaceWith(words(seg, si, i, q)));
+  seg.l.forEach((line, i) => ps[i].replaceWith(words(seg, si, i, re)));
 }
 
 /* ================= 12. 오디오 ================= */
@@ -1808,6 +1877,7 @@ function mount(map, segs, name, audioSrc) {
   loadLocal();
   document.body.classList.toggle('nomap', !map);
   $('#rehearse').hidden = !LOCALSRV;
+  $('#qai').hidden = !LOCALSRV; $('#aians').hidden = true;
   if (map) { const g = build(map); layout(g); render(g); applyEdits(); NODES.forEach(paintNode); }
   else { NODES = []; EDGES = []; FRAMES = []; REVEAL = []; render({ nodes: [], edges: [], frames: [] }); }
   renderTranscript(); renderCards(); group = 'decision'; renderDigest(); marks();

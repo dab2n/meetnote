@@ -300,6 +300,32 @@ def as_prompt(segs: list[dict]) -> str:
     return "\n\n".join(f"{s['s']} {mmss(s['t'])}\n" + "\n".join(s["l"]) for s in segs)
 
 
+# ---------- 묻기 ----------
+
+ASK = """너는 한 회의의 전사문을 읽고 질문에 답한다. 전사문에 있는 것만 말한다.
+- 한국어로 짧게 답한다(2~6문장). 누가 무슨 입장이었는지, 결론이 났는지 안 났는지를 분명히 한다.
+- 전사문에 없는 내용이면 지어내지 말고 "회의에서 다루지 않았다"고 답한다.
+- 답의 근거가 된 발언을 cites 에 1~5개 넣는다. quote 는 who 가 실제로 한 말을
+  전사문의 한 줄 안에서 글자 하나 바꾸지 않고 옮긴 8~80자 구절이다.
+- 정리 맵이 함께 오면 참고만 한다. 맵과 전사문이 다르면 전사문이 맞다.
+JSON 하나만 출력한다: {"answer": "...", "cites": [{"who": "이름", "t": "mm:ss", "quote": "..."}]}"""
+
+
+def ask(question: str, segs: list[dict], m: dict | None = None, model: str = "sonnet") -> dict:
+    """회의에 대해 묻고 답한다. 이 맥의 Claude Code 구독으로 돈다.
+    모델이 댄 인용은 원문에 그대로 있는 것만 남긴다 — 지어낸 근거는 보여주지 않는다."""
+    user = (f"<transcript>\n{as_prompt(segs)}\n</transcript>\n"
+            + (f"<map>\n{as_map_text(m)}\n</map>\n" if m and m.get("sections") else "")
+            + f"\n질문: {question}")
+    out = _cli(ASK, user, model=model)
+    cites, raw = [], out.get("cites") or []
+    for c in raw:
+        i = locate(c.get("quote", ""), c.get("who", ""), segs)
+        if i is not None and not any(x["quote"] == c["quote"] for x in cites):
+            cites.append({"who": segs[i]["s"], "t": mmss(segs[i]["t"]), "quote": c["quote"].strip()})
+    return {"answer": (out.get("answer") or "").strip(), "cites": cites, "dropped": len(raw) - len(cites)}
+
+
 # ---------- 생성 ----------
 
 def _key() -> str | None:
@@ -339,14 +365,14 @@ def harvest(text: str, frm: int):
     return done, (start if start >= 0 else i), False
 
 
-def _cli(system: str, user: str, attach: list[Path] | None = None, on_section=None) -> dict:
+def _cli(system: str, user: str, attach: list[Path] | None = None, on_section=None, model: str = "opus") -> dict:
     """이 맥에 깔린 Claude Code 로 돌린다. 구독으로 쓰는 것이라 API 청구가 따로 붙지 않는다.
     회의자료를 붙이면 CLI 가 그 파일을 직접 읽는다."""
     import shutil, subprocess, tempfile
     note = ""
     # MCP 서버·저장소 스캔이 세션마다 붙어 몇 분씩 잡아먹는다. 빈 디렉터리에서 최소로 띄운다.
     work = Path(tempfile.mkdtemp(prefix="mn-run-"))
-    cmd = ["claude", "-p", "--model", "opus", "--permission-mode", "dontAsk", "--strict-mcp-config"]
+    cmd = ["claude", "-p", "--model", model, "--permission-mode", "dontAsk", "--strict-mcp-config"]
     cmd += (["--output-format", "stream-json", "--include-partial-messages", "--verbose"]
             if on_section else ["--output-format", "json"])
     if attach:

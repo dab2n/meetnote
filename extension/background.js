@@ -1,6 +1,9 @@
-// 툴바 아이콘 = 지금 보고 있는 탭 위에 meetnote 패널을 띄우고 닫는 스위치.
-// 패널 자체가 녹음·인식·도식화를 다 한다. 로컬 서버는 없어도 되고,
-// 켜져 있으면 회의가 끝난 뒤 전사문을 넘겨 정식 회의록까지 만든다.
+// 툴바 아이콘 클릭 = meetnote 열기. 이미 열린 탭이 있으면 그 탭으로 간다.
+// 로컬 서버가 떠 있으면 로컬(구독으로 새 맵 생성)을, 아니면 배포본(보기 전용)을 연다.
+// 아이콘 우클릭 = 지금 보는 탭 위에 회의 녹음 패널을 띄운다.
+
+const LOCAL = "http://127.0.0.1:8787/notes/";
+const PUBLIC = "https://dab2n.github.io/meetnote/";
 
 async function flash(text, color) {
   await chrome.action.setBadgeBackgroundColor({ color });
@@ -8,8 +11,30 @@ async function flash(text, color) {
   setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2200);
 }
 
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id || /^(chrome|edge|about|devtools):|chrome\.google\.com\/webstore/.test(tab.url || "")) {
+async function localUp() {
+  try { return (await fetch("http://127.0.0.1:8787/health", { signal: AbortSignal.timeout(800) })).ok; }
+  catch { return false; }
+}
+
+chrome.action.onClicked.addListener(async () => {
+  const url = (await localUp()) ? LOCAL : PUBLIC;
+  const [tab] = await chrome.tabs.query({ url: url + "*" });
+  if (tab) {
+    await chrome.tabs.update(tab.id, { active: true });
+    await chrome.windows.update(tab.windowId, { focused: true });
+  } else {
+    await chrome.tabs.create({ url });
+  }
+  if (url === PUBLIC) flash("웹", "#6b6f7a");   // 로컬 서버가 꺼져 배포본을 열었다는 표시
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({ id: "panel", title: "이 탭에 회의 녹음 패널 띄우기", contexts: ["action"] });
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId !== "panel") return;
+  if (!tab?.id || /^(chrome|edge|about|devtools):|chrome\.google\.com\/webstore/.test(tab.url || "")) {
     return flash("!", "#c53f2d");   // 크롬 내부 페이지에는 끼어들 수 없다
   }
   try {

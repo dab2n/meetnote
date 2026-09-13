@@ -25,8 +25,9 @@ NODE = {
             "items": {"type": "string"}, "minItems": 2, "maxItems": 2,
         },
         "note": {"type": "string", "description": "왜 그렇게 말했는지 한 문장. 원문 재인용 금지."},
+        "ev": {"type": "string", "description": "who가 실제로 말한 원문 구절 그대로(8~80자). 카드를 누르면 여기가 하이라이트된다."},
     },
-    "required": ["id", "kind", "parent", "title", "who", "t", "at", "note"],
+    "required": ["id", "kind", "parent", "title", "who", "t", "at", "note", "ev"],
     "additionalProperties": False,
 }
 
@@ -141,7 +142,7 @@ JSON_ONLY = """
 출력은 아래 형태의 JSON 하나뿐이다. 설명·코드펜스·머리말을 붙이지 마라.
 {"title","headline",
  "sections":[{"title","part","t","t1",
-   "nodes":[{"id","kind","parent","title","who","t","at":[시작,끝],"note"}],
+   "nodes":[{"id","kind","parent","title","who","t","at":[시작,끝],"note","ev":"who가 말한 원문 구절 그대로"}],
    "conflicts":[[id,id]],
    "resolution":{"kind","title","who","t","at":[시작,끝],"from":[id]}}],
  "highlights":[{"title","quote","t","t1"}],
@@ -168,7 +169,7 @@ INCREMENT = """회의가 진행 중이다. 지금까지의 정리 맵과, 그 �
 - 문구·종류·대립 기준은 위 표준을 그대로 따른다.
 
 출력은 이 형태의 JSON 하나뿐이다. 설명을 붙이지 마라.
-{"changes":[{"no":3,"nodes":[{"id","kind","parent","title","who","t","at":[시작,끝],"note"}],
+{"changes":[{"no":3,"nodes":[{"id","kind","parent","title","who","t","at":[시작,끝],"note","ev"}],
              "resolution":{"kind","title","who","t","at":[시작,끝],"from":[id]}},
             {"no":0,"title","part","t","t1","nodes":[...],"conflicts":[[id,id]],"resolution":{...}}],
  "carry":[{"label","part","note"}]}"""
@@ -463,6 +464,23 @@ def snap(t, starts: list[int], lo: int = 0) -> int:
     return min(cands, key=lambda x: abs(x - v))
 
 
+_WS = re.compile(r"\s+")
+
+
+def locate(ev: str, who: str, segs: list[dict], lo: int = 0, hi: int = 10**9, slack: int = 60) -> int | None:
+    """근거 구절이 그 사람의 발언 어디에 있는지. 섹션 구간(앞뒤 slack초) 안을 먼저, 없으면 가장 가까운 곳.
+    공백 차이만 눈감아 준다. 못 찾으면 None."""
+    key = _WS.sub(" ", (ev or "").strip())
+    if len(key) < 4:
+        return None
+    hits = [i for i, sg in enumerate(segs)                 # 뷰어가 단어를 짚을 수 있게 한 줄 안에서만
+            if sg["s"] == who and any(key in _WS.sub(" ", ln) for ln in sg["l"])]
+    if not hits:
+        return None
+    near = [i for i in hits if lo - slack <= segs[i]["t"] <= hi + slack]
+    return near[0] if near else min(hits, key=lambda i: abs(segs[i]["t"] - lo))   # 앞에서 한 말을 뒤에서 다툰 경우
+
+
 def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
     """모델 출력 -> 뷰어가 읽는 맵. 풀리지 않는 참조는 버리고 무엇을 버렸는지 남긴다."""
     starts = [s["t"] for s in segs]
@@ -480,6 +498,13 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
             a1 = snap(n["at"][1], starts, lo=a0 + 1) if len(n["at"]) > 1 else end
             if a1 <= a0:
                 a1 = next((x for x in starts if x > a0), end)
+            i = locate(n.get("ev", ""), n.get("who", ""), segs, snap(sec.get("t", n["t"]), starts),
+                       secs(sec["t1"]) if sec.get("t1") else end)
+            if i is not None:                  # 카드 시각·구간은 근거가 나온 발언을 따른다
+                t = a0 = segs[i]["t"]
+                a1 = segs[i + 1]["t"] if i + 1 < len(segs) else end
+            elif n.get("ev"):
+                warn.append(f"[{sec['title']}] {n['id']} 근거 구절을 {n.get('who')}의 발언에서 못 찾음")
             n = dict(n, t=mmss(t), at=[mmss(a0), mmss(a1)])
             nodes.append(n); by_id[n["id"]] = n
 
@@ -597,6 +622,18 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
                 v.append(f"{where} 제목이 발언 그대로다. 정리한 문장으로 바꿔야 한다 — “{t[:30]}”")
             if n.get("parent") and n["parent"] not in ids:
                 v.append(f"{where} parent가 이 섹션에 없다")
+            if segs and not n["id"].endswith("-res"):  # 결론은 from 노드들이 근거다
+                ev = (n.get("ev") or "").strip()
+                if not ev:
+                    v.append(f"{where} 근거 구절(ev)이 없다")
+                elif not 8 <= len(ev) <= 80:
+                    v.append(f"{where} 근거 구절이 {len(ev)}자다. 8~80자여야 한다")
+                elif locate(ev, n.get("who", ""), segs, secs(sec.get("t") or "0:00"),
+                            secs(sec["t1"]) if sec.get("t1") else 10**9) is None:
+                    anyone = next((sg["s"] for sg in segs if _WS.sub(" ", ev) in _WS.sub(" ", " ".join(sg["l"]))), None)
+                    v.append(f"{where} 근거 구절이 {n.get('who')}의 발언에 없다"
+                             + (f" — 실제로는 {anyone}가 한 말" if anyone else " — 원문 어디에도 없다")
+                             + f" “{ev[:24]}”")
 
         r = sec.get("resolution") or {}
         if r.get("kind") == "decision":

@@ -149,6 +149,7 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .seg mark{background:#ffe9a8;color:inherit;border-radius:3px}
 
 /* 단어 단위 — 누르면 그 자리로, 재생 중인 단어에 무지갯빛이 흐른다 */
+.w.ev{background:#fde3d6;box-shadow:0 0 0 2px #fde3d6}
 .w{cursor:pointer;border-radius:4px;transition:-webkit-text-fill-color .34s ease,color .34s ease,opacity .3s}
 .w:hover{background:#eef1f6}
 @keyframes shimmer{to{background-position:-200% 0}}
@@ -519,7 +520,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260908-104339';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260913-153102';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -710,7 +711,7 @@ const key = () => localStorage.getItem('mn.key') || '';
 
 const NODE_S = {
   type: 'object', additionalProperties: false,
-  required: ['id', 'kind', 'parent', 'title', 'who', 't', 'at', 'note'],
+  required: ['id', 'kind', 'parent', 'title', 'who', 't', 'at', 'note', 'ev'],
   properties: {
     id: { type: 'string' }, kind: { type: 'string', enum: KINDS },
     parent: { type: 'string', description: '이 노드가 반응한 대상 id. 쟁점은 빈 문자열' },
@@ -718,6 +719,7 @@ const NODE_S = {
     t: { type: 'string' },
     at: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2 },
     note: { type: 'string' },
+    ev: { type: 'string', description: 'who가 실제로 말한 원문 구절 그대로(8~80자)' },
   },
 };
 const SCHEMA = {
@@ -875,8 +877,10 @@ function tidy(raw, segs, meta) {
     const by = {}, nodes = [];
     (sec.nodes || []).forEach(n => {
       if (!KINDS.includes(n.kind) || !n.title) return;
-      const a0 = snap((n.at || [])[0]), a1 = Math.max(snap((n.at || [])[1], a0 + 1), a0 + 1);
-      const o = Object.assign({}, n, { t: mmss(snap(n.t)), at: [mmss(a0), mmss(a1)] });
+      let t = snap(n.t), a0 = snap((n.at || [])[0]), a1 = Math.max(snap((n.at || [])[1], a0 + 1), a0 + 1);
+      const h = locate(n.ev, n.who, segs, snap(sec.t), sec.t1 ? secs(sec.t1) : 1e9);
+      if (h) { t = a0 = segs[h.i].t; a1 = h.i + 1 < segs.length ? segs[h.i + 1].t : end; }
+      const o = Object.assign({}, n, { t: mmss(t), at: [mmss(a0), mmss(a1)] });
       nodes.push(o); by[o.id] = o;
     });
     const iss = nodes.filter(n => n.kind === 'issue');
@@ -948,6 +952,14 @@ function auditMap(m, segs) {
       if (e && !e[0].test(t)) v.push(`${w} ${n.kind} 제목을 ${e[1]} 써야 한다 — “${t.slice(0, 28)}”`);
       if (t.length > 14 && body.includes(t.replace(/\.$/, ''))) v.push(`${w} 제목이 발언 그대로다 — “${t.slice(0, 28)}”`);
       if (n.parent && !ids.has(n.parent)) v.push(`${w} parent가 이 섹션에 없다`);
+      if (String(n.id).endsWith('-res')) return;        /* 결론은 from 노드들이 근거다 */
+      const ev = (n.ev || '').trim();
+      if (!ev) v.push(`${w} 근거 구절(ev)이 없다`);
+      else if (ev.length < 8 || ev.length > 80) v.push(`${w} 근거 구절이 ${ev.length}자다. 8~80자여야 한다`);
+      else if (!locate(ev, n.who, segs, sec.t ? secs(sec.t) : 0, sec.t1 ? secs(sec.t1) : 1e9)) {
+        const any = locate(ev, null, segs);
+        v.push(`${w} 근거 구절이 ${n.who}의 발언에 없다` + (any ? ` — 실제로는 ${segs[any.i].s}가 한 말` : ' — 원문 어디에도 없다'));
+      }
     });
     const r = sec.resolution || {};
     if (r.kind === 'decision') dec++;
@@ -1340,7 +1352,9 @@ function renderDigest() {
         + `<h5>${esc(f.title)}</h5>`
         + (f.quote ? `<div class="fq">“${esc(f.quote)}”</div>` : '')
         + `<div class="dm">${mmss(f.t)}–${mmss(f.t1)}${f.meta ? ' · ' + esc(f.meta) : ''}</div>`);
-      d.onclick = e => { if (!e.target.closest('.rx,.cmts')) highlightRange(f.t, f.t1, true); };
+      d.onclick = e => { if (e.target.closest('.rx,.cmts')) return;
+        if (showEvidence(f.quote, null, f.t)) NODES.forEach(o => o.dom.classList.remove('sel'));
+        else highlightRange(f.t, f.t1, true); };
       d.append(footer('hl' + i));
       w.append(d);
     });
@@ -1430,15 +1444,49 @@ document.querySelectorAll('.seg2 button').forEach(b => b.onclick = () => {
 });
 
 /* ================= 9. 노드 ↔ 원문 ================= */
+/* 근거 구절이 원문 어느 발언의 몇 번째 줄에 있는지. who 가 없으면 누구 말이든 찾는다.
+   ibis.py locate() 와 같은 규칙 — 한 줄 안에서, 공백 차이만 눈감는다. */
+const evRe = ev => new RegExp(ev.trim().split(/\s+/).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+'));
+function locate(ev, who, segs, lo = 0, hi = 1e9, slack = 60) {
+  if (!ev || ev.trim().length < 4) return null;
+  const re = evRe(ev), hits = [];
+  segs.forEach((s, i) => {
+    if (who && s.s !== who) return;
+    const li = s.l.findIndex(l => re.test(l));
+    if (li >= 0) hits.push({ i, li });
+  });
+  return hits.find(h => segs[h.i].t >= lo - slack && segs[h.i].t <= hi + slack)
+    || hits.sort((a, b) => Math.abs(segs[a.i].t - lo) - Math.abs(segs[b.i].t - lo))[0] || null;
+}
+function showEvidence(ev, who, near) {
+  const segEls = $('#tr').children;
+  [...segEls].forEach(d => d.classList.remove('src'));
+  $('#tr').querySelectorAll('.w.ev').forEach(w => w.classList.remove('ev'));
+  const hit = locate(ev, who, TRANS, near - 600, near + 600) || locate(ev, who, TRANS);
+  if (!hit) return false;
+  const d = segEls[hit.i], line = TRANS[hit.i].l[hit.li], m = evRe(ev).exec(line);
+  d.hidden = false; d.classList.add('src');
+  let c = 0, first = null;
+  d.querySelectorAll('p')[hit.li].querySelectorAll('.w').forEach(w => {
+    const at = line.indexOf(w.textContent, c); c = at + w.textContent.length;
+    if (at < m.index + m[0].length && c > m.index) { w.classList.add('ev'); first = first || w; }
+  });
+  (first || d).scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (innerWidth <= 900) showTab('src');
+  seekTo(first ? +first.dataset.t : TRANS[hit.i].t, true);
+  if (audioOK) au.play().catch(() => {});
+  return true;
+}
 function selectNode(n) {
   selected = n;
   NODES.forEach(o => o.dom.classList.toggle('sel', o === n));
   const [a, b] = n.at && n.at.length === 2 ? n.at : [n.t, n.t + 45];
-  highlightRange(a, b, false);
+  if (!showEvidence(n.ev, n.who, n.t)) highlightRange(a, b, false);
   if (!document.body.classList.contains('view-cards') && n.dom.classList.contains('in')) centerOn(n);
 }
 function highlightRange(a, b, fromFun) {
   let first = null;
+  $('#tr').querySelectorAll('.w.ev').forEach(w => w.classList.remove('ev'));
   [...$('#tr').children].forEach((d, i) => {
     const on = TRANS[i].t >= a && TRANS[i].t < b;
     d.classList.toggle('src', on);
@@ -1984,7 +2032,7 @@ function toastEl(html, onClick) {
 function plain(m) {
   const node = n => {
     const o = { id: n.id, kind: n.kind, title: n.title, who: n.who || '',
-      t: n.t, at: (n.at || []).map(x => typeof x === 'number' ? mmss(x) : x), note: n.note || '' };
+      t: n.t, at: (n.at || []).map(x => typeof x === 'number' ? mmss(x) : x), note: n.note || '', ev: n.ev || '' };
     if (n.parent) o.parent = n.parent;
     if (n.lock || n.edited) o.lock = true;
     return o;

@@ -112,3 +112,20 @@ if REF.exists():
     assert any("순간" in x for x in got), got
     assert any("대립" in x for x in got), got
     print("표준 검사기 OK · 표본 통과, 심어둔 위반", len(got), "건 검출")
+
+    # 근거 구절 — 논의 6에서 실제로 틀렸던 것: 주장은 일여 것인데 30:28 다빈의 말을 짚었다
+    ev = json.loads(json.dumps(ref))
+    g = next(sc for sc in ev["sections"] if any(n["id"] == "g-p0" for n in sc["nodes"]))
+    nd = {n["id"]: n for n in g["nodes"]}
+    nd["g-p0"]["ev"] = nd["g-c1"]["ev"]                     # 다빈이 한 말을 일여 근거로
+    nd["g-a1"]["ev"] = "모두가 프로의 스킬을 쓰면 좋겠다"      # 원문에 없는 말
+    nd["g-a2"].pop("ev")                                    # 근거 없음
+    got = ibis.audit(ev, rsegs)
+    assert any("g-p0" in x and "실제로는 다빈" in x for x in got), got
+    assert any("g-a1" in x and "원문 어디에도 없다" in x for x in got), got
+    assert any("g-a2" in x and "근거 구절(ev)이 없다" in x for x in got), got
+
+    # 앞에서 한 주장을 뒤에서 다툰 경우 — 근거가 섹션 밖(18:57)에 있어도 통과, 카드 시각은 그 발언으로
+    assert ibis.audit(ref, rsegs) == []
+    assert nd["g-p0"]["t"] == "18:57", nd["g-p0"]["t"]
+    print("근거 검사 OK · 다른 사람 말·지어낸 말·빠진 근거 검출")

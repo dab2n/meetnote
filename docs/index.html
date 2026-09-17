@@ -270,8 +270,38 @@ body.view-cards .stage{display:none}
 /* ---------- 카드 뷰 ---------- */
 .cards{display:none;overflow:auto;padding:16px 16px 60px;background:var(--bg)}
 body.view-cards .cards{display:block}
-.cgrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(370px,1fr));align-items:start}
-.sc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px 16px 14px}
+.cgrid{max-width:860px;margin:0 auto;display:grid;gap:12px}
+.cbar{max-width:860px;margin:0 auto 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+.cbar b{color:var(--ink2);font-weight:750}
+.cbar button{margin-left:auto;height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+  font-size:12px;font-weight:650;color:var(--ink2)}
+.cbar button+button{margin-left:0}
+.sc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px 18px 16px}
+/* 스레드 — 쟁점에서 결론까지 한 줄기로 잇고, 그 사이 오간 이야기는 접어 둔다 */
+.th{position:relative;padding-left:22px}
+.th:before{content:"";position:absolute;left:6px;top:18px;bottom:18px;width:2px;background:var(--line)}
+.th>*{position:relative}
+.th>*:before{content:"";position:absolute;left:-21px;top:14px;width:12px;height:12px;border-radius:99px;
+  background:var(--panel);border:2px solid var(--line)}
+.th>.q:before{border-color:var(--ink);background:var(--ink)}
+.th>.res.decision:before{border-color:var(--gold);background:var(--gold)}
+.th>.res.conditional:before{border-color:var(--gold)}
+.th>.res.open:before{border-color:#b6b9bf;border-style:dotted}
+.sc .res.none{border:1.5px dashed var(--line);color:var(--dim)}
+.xp{margin:8px 0}
+.xp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:9px;
+  font-size:12px;font-weight:650;color:var(--ink2);user-select:none}
+.xp>summary::-webkit-details-marker{display:none}
+.xp>summary:hover{background:#f4f4f6}
+.xp>summary .ar{display:inline-block;width:10px;color:var(--dim);transition:transform .18s}
+.xp[open]>summary .ar{transform:rotate(90deg)}
+.xp>summary .ct{display:flex;flex-wrap:wrap;gap:4px;margin-left:auto}
+.xp>summary .ct i{font-style:normal;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;background:#f0f0f2;color:#6d727a}
+.xp>summary .ct i.con{background:#fbecea;color:var(--red)}
+.xp>summary .ct i.cf{background:var(--red);color:#fff}
+.xp[open]>summary{margin-bottom:2px}
+.xp>ul{margin-top:0}
+@media (prefers-reduced-motion:reduce){.xp>summary .ar{transition:none}}
 .sc>header{display:flex;align-items:baseline;flex-wrap:wrap;gap:7px;margin-bottom:10px}
 .sc .no{font-size:10.5px;font-weight:800;color:var(--dim);letter-spacing:.06em}
 .sc h3{font-size:16px;font-weight:800;letter-spacing:-.02em}
@@ -487,7 +517,7 @@ body.noaudio .player{display:none}
     </div>
   </section>
 
-  <section class="cards" id="cards"><div class="cgrid" id="cgrid"></div></section>
+  <section class="cards" id="cards"><div class="cbar" id="cbar"></div><div class="cgrid" id="cgrid"></div></section>
 </main>
 
 <nav class="tabs">
@@ -542,7 +572,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260913-212914';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260918-005658';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -1170,22 +1200,36 @@ function render(g) {
 }
 
 /* ================= 6. 카드 뷰 ================= */
+/* 카드 보기 — 논의 하나를 스레드 하나로. 쟁점과 결론은 늘 보이고,
+   그 사이에 오간 주장·근거·반론은 ▸ 를 눌러야 펼쳐진다. 펼친 상태는 다시 그려도 유지한다. */
+const OPENED = new Set();
+const cKey = sec => (MAP ? MAP.id : '') + '#' + sec.no;
 function renderCards() {
   const w = $('#cgrid'); w.textContent = '';
+  const bar = $('#cbar'); bar.textContent = '';
   if (!MAP) return;
-  MAP.sections.forEach(sec => {
+  const secs_ = MAP.sections;
+  const tally = k => secs_.filter(x => x.frame.res && x.frame.res.kind === k).length;
+  bar.innerHTML = `<span>논의 <b>${secs_.length}</b> · 확정 <b>${tally('decision')}</b> · 조건부 <b>${tally('conditional')}</b> · 미결 <b>${tally('open')}</b></span>`;
+  const all = (on) => () => { secs_.forEach(x => on ? OPENED.add(cKey(x)) : OPENED.delete(cKey(x))); renderCards(); };
+  const bo = el('button', null, '모두 펼치기'); bo.onclick = all(true);
+  const bc = el('button', null, '모두 접기'); bc.onclick = all(false);
+  bar.append(bo, bc);
+
+  secs_.forEach(sec => {
     const a = el('article', 'sc');
     a.append(el('header', null,
       `<span class="no">논의 ${String(sec.no).padStart(2, '0')}</span><h3>${esc(sec.title)}</h3>`
       + `<span class="pt">${esc(sec.part)}</span><time>${esc(sec.t)}–${esc(sec.t1)}</time>`));
+    const th = el('div', 'th');
     const nodes = sec.frame.nodes;
     const issue = nodes.find(n => n.kind === 'issue');
     if (issue) {
       const q = el('div', 'q', `<em>쟁점</em><b>${esc(issue.title)}</b>`);
-      q.onclick = () => selectNode(issue); a.append(q);
+      q.onclick = () => selectNode(issue); th.append(q);
     }
-    const listOf = (parent, depth) => {
-      const kids = nodes.filter(n => n.p === parent && n.kind !== 'issue');
+    const listOf = parent => {
+      const kids = nodes.filter(n => n.p === parent && n.kind !== 'issue' && n !== sec.frame.res);
       if (!kids.length) return null;
       const ul = el('ul');
       kids.sort((x, y) => x.t - y.t).forEach(n => {
@@ -1193,20 +1237,34 @@ function renderCards() {
           `<span>${KIND_KO[n.kind]}</span><b>${esc(n.title)}</b>`
           + `<i>${esc(n.who || '')} · ${mmss(n.t)}</i>`);
         li.onclick = e => { e.stopPropagation(); selectNode(n); };
-        const sub = listOf(n, depth + 1); if (sub) li.append(sub);
+        const sub = listOf(n); if (sub) li.append(sub);
         ul.append(li);
       });
       return ul;
     };
-    const tree = issue && listOf(issue, 0); if (tree) a.append(tree);
-    (sec.conflictPairs || []).forEach(([x, y]) => {
-      a.append(el('div', 'cf', `<em>대립</em>${esc(x.title)} <b>↔</b> ${esc(y.title)}`));
-    });
+    // 사이에 오간 이야기
+    const body = nodes.filter(n => n.kind !== 'issue' && n !== sec.frame.res);
+    const pairs = sec.conflictPairs || [];
+    if (body.length || pairs.length) {
+      const d = el('details', 'xp');
+      if (OPENED.has(cKey(sec))) d.open = true;
+      const cnt = k => body.filter(n => n.kind === k).length;
+      const chips = [['position', '주장'], ['pro', '근거'], ['con', '반론'], ['concern', '우려'], ['condition', '조건'], ['open', '미결']]
+        .filter(([k]) => cnt(k)).map(([k, ko]) => `<i class="${k === 'con' ? 'con' : ''}">${ko} ${cnt(k)}</i>`).join('')
+        + (pairs.length ? `<i class="cf">대립 ${pairs.length}</i>` : '');
+      const sm = el('summary', null, `<span class="ar">▸</span><span>오간 이야기 ${body.length}개</span><span class="ct">${chips}</span>`);
+      d.append(sm);
+      d.addEventListener('toggle', () => { d.open ? OPENED.add(cKey(sec)) : OPENED.delete(cKey(sec)); });
+      const tree = issue && listOf(issue); if (tree) d.append(tree);
+      pairs.forEach(([x, y]) => d.append(el('div', 'cf', `<em>대립</em>${esc(x.title)} <b>↔</b> ${esc(y.title)}`)));
+      th.append(d);
+    }
     const r = sec.frame.res;
     if (r) {
       const d = el('div', 'res ' + r.kind, `<em>${KIND_KO[r.kind]}</em><b>${esc(r.title)}</b>`);
-      d.onclick = () => selectNode(r); a.append(d);
-    }
+      d.onclick = () => selectNode(r); th.append(d);
+    } else th.append(el('div', 'res none', '<em>결론</em><b>결론 없이 넘어갔어요</b>'));
+    a.append(th);
     w.append(a);
   });
 }

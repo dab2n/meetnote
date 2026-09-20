@@ -101,6 +101,21 @@ SCHEMA = {
                 "additionalProperties": False,
             },
         },
+        "todos": {
+            "type": "array",
+            "description": "회의 뒤 실제로 해야 할 일. 0~10개. 없으면 빈 배열.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "할 일. '~하기'로 끝나는 명사형, 8~40자"},
+                    "owner": {"type": "string", "description": "담당자. 원문에서 분명할 때만. 아니면 빈 문자열."},
+                    "who": {"type": "string"}, "t": {"type": "string"},
+                    "ev": {"type": "string", "description": "who가 말한 원문 구절 그대로"},
+                },
+                "required": ["text", "owner", "who", "t", "ev"],
+                "additionalProperties": False,
+            },
+        },
         "carry": {
             "type": "array",
             "description": "결론이 안 난 채 다음 회의로 넘어가는 쟁점",
@@ -114,7 +129,7 @@ SCHEMA = {
             },
         },
     },
-    "required": ["title", "headline", "brief", "sections", "highlights", "carry"],
+    "required": ["title", "headline", "brief", "sections", "highlights", "carry", "todos"],
     "additionalProperties": False,
 }
 
@@ -163,7 +178,8 @@ JSON_ONLY = """
    "conflicts":[[id,id]],
    "resolution":{"kind","title","who","t","at":[시작,끝],"from":[id]}}],
  "highlights":[{"title","quote","t","t1"}],
- "carry":[{"label","part","note"}]}
+ "carry":[{"label","part","note"}],
+ "todos":[{"text":"~하기","owner":"담당자(불분명하면 빈 문자열)","who","t","ev"}]}
 kind 는 issue·position·pro·con·concern·condition·open 중 하나,
 resolution.kind 는 decision·conditional·open 중 하나. 시각은 "mm:ss" 또는 "h:mm:ss"."""
 
@@ -586,6 +602,17 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
                          "t": mmss(st), "t1": mmss(st1), "nodes": nodes,
                          "conflicts": conflicts, "resolution": r})
 
+    todos = []
+    for d in raw.get("todos", []):
+        if not (d.get("text") or "").strip():
+            continue
+        i = locate(d.get("ev", ""), d.get("who", ""), segs)
+        if i is None and d.get("ev"):
+            warn.append(f"[할 일] {d['text'][:16]} 근거 구절을 {d.get('who')}의 발언에서 못 찾음")
+        todos.append({"text": d["text"].strip(), "owner": (d.get("owner") or "").strip(),
+                      "who": d.get("who", ""), "ev": d.get("ev", ""),
+                      "t": mmss(segs[i]["t"] if i is not None else snap(d.get("t") or "0:00", starts))})
+
     sections.sort(key=lambda s: secs(s["t"]))
     for i, s in enumerate(sections, 1):
         s["no"] = i
@@ -602,6 +629,7 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
         "sections": sections,
         "highlights": [h for h in raw.get("highlights", []) if h.get("title") and h.get("quote")],
         "carry": raw.get("carry", []),
+        "todos": todos,
     }, warn
 
 
@@ -719,6 +747,24 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
 
     if not partial and secs_ and dec > len(secs_) * 2 / 3:
         v.append(f"[결론] 확정이 {dec}/{len(secs_)}개다. 3분의 2를 넘으면 대개 오탐이다")
+
+    todos = m.get("todos") or []                       # SPEC 8절 할 일
+    if len(todos) > 10:
+        v.append(f"[할 일] {len(todos)}개다. 10개를 넘기지 않는다")
+    for i, d in enumerate(todos, 1):
+        t = (d.get("text") or "").strip()
+        if not 8 <= len(t) <= 40:
+            v.append(f"[할 일 {i}] 문구가 {len(t)}자다. 8~40자여야 한다 — “{t[:20]}”")
+        if not t.endswith("기"):
+            v.append(f"[할 일 {i}] ‘~하기’로 끝나는 명사형이어야 한다 — “{t[:24]}”")
+        if segs:
+            ev = (d.get("ev") or "").strip()
+            if not 8 <= len(ev) <= 80:
+                v.append(f"[할 일 {i}] 근거 구절이 {len(ev)}자다. 8~80자여야 한다")
+            elif locate(ev, d.get("who", ""), segs) is None:
+                anyone = next((sg["s"] for sg in segs if _WS.sub(" ", ev) in _WS.sub(" ", " ".join(sg["l"]))), None)
+                v.append(f"[할 일 {i}] 근거 구절이 {d.get('who')}의 발언에 없다"
+                         + (f" — 실제로는 {anyone}가 한 말" if anyone else " — 원문 어디에도 없다"))
 
     hs = m.get("highlights", [])
     if not partial and hs and not 3 <= len(hs) <= 6:

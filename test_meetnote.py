@@ -130,6 +130,19 @@ if REF.exists():
     assert nd["g-p0"]["t"] == "18:57", nd["g-p0"]["t"]
     print("근거 검사 OK · 다른 사람 말·지어낸 말·빠진 근거 검출")
 
+    # 할 일 — 담당자는 비워도 되지만 근거는 그 사람 말이어야 한다 (SPEC 8절)
+    assert ref["todos"] and any(not d["owner"] for d in
+        json.loads((REF.parent / "2026-05-30.ibis.json").read_text())["todos"]), "담당 미정이 표현돼야 한다"
+    td = json.loads(json.dumps(ref))
+    td["todos"][0]["text"] = "마네킹에 클레이를 붙인다"                      # 명사형 아님
+    td["todos"][1]["ev"] = "촬영은 제가 다 해놓겠습니다"                      # 원문에 없는 말
+    td["todos"][2]["who"] = "다빈"                                          # 다른 사람 말
+    got = ibis.audit(td, rsegs)
+    assert any("명사형" in x for x in got), got
+    assert any("원문 어디에도 없다" in x for x in got), got
+    assert any("실제로는 시헌" in x for x in got), got
+    print("할 일 검사 OK · 서술형·지어낸 말·다른 사람 말 검출")
+
 # ---------- AI 검색 — 원문에 없는 인용은 버린다 ----------
 if REF.exists():
     real = ibis._cli

@@ -286,6 +286,17 @@ body.view-cards .cards{display:block}
 .cbrief .fc i.decision{color:var(--gold)} .cbrief .fc i.conditional{color:#c07d22} .cbrief .fc i.open{color:#8d9299}
 .cbrief .mm{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--dim)}
 .cbrief .mm b{color:var(--ink2);font-weight:700}
+.ctodo{max-width:860px;margin:0 auto 10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 18px}
+.ctodo:empty{display:none}
+.ctodo .lb{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:.07em;color:var(--dim)}
+.ctodo .lb b{font-weight:800;color:var(--ink2)}
+.ctodo ol{margin-top:9px;display:grid;gap:2px}
+.ctodo li{display:flex;align-items:baseline;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:13px;line-height:1.5}
+.ctodo li:hover{background:#f1f1f3}
+.ctodo li>span:first-child{flex:1;letter-spacing:-.01em}
+.ctodo li em{font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--dim);white-space:nowrap}
+.ctodo li .ow{font-size:11px;font-weight:750;color:var(--ink);background:#ececed;border-radius:99px;padding:2px 9px;white-space:nowrap}
+.ctodo li .ow.none{color:var(--dim);background:transparent;border:1px dashed var(--line);font-weight:700}
 .cbar{max-width:860px;margin:0 auto 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
 .cbar b{color:var(--ink2);font-weight:750}
 .cbar button{margin-left:auto;height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
@@ -532,7 +543,7 @@ body.noaudio .player{display:none}
     </div>
   </section>
 
-  <section class="cards" id="cards"><div class="cbrief" id="cbrief"></div><div class="cbar" id="cbar"></div><div class="cgrid" id="cgrid"></div></section>
+  <section class="cards" id="cards"><div class="cbrief" id="cbrief"></div><div class="ctodo" id="ctodo"></div><div class="cbar" id="cbar"></div><div class="cgrid" id="cgrid"></div></section>
 </main>
 
 <nav class="tabs">
@@ -791,7 +802,7 @@ const NODE_S = {
 };
 const SCHEMA = {
   type: 'object', additionalProperties: false,
-  required: ['title', 'headline', 'sections', 'highlights', 'carry'],
+  required: ['title', 'headline', 'sections', 'highlights', 'carry', 'todos'],
   properties: {
     title: { type: 'string' }, headline: { type: 'string' },
     sections: {
@@ -829,6 +840,16 @@ const SCHEMA = {
       items: {
         type: 'object', additionalProperties: false, required: ['label', 'part', 'note'],
         properties: { label: { type: 'string' }, part: { type: 'string' }, note: { type: 'string' } },
+      },
+    },
+    todos: {
+      type: 'array',
+      description: '회의 뒤 실제로 해야 할 일. 0~10개.',
+      items: {
+        type: 'object', additionalProperties: false, required: ['text', 'owner', 'who', 't', 'ev'],
+        properties: { text: { type: 'string', description: "'~하기'로 끝나는 명사형, 8~40자" },
+          owner: { type: 'string', description: '담당자. 분명할 때만. 아니면 빈 문자열' },
+          who: { type: 'string' }, t: { type: 'string' }, ev: { type: 'string' } },
       },
     },
   },
@@ -981,7 +1002,7 @@ function tidy(raw, segs, meta) {
       audio: '', transcript: meta.id + '.transcript.json' },
     headline: raw.headline || '',
     highlights: (raw.highlights || []).filter(h => h.title && h.quote),
-    sections: out, carry: raw.carry || [],
+    sections: out, carry: raw.carry || [], todos: raw.todos || [],
     segments: segs,          /* 파일 하나로 완결되게 전사문을 품는다 */
   };
 }
@@ -1040,6 +1061,16 @@ function auditMap(m, segs) {
     });
   });
   if (secs_.length && dec > secs_.length * 2 / 3) v.push(`[결론] 확정이 ${dec}/${secs_.length}개다. 3분의 2를 넘으면 대개 오탐이다`);
+  (m.todos || []).forEach((d, i) => {                  /* SPEC 8절 할 일 */
+    const t = (d.text || '').trim();
+    if (t.length < 8 || t.length > 40) v.push(`[할 일 ${i + 1}] 문구가 ${t.length}자다. 8~40자여야 한다`);
+    if (!t.endsWith('기')) v.push(`[할 일 ${i + 1}] ‘~하기’로 끝나는 명사형이어야 한다 — “${t.slice(0, 24)}”`);
+    const ev = (d.ev || '').trim();
+    if (ev.length < 8 || ev.length > 80) v.push(`[할 일 ${i + 1}] 근거 구절이 ${ev.length}자다. 8~80자여야 한다`);
+    else if (!locate(ev, d.who, segs)) v.push(`[할 일 ${i + 1}] 근거 구절이 ${d.who}의 발언에 없다`);
+  });
+  if ((m.todos || []).length > 10) v.push(`[할 일] ${m.todos.length}개다. 10개를 넘기지 않는다`);
+
   const hs = m.highlights || [];
   if (hs.length && (hs.length < 3 || hs.length > 6)) v.push(`[하이라이트] ${hs.length}개다. 3~6개여야 한다`);
   hs.forEach((h, i) => {
@@ -1247,6 +1278,23 @@ function renderCards() {
     if (card) { card.scrollIntoView({ block: 'start', behavior: 'smooth' }); card.animate(
       [{ boxShadow: '0 0 0 2px var(--gold)' }, { boxShadow: '0 0 0 2px transparent' }], { duration: 1200, easing: 'ease-out' }); }
   };
+  /* 다음 해야 할 일 — 담당자가 분명한 것만 이름을 단다(SPEC 8절) */
+  const tw = $('#ctodo'); tw.textContent = '';
+  const todos = MAP.todos || [];
+  if (todos.length) {
+    const named = todos.filter(d => d.owner).length;
+    tw.innerHTML = `<div class="lb"><span>다음 해야 할 일</span><b>${todos.length}</b>
+      ${named < todos.length ? `<span style="letter-spacing:0;font-weight:700">담당 미정 ${todos.length - named}</span>` : ''}</div>
+      <ol>${todos.map((d, i) => `<li data-i="${i}"><span>${esc(d.text)}</span>
+        <span class="ow${d.owner ? '' : ' none'}">${esc(d.owner || '담당 미정')}</span><em>${esc(d.t)}</em></li>`).join('')}</ol>`;
+    tw.onclick = e => {                                 /* 누르면 그 말이 나온 자리를 짚는다 */
+      const li = e.target.closest('[data-i]'); if (!li) return;
+      const d = todos[+li.dataset.i];
+      NODES.forEach(o => o.dom.classList.remove('sel'));
+      showEvidence(d.ev, d.who, secs(d.t));
+    };
+  }
+
   const secs_ = MAP.sections;
   const tally = k => secs_.filter(x => x.frame.res && x.frame.res.kind === k).length;
   bar.innerHTML = `<span>논의 <b>${secs_.length}</b> · 확정 <b>${tally('decision')}</b> · 조건부 <b>${tally('conditional')}</b> · 미결 <b>${tally('open')}</b></span>`;

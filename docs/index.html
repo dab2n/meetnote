@@ -114,6 +114,8 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .rx button:hover{border-color:#c9cbd1}
 .rx button.on{background:#eef3fe;border-color:#bcd0f7;color:var(--blue);font-weight:700}
 .rx .cm{margin-left:auto;color:var(--dim);font-weight:650}
+.rx .cm.on{color:var(--blue);border-color:#bcd0f7;background:#eef3fe}
+.sc .rx{margin-top:12px}
 .cmts{margin-top:7px;display:flex;flex-direction:column;gap:6px}
 .cmt{padding:7px 9px;border-radius:9px;background:#f6f6f8;font-size:12px;line-height:1.55;color:var(--ink2)}
 .cmt time{display:block;margin-top:3px;font-size:10.5px;color:var(--dim)}
@@ -585,7 +587,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260920-182702';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260920-190641';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -1302,6 +1304,7 @@ function renderCards() {
       d.onclick = () => selectNode(r); th.append(d);
     } else th.append(el('div', 'res none', '<em>결론</em><b>결론 없이 넘어갔어요</b>'));
     a.append(th);
+    a.append(footer(r ? r.id : 'sec' + sec.no));       /* 논의마다 반응·댓글. 왼쪽 카드와 같은 메모를 쓴다 */
     w.append(a);
   });
 }
@@ -1338,6 +1341,10 @@ function paintNode(n) {
 const note = k => (LOCAL.notes[k] = LOCAL.notes[k] || { rx: {}, cs: [] });
 const RX = ['👍', '🙌', '🤔', '❗'];
 
+/* 댓글칸을 폈는지는 화면 상태다. 저장본에 두면 saveLocal() 이 빈 메모를 지울 때 같이 날아가
+   버튼을 눌러도 입력칸이 안 열렸다. */
+const OPENC = new Set();
+const refresh = () => { renderDigest(); if (document.body.classList.contains('view-cards')) renderCards(); };
 function footer(key) {
   const nt = note(key), box = el('div');
   const bar = el('div', 'rx');
@@ -1348,19 +1355,19 @@ function footer(key) {
       ev.stopPropagation();
       nt.rx[e] = (nt.rx[e] || 0) + 1;
       if (nt.rx[e] > 3) delete nt.rx[e];      /* 눌러서 올리고, 넘치면 초기화 */
-      saveLocal(); renderDigest();
+      saveLocal(); refresh();
     };
     bar.append(b);
   });
-  const t = el('button', 'cm', nt.cs.length ? `댓글 ${nt.cs.length}` : '댓글');
-  t.onclick = ev => { ev.stopPropagation(); nt.open = !nt.open; saveLocal(); renderDigest(); };
+  const t = el('button', OPENC.has(key) ? 'cm on' : 'cm', nt.cs.length ? `댓글 ${nt.cs.length}` : '댓글');
+  t.onclick = ev => { ev.stopPropagation(); OPENC.has(key) ? OPENC.delete(key) : OPENC.add(key); refresh(); };
   bar.append(t); box.append(bar);
-  if (!nt.open) return box;
+  if (!OPENC.has(key)) return box;
 
   const list = el('div', 'cmts');
   nt.cs.forEach((c, i) => {
     const d = el('div', 'cmt', `<span class="del" title="지우기">✕</span>${esc(c.text)}<time>${esc(c.at)}</time>`);
-    d.querySelector('.del').onclick = ev => { ev.stopPropagation(); nt.cs.splice(i, 1); saveLocal(); renderDigest(); };
+    d.querySelector('.del').onclick = ev => { ev.stopPropagation(); nt.cs.splice(i, 1); saveLocal(); refresh(); };
     list.append(d);
   });
   const row = el('div', 'cin');
@@ -1368,7 +1375,7 @@ function footer(key) {
   const add = () => {
     const v = inp.value.trim(); if (!v) return;
     nt.cs.push({ text: v, at: new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) });
-    saveLocal(); renderDigest();
+    saveLocal(); refresh();
   };
   inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') add(); };
   inp.onclick = e => e.stopPropagation();

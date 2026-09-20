@@ -616,7 +616,7 @@ END = {                                   # 종류별 종결 형태 (SPEC 2절)
     "con": (r"다$", "‘~면 ~할 수 없다’처럼 서술형으로"),
     "concern": (r"다$", "‘~가 걸린다 / ~가 우려된다’로"),
     "condition": (r"다$", "‘~해야 ~할 수 있다’로"),
-    "open": (r"[?？]$", "물음으로 (예: ~할까? · ~는 어떻게?)"),
+    "open": (r"\A(?!.*(다|까|요|죠|\?|？)\s*\Z).+\Z", "명사형 안건 이름으로 (예: 발목 결착 구조)"),
     "decision": (r"다$", "‘~하기로 한다’로"),
     "conditional": (r"다$", "‘~하되 ~를 조건으로 한다’로"),
 }
@@ -678,8 +678,9 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
             if not k or not t:
                 continue
             where = f"{tag} {n['id']}"
-            if not 12 <= len(t) <= 60:
-                v.append(f"{where} 제목이 {len(t)}자다. 12~60자여야 한다 — “{t[:26]}”")
+            lo, hi = (6, 30) if k == "open" else (12, 60)    # 미결은 안건 이름만 적는다
+            if not lo <= len(t) <= hi:
+                v.append(f"{where} 제목이 {len(t)}자다. {lo}~{hi}자여야 한다 — “{t[:26]}”")
             pat, how = END.get(k, (None, None))
             if pat and not re.search(pat, t):
                 v.append(f"{where} {k} 제목을 {how} 써야 한다 — “{t[:30]}”")

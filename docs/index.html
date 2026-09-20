@@ -585,7 +585,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260920-123636';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260920-181006';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -988,7 +988,7 @@ function tidy(raw, segs, meta) {
 const END = { issue: [/(인가|것인가|는가|은가|운가|을까|까)[?]?$/, '물음 형태로'],
   position: [/(다|자)$/, '‘~한다 / ~하자’로'], pro: [/다$/, '서술형으로'],
   con: [/다$/, '‘~면 ~할 수 없다’처럼'], concern: [/다$/, '‘~가 걸린다’로'],
-  condition: [/다$/, '‘~해야 ~할 수 있다’로'], open: [/다$/, '‘~는 정하지 못했다’로'],
+  condition: [/다$/, '‘~해야 ~할 수 있다’로'], open: [/[?？]$/, '물음으로 (예: ~할까?)'],
   decision: [/다$/, '‘~하기로 한다’로'], conditional: [/다$/, '‘~하되 ~를 조건으로 한다’로'] };
 function auditMap(m, segs) {
   const v = [], secs_ = m.sections || [];

@@ -9,6 +9,7 @@ from pathlib import Path
 
 MODEL = "claude-opus-5"
 KINDS = ["issue", "position", "pro", "con", "concern", "condition", "open"]
+KINDS_MEET = ["아이데이션", "논의·결정", "공유·점검", "인터뷰", "보고", "일정 조율"]   # SPEC 0.1 회의 성격
 RES_KINDS = ["decision", "conditional", "open"]
 
 NODE = {
@@ -36,6 +37,21 @@ SCHEMA = {
     "properties": {
         "title": {"type": "string", "description": "회의 제목"},
         "headline": {"type": "string", "description": "이 회의가 무엇을 바꿨는지 한 문장"},
+        "brief": {
+            "type": "object", "description": "SPEC 0절 — 카드를 열기 전에 읽는 브리핑",
+            "properties": {
+                "kind": {"type": "array", "description": "회의 성격 1~2개", "items": {"type": "string", "enum": KINDS_MEET},
+                         "minItems": 1, "maxItems": 2},
+                "line": {"type": "string", "description": "무엇을 다뤘고 어디로 갔는지 한 문장 40~120자"},
+                "focus": {
+                    "type": "array", "description": "주요 논의 3~5개", "minItems": 3, "maxItems": 5,
+                    "items": {"type": "object", "additionalProperties": False, "required": ["no", "text"],
+                              "properties": {"no": {"type": "integer", "description": "섹션 번호"},
+                                             "text": {"type": "string", "description": "무엇이 어떻게 됐는지 10~40자"}}},
+                },
+            },
+            "required": ["kind", "line", "focus"], "additionalProperties": False,
+        },
         "sections": {
             "type": "array",
             "description": "메인 논의 주제. 실제 논의된 시간 순서.",
@@ -98,7 +114,7 @@ SCHEMA = {
             },
         },
     },
-    "required": ["title", "headline", "sections", "highlights", "carry"],
+    "required": ["title", "headline", "brief", "sections", "highlights", "carry"],
     "additionalProperties": False,
 }
 
@@ -141,6 +157,7 @@ JSON_ONLY = """
 
 출력은 아래 형태의 JSON 하나뿐이다. 설명·코드펜스·머리말을 붙이지 마라.
 {"title","headline",
+ "brief":{"kind":[성격 1~2개],"line":"한 문장","focus":[{"no":섹션번호,"text":"무엇이 어떻게 됐는지"} 3~5개]},
  "sections":[{"title","part","t","t1",
    "nodes":[{"id","kind","parent","title","who","t","at":[시작,끝],"note","ev":"who가 말한 원문 구절 그대로"}],
    "conflicts":[[id,id]],
@@ -581,6 +598,7 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
                     "duration": mmss(end - 30), "audio": meta.get("audio", ""),
                     "transcript": f"data/{meta['id']}.transcript.json"},
         "headline": raw.get("headline", ""),
+        "brief": raw.get("brief") or {},
         "sections": sections,
         "highlights": [h for h in raw.get("highlights", []) if h.get("title") and h.get("quote")],
         "carry": raw.get("carry", []),
@@ -620,6 +638,27 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
                      f"(평균 {mins / len(secs_):.1f}분). 섹션 하나가 평균 5분은 되어야 한다")
     if len(m.get("headline", "")) < 20:
         v.append("[구조] headline이 비었거나 너무 짧다")
+    if not partial:                                     # 0절 브리핑
+        b = m.get("brief") or {}
+        kind, line, focus = b.get("kind") or [], (b.get("line") or "").strip(), b.get("focus") or []
+        if not 1 <= len(kind) <= 2 or any(k not in KINDS_MEET for k in kind):
+            v.append(f"[브리핑] 성격(kind)은 {' · '.join(KINDS_MEET)} 중 1~2개여야 한다 — {kind}")
+        if not 40 <= len(line) <= 120:
+            v.append(f"[브리핑] 한 문장(line)이 {len(line)}자다. 40~120자여야 한다")
+        if m.get("meeting", {}).get("title") and m["meeting"]["title"] in line:
+            v.append("[브리핑] 한 문장에 회의 제목을 그대로 넣지 않는다")
+        if not 3 <= len(focus) <= 5:
+            v.append(f"[브리핑] 주요 논의(focus)가 {len(focus)}개다. 3~5개여야 한다")
+        nos = {x.get("no") for x in secs_}
+        for f in focus:
+            if f.get("no") not in nos:
+                v.append(f"[브리핑] focus 가 없는 섹션 {f.get('no')} 을 가리킨다")
+            t = (f.get("text") or "").strip()
+            if not 10 <= len(t) <= 40:
+                v.append(f"[브리핑] focus 문구가 {len(t)}자다. 10~40자여야 한다 — “{t[:20]}”")
+            sec = next((x for x in secs_ if x.get("no") == f.get("no")), None)
+            if sec and t and t == (sec.get("title") or "").strip():
+                v.append(f"[브리핑] focus {f['no']} 가 섹션 제목을 그대로 베꼈다")
 
     dec = 0
     for sec in secs_:

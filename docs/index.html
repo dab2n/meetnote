@@ -272,8 +272,16 @@ body.view-cards .stage{display:none}
 body.view-cards .cards{display:block}
 .cgrid{max-width:860px;margin:0 auto;display:grid;gap:12px}
 .cbrief{max-width:860px;margin:0 auto 10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
-.cbrief .lb{font-size:10px;font-weight:800;letter-spacing:.07em;color:var(--dim)}
-.cbrief h2{margin-top:5px;font-size:16px;font-weight:780;line-height:1.55;letter-spacing:-.02em}
+.cbrief .lb{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.07em;color:var(--dim)}
+.cbrief .kd{font-size:10.5px;font-weight:800;letter-spacing:0;padding:2px 8px;border-radius:99px;background:var(--ink);color:#fff}
+.cbrief .kd+.kd{background:#ececed;color:var(--ink2)}
+.cbrief h2{margin-top:7px;font-size:16px;font-weight:780;line-height:1.55;letter-spacing:-.02em}
+.cbrief .fc{margin-top:11px;display:grid;gap:4px}
+.cbrief .fc button{display:flex;align-items:baseline;gap:8px;text-align:left;padding:6px 8px;border-radius:8px;font-size:12.5px;color:var(--ink);line-height:1.5}
+.cbrief .fc button:hover{background:#f1f1f3}
+.cbrief .fc b{font-size:10px;font-weight:800;color:var(--dim);letter-spacing:.04em;white-space:nowrap}
+.cbrief .fc i{margin-left:auto;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.05em;white-space:nowrap}
+.cbrief .fc i.decision{color:var(--gold)} .cbrief .fc i.conditional{color:#c07d22} .cbrief .fc i.open{color:#8d9299}
 .cbrief .mm{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--dim)}
 .cbrief .mm b{color:var(--ink2);font-weight:700}
 .cbar{max-width:860px;margin:0 auto 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
@@ -577,7 +585,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260920-110652';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260920-123636';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -1217,11 +1225,25 @@ function renderCards() {
   /* 한 줄 브리핑 — 이 회의가 무엇을 다뤘는지 먼저 읽고 스레드로 들어간다 */
   const who = [...new Set(TRANS.map(x => x.s))].filter(x => !/^(참석자|발화자|화자)\s*\d+$/.test(x));
   const parts = [...new Set(MAP.sections.flatMap(x => (x.part || '').split(/[×x]/).map(v => v.trim())))].filter(v => v && v !== 'TEAM');
-  brief.innerHTML = `<div class="lb">이 회의 한 줄</div><h2>${esc(MAP.headline || MAP.meeting.title)}</h2>
+  const bf = MAP.brief || {};
+  const fc = (bf.focus || []).map(f => [f, MAP.sections.find(x => x.no === f.no)]).filter(x => x[1]);
+  brief.innerHTML = `<div class="lb">${(bf.kind || []).map(k => `<span class="kd">${esc(k)}</span>`).join('')}<span>이 회의 한 줄</span></div>
+    <h2>${esc(bf.line || MAP.headline || MAP.meeting.title)}</h2>
+    ${fc.length ? `<div class="fc">${fc.map(([f, sec]) =>
+      `<button type="button" data-no="${sec.no}"><b>논의 ${String(sec.no).padStart(2, '0')}</b><span>${esc(f.text)}</span>
+        <i class="${sec.resolution.kind}">${KIND_KO[sec.resolution.kind]}</i></button>`).join('')}</div>` : ''}
     <div class="mm"><span>${esc(MAP.meeting.date || '')}</span><span>${esc(MAP.meeting.duration || '')}</span>
       ${who.length ? `<span>참석 <b>${who.map(esc).join(' · ')}</b></span>` : ''}
       ${parts.length ? `<span>파트 <b>${parts.map(esc).join(' · ')}</b></span>` : ''}
-      <span>발언 <b>${TRANS.length}</b></span></div>`;
+      <span>논의 <b>${MAP.sections.length}</b></span><span>발언 <b>${TRANS.length}</b></span></div>`;
+  brief.onclick = e => {                                /* 주요 논의를 누르면 그 스레드로 내려가 펼친다 */
+    const b = e.target.closest('[data-no]'); if (!b) return;
+    const sec = MAP.sections.find(x => String(x.no) === b.dataset.no);
+    OPENED.add(cKey(sec)); renderCards();
+    const card = [...$('#cgrid').children][MAP.sections.indexOf(sec)];
+    if (card) { card.scrollIntoView({ block: 'start', behavior: 'smooth' }); card.animate(
+      [{ boxShadow: '0 0 0 2px var(--gold)' }, { boxShadow: '0 0 0 2px transparent' }], { duration: 1200, easing: 'ease-out' }); }
+  };
   const secs_ = MAP.sections;
   const tally = k => secs_.filter(x => x.frame.res && x.frame.res.kind === k).length;
   bar.innerHTML = `<span>논의 <b>${secs_.length}</b> · 확정 <b>${tally('decision')}</b> · 조건부 <b>${tally('conditional')}</b> · 미결 <b>${tally('open')}</b></span>`;

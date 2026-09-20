@@ -271,6 +271,11 @@ body.view-cards .stage{display:none}
 .cards{display:none;overflow:auto;padding:16px 16px 60px;background:var(--bg)}
 body.view-cards .cards{display:block}
 .cgrid{max-width:860px;margin:0 auto;display:grid;gap:12px}
+.cbrief{max-width:860px;margin:0 auto 10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.cbrief .lb{font-size:10px;font-weight:800;letter-spacing:.07em;color:var(--dim)}
+.cbrief h2{margin-top:5px;font-size:16px;font-weight:780;line-height:1.55;letter-spacing:-.02em}
+.cbrief .mm{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--dim)}
+.cbrief .mm b{color:var(--ink2);font-weight:700}
 .cbar{max-width:860px;margin:0 auto 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
 .cbar b{color:var(--ink2);font-weight:750}
 .cbar button{margin-left:auto;height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
@@ -517,7 +522,7 @@ body.noaudio .player{display:none}
     </div>
   </section>
 
-  <section class="cards" id="cards"><div class="cbar" id="cbar"></div><div class="cgrid" id="cgrid"></div></section>
+  <section class="cards" id="cards"><div class="cbrief" id="cbrief"></div><div class="cbar" id="cbar"></div><div class="cgrid" id="cgrid"></div></section>
 </main>
 
 <nav class="tabs">
@@ -572,7 +577,7 @@ const mmss = t => { t = Math.max(0, Math.round(t)); const h = t / 3600 | 0, m = 
   return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 const secs = s => String(s).split(':').reverse().reduce((a, v, i) => a + (+v) * [1, 60, 3600][i], 0);
 
-const BUILD = '20260918-005658';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
+const BUILD = '20260920-110652';                 /* 배포할 때 bump.sh 가 version.txt 와 함께 갱신한다 */
 /* 캐시에 묶인 옛 화면이 도는 일이 없게, 뜨자마자 최신 버전인지 확인하고 한 번만 새로고침한다 */
 (async () => {
   try {
@@ -1207,7 +1212,16 @@ const cKey = sec => (MAP ? MAP.id : '') + '#' + sec.no;
 function renderCards() {
   const w = $('#cgrid'); w.textContent = '';
   const bar = $('#cbar'); bar.textContent = '';
+  const brief = $('#cbrief'); brief.textContent = '';
   if (!MAP) return;
+  /* 한 줄 브리핑 — 이 회의가 무엇을 다뤘는지 먼저 읽고 스레드로 들어간다 */
+  const who = [...new Set(TRANS.map(x => x.s))].filter(x => !/^(참석자|발화자|화자)\s*\d+$/.test(x));
+  const parts = [...new Set(MAP.sections.flatMap(x => (x.part || '').split(/[×x]/).map(v => v.trim())))].filter(v => v && v !== 'TEAM');
+  brief.innerHTML = `<div class="lb">이 회의 한 줄</div><h2>${esc(MAP.headline || MAP.meeting.title)}</h2>
+    <div class="mm"><span>${esc(MAP.meeting.date || '')}</span><span>${esc(MAP.meeting.duration || '')}</span>
+      ${who.length ? `<span>참석 <b>${who.map(esc).join(' · ')}</b></span>` : ''}
+      ${parts.length ? `<span>파트 <b>${parts.map(esc).join(' · ')}</b></span>` : ''}
+      <span>발언 <b>${TRANS.length}</b></span></div>`;
   const secs_ = MAP.sections;
   const tally = k => secs_.filter(x => x.frame.res && x.frame.res.kind === k).length;
   bar.innerHTML = `<span>논의 <b>${secs_.length}</b> · 확정 <b>${tally('decision')}</b> · 조건부 <b>${tally('conditional')}</b> · 미결 <b>${tally('open')}</b></span>`;

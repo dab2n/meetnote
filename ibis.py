@@ -349,8 +349,12 @@ def ask(question: str, segs: list[dict], m: dict | None = None, model: str = "so
     모델이 댄 인용은 원문에 그대로 있는 것만 남긴다 — 지어낸 근거는 보여주지 않는다."""
     user = (f"<transcript>\n{as_prompt(segs)}\n</transcript>\n"
             + (f"<map>\n{as_map_text(m)}\n</map>\n" if m and m.get("sections") else "")
-            + f"\n질문: {question}")
-    out = _cli(ASK, user, model=model)
+            + f"\n질문: {question}\n\n"
+            + '답은 설명 없이 JSON 하나로만: {"answer": "...", "cites": [...]}')   # 긴 입력이면 형식을 잊는다
+    try:
+        out = _cli(ASK, user, model=model)
+    except NoJSON as e:                    # 그래도 문장으로 오면 그 문장을 답으로 — 인용 없이
+        out = {"answer": e.text.strip(), "cites": []}
     cites, raw = [], out.get("cites") or []
     for c in raw:
         i = locate(c.get("quote", ""), c.get("who", ""), segs)
@@ -458,11 +462,26 @@ def _cli(system: str, user: str, attach: list[Path] | None = None, on_section=No
     if out.get("is_error"):
         raise RuntimeError(f"claude CLI 오류: {str(out.get('result'))[:300]}")
     shutil.rmtree(work, ignore_errors=True)
-    text = out.get("result") or ""
-    m = re.search(r"\{.*\}", text, re.S)          # 앞뒤에 말이 붙어 와도 JSON 만 집는다
-    if not m:
-        raise RuntimeError(f"JSON 을 찾지 못했습니다: {text[:300]}")
-    return json.loads(m.group(0))
+    return first_json(out.get("result") or "")
+
+
+def first_json(text: str) -> dict:
+    """모델 답에서 첫 JSON 객체만 읽는다. 앞뒤 말이나 뒤에 붙은 두 번째 객체는 버린다.
+    (첫 { 부터 마지막 } 까지 통째로 읽으면 객체가 둘일 때 Extra data 로 깨진다)"""
+    dec = json.JSONDecoder()
+    for i, c in enumerate(text):
+        if c == "{":
+            try:
+                return dec.raw_decode(text, i)[0]
+            except json.JSONDecodeError:
+                continue
+    raise NoJSON(text)
+
+
+class NoJSON(RuntimeError):
+    def __init__(self, text: str):
+        super().__init__(f"JSON 을 찾지 못했습니다: {text[:300]}")
+        self.text = text
 
 
 def _ask(system: str, user: str) -> dict:

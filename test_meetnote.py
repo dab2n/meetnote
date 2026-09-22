@@ -143,6 +143,15 @@ if REF.exists():
     assert any("실제로는 시헌" in x for x in got), got
     print("할 일 검사 OK · 서술형·지어낸 말·다른 사람 말 검출")
 
+# ---------- 모델 답 파싱 — 객체가 둘 붙어 와도 첫 것만 ----------
+assert ibis.first_json('답입니다 {"answer": "a", "cites": []}\n{"answer": "b"}') == {"answer": "a", "cites": []}
+assert ibis.first_json('```json\n{"x": {"y": 1}}\n``` 끝 }') == {"x": {"y": 1}}
+real_cli = ibis._cli
+ibis._cli = lambda *a, **k: (_ for _ in ()).throw(ibis.NoJSON("일여는 장표 흐름을 만들어 놓기로 했어요."))
+assert ibis.ask("일여 할 일", [{"s": "일여", "t": 0, "l": ["장표 흐름"]}]) == {"answer": "일여는 장표 흐름을 만들어 놓기로 했어요.", "cites": [], "dropped": 0}
+ibis._cli = real_cli
+print("답 파싱 OK · 뒤에 붙은 객체·말 무시, 문장만 와도 답으로")
+
 # ---------- AI 검색 — 원문에 없는 인용은 버린다 ----------
 if REF.exists():
     real = ibis._cli

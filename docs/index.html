@@ -508,7 +508,7 @@ function meetingTab(tab) {
   const focusNo = +decodeURIComponent(location.hash).split('/')[4] || 0;
   document.querySelectorAll('#mtabs button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   const body = $('#mbody');
-  if (tab === 'map') { body.innerHTML = `<div class="map"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map" title="관계 맵"></iframe></div>`; return; }
+  if (tab === 'map') { body.innerHTML = `<div class="map"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map&embed=1" title="관계 맵"></iframe></div>`; return; }
   body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : ''}">${tab === 'src' ? '' : summaryHTML(map)}${transHTML(segs)}</div>`;
   if (tab !== 'src') bindSummary(map);
   bindTrans();

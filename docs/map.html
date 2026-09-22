@@ -476,9 +476,217 @@ body.noaudio .player{display:none}
   .file,.top .brand i,.now{display:none}
   .cgrid{grid-template-columns:1fr}
 }
+
+/* =====================================================================
+   새 홈(index.html)과 같은 디자인 언어 — 모바일 앱 컨셉
+   밝은 배경 · 테두리 대신 옅은 면과 그림자 · 알약형 버튼 · SF Pro +KR
+   위의 규칙을 지우지 않고 여기서 덮는다
+   ===================================================================== */
+@font-face{font-family:SFKR;font-weight:400;src:local("SF Pro +KR Display Regular"),local("SFProKR-Regular")}
+@font-face{font-family:SFKR;font-weight:500;src:local("SF Pro +KR Display Medium"),local("SFProKR-Medium")}
+@font-face{font-family:SFKR;font-weight:600;src:local("SF Pro +KR Display Semibold"),local("SFProKR-Semibold")}
+@font-face{font-family:SFKR;font-weight:700;src:local("SF Pro +KR Display Bold"),local("SFProKR-Bold")}
+:root{
+  --bg:#fcfcfe; --panel:#fff; --line:#e4eaf2; --line2:#eef1f6; --card:#f2f5fa; --chip:#e4eaf2; --navy:#2d3b48;
+  --ink:#050a0a; --ink2:#3b3b3b; --dim:#757575; --dim2:#a3a3a3; --dark:#222a2a;
+  --blue:#4b87e9; --green:#2f9e5b; --red:#e0443e; --amber:#d9892b; --violet:#8a6fd1; --gray:#8d9299; --gold:#4b87e9;
+  --soft:0 0 0 1px rgba(40,39,51,.05),0 4px 16px rgba(40,39,51,.06);
+  --font:SFKR,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,sans-serif;
+}
+body{letter-spacing:-.01em;word-break:keep-all}
+b,h2,h3,h4,h5{font-weight:600}
+
+/* 상단 — 흰 판 대신 배경과 이어지는 막대, 알약 버튼 */
+.top{background:rgba(252,252,254,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid #eef0f4}
+.brand{font-weight:700}.brand i{font-weight:500}
+.tbtn{height:32px;padding:0 14px;border-radius:99px;border:0;background:var(--card);color:var(--navy);font-weight:500}
+.tbtn:hover{background:var(--chip)}
+.tbtn.pri{background:var(--dark);color:#fff}
+.tbtn.pri:hover{background:var(--ink)}
+.seg2{padding:0;gap:4px;background:none}
+.seg2 button{height:32px;padding:0 14px;border-radius:99px;font-weight:500;color:var(--dim2)}
+.seg2 button.on{background:var(--chip);color:var(--navy);font-weight:600;box-shadow:none}
+.prog .track{background:var(--chip)} .prog .fillp{background:var(--dark)}
+
+/* 왼쪽 패널 */
+.rail{background:var(--bg);border-right:1px solid #eef0f4}
+.rz{background:var(--bg)} .rz-y{background:var(--bg);border-color:#eef0f4} .rz:before{background:#d7dff1}
+.chip{height:30px;padding:0 13px;border:0;background:none;color:var(--dim2);font-weight:500;font-size:12.5px}
+.chip b{font-weight:600;color:var(--dim2)}
+.chip:hover{color:var(--ink2)}
+.chip.on,.chip.c-decision.on,.chip.c-conditional.on,.chip.c-open.on,.chip.c-conflict.on,.chip.c-fun.on{background:var(--chip);color:var(--navy);font-weight:600}
+.chip.on b{color:var(--navy);opacity:.6}
+.dlist{gap:8px;padding:2px 12px 16px}
+.dc{padding:14px 16px;border:0;border-radius:16px;background:var(--card);transition:background .2s}
+.dc:hover{border:0;box-shadow:none;background:var(--chip)}
+.dc .dk{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:0}
+.dc .dk:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.dc h5{font-size:14px;font-weight:500;line-height:1.5}
+.dc .dm{font-size:11.5px;color:var(--dim2)}
+.dc.k-decision,.dc.k-conditional,.dc.k-open,.dc.k-conflict,.dc.k-fun{border-left:0}
+.dc.k-decision .dk{color:var(--blue)} .dc.k-conditional .dk{color:var(--amber)} .dc.k-open .dk{color:var(--gray)}
+.dc.k-conflict .dk{color:var(--red)} .dc.k-fun .dk{color:var(--violet)}
+.dc.k-fun .rk{background:var(--violet);border-radius:6px}
+.dc.k-fun .fq{border-left-color:#dcd6ef;color:var(--dim)}
+.dc.k-fun.top{background:#f3f0fb;border:0}
+.dc .vs b{color:var(--blue)} .dc .vs span+span b{color:var(--red)}
+.dc .vs span:before{border-radius:50%;background:var(--blue)} .dc .vs span+span:before{background:var(--red)}
+.menu>button:hover,.menu li:hover{background:var(--card)}
+.menu ul{border:0;border-radius:14px;box-shadow:0 0 0 1px rgba(40,39,51,.06),0 18px 40px rgba(40,39,51,.14)}
+.rx{border-top-color:rgba(40,39,51,.06)}
+.rx button{height:26px;border:0;background:rgba(255,255,255,.7);color:var(--dim)}
+.rx button:hover{background:#fff;color:var(--ink2)}
+.rx button.on,.rx .cm.on{background:#fff;color:var(--blue);font-weight:600;box-shadow:0 0 0 1px rgba(75,135,233,.3)}
+.cmt{background:rgba(255,255,255,.75);border-radius:12px}
+.cin input{height:32px;border:0;border-radius:99px;background:#fff;padding:0 12px}
+.cin button{height:32px;border-radius:99px;background:var(--dark)}
+.ed textarea{border-radius:12px}
+.ed button{border:0;background:var(--card);border-radius:99px}.ed button.ok{background:var(--dark)}
+
+/* 원문 */
+.rhead{border-bottom-color:#eef0f4;padding:12px 14px}
+.rhead h2{font-size:14px;font-weight:600;letter-spacing:0;color:var(--ink)}
+.search{height:34px;border-radius:99px;background:var(--card);padding:0 12px}
+.qai{height:34px;padding:0 13px;border:0;border-radius:99px;background:var(--card);color:var(--navy);font-weight:600}
+.rhead.ai .qai{background:var(--dark)} .rhead.ai .search{background:#eef3fe}
+.aians{border:0;border-radius:16px;background:var(--card)}
+.aians .ci{border-left-color:var(--blue);background:#fff;border-radius:0 10px 10px 0}
+.seg{border-radius:14px}
+.seg:hover{background:#f7f8fb}
+.seg.src{box-shadow:none;background:linear-gradient(90deg,rgba(228,234,242,.9),rgba(228,234,242,.25))}
+.seg.cur{background:#f5f8ff}
+.seg.fun{box-shadow:inset 2px 0 0 var(--violet)}
+.av{width:32px;height:32px;font-size:12.5px;font-weight:600}
+.seg{grid-template-columns:32px minmax(0,1fr)}
+.seg-h b{font-size:14px;font-weight:600}
+.seg-h time{color:var(--dim2)} .seg.cur .seg-h time{color:var(--blue);font-weight:600}
+.seg p{font-size:14px;line-height:1.6}
+.seg mark{background:#fffbc9}
+.w.ev{background:#ffe27a;box-shadow:0 0 0 2px #ffe27a}
+.w:hover{background:var(--chip)}
+.w.lit{background-image:linear-gradient(90deg,#fa0004,#e5db69,#9de3ff,#fa0004)}
+
+/* ---------- 관계 맵 ---------- */
+.stage{background:var(--bg);background-image:radial-gradient(circle,#e4e8f0 1px,transparent 1.2px);background-size:22px 22px}
+.frame{border:0;border-radius:28px;background:rgba(242,245,250,.72);box-shadow:inset 0 0 0 1px rgba(40,39,51,.04)}
+.fhead{left:22px;top:-15px;gap:8px;padding:5px 12px 5px 5px;border:0;background:#fff;box-shadow:var(--soft)}
+.fhead .no{padding:3px 9px;border-radius:99px;background:var(--c,#c7d3e4);color:var(--ink);font-size:12px;font-weight:600;letter-spacing:-.2px}
+.fhead b{font-size:14px;font-weight:600;letter-spacing:-.2px}
+.fhead .pt{padding:0;background:none;color:var(--dim2);font-weight:500;font-size:11px}
+.fhead time{color:var(--dim2)}
+.fbig .n{font-weight:600;color:var(--dim2)} .fbig .t{font-weight:700;letter-spacing:-.03em} .fbig .s{font-weight:500;color:var(--dim)}
+.fbig .dot{border-radius:50%}
+#cv.lod .frame{background:var(--card);box-shadow:inset 0 0 0 3px var(--c,#c7d3e4)}
+
+.node{width:232px;padding:14px 16px;border:0;border-radius:18px;background:#fff;box-shadow:var(--soft)}
+.node:hover{box-shadow:0 0 0 1px rgba(40,39,51,.06),0 10px 26px rgba(40,39,51,.12)}
+.node .k{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:0}
+.node .k:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.node h4{font-size:14px;font-weight:600;line-height:1.45;letter-spacing:-.2px}
+.node p{font-size:12px;color:var(--dim);-webkit-line-clamp:2}
+.node .m{font-size:11.5px;color:var(--dim2)}
+.node .m .d{width:18px;height:18px;font-size:9.5px;font-weight:600}
+.node.position,.node.pro,.node.con,.node.concern,.node.condition{border:0}
+.node.position .k{color:var(--blue)} .node.pro .k{color:var(--green)} .node.con .k{color:var(--red)}
+.node.concern .k{color:var(--violet)} .node.condition .k{color:var(--amber)}
+.node.con{box-shadow:inset 0 0 0 1.5px rgba(224,68,62,.22),var(--soft)}
+/* 쟁점 — 모바일의 짙은 버튼색 */
+.node.issue{width:256px;background:var(--dark);color:#fff;box-shadow:0 10px 26px rgba(34,42,42,.2)}
+.node.issue .k{color:rgba(255,255,255,.55)} .node.issue h4{font-size:15px;font-weight:600}
+.node.issue p,.node.issue .m{color:rgba(255,255,255,.6)}
+/* 결론 — 할 일 카드와 같은 방사형 그라데이션 */
+.node.decision{width:256px;border:0;color:var(--ink);background:radial-gradient(70% 90% at 50% 30%,#87d1ff 0%,#aedeff 50%,#d6ebff 100%);
+  box-shadow:0 10px 26px rgba(75,135,233,.22)}
+.node.decision .k{color:rgba(5,10,10,.55)} .node.decision h4{font-size:15px;font-weight:600}
+.node.decision p,.node.decision .m{color:rgba(5,10,10,.6)}
+.node.conditional{width:256px;border:0;color:var(--ink);background:radial-gradient(70% 90% at 50% 30%,#f1e1b8 0%,#f6ebcf 55%,#fbf5e6 100%);
+  box-shadow:inset 0 0 0 1.5px rgba(217,137,43,.35),0 8px 22px rgba(217,137,43,.14)}
+.node.conditional .k{color:var(--amber)} .node.conditional h4{font-size:15px;font-weight:600;color:var(--ink)}
+.node.conditional p{color:rgba(5,10,10,.6)}
+.node.open{width:256px;border:0;background:var(--card);box-shadow:inset 0 0 0 1.5px #d7dff1}
+.node.open .k{color:var(--gray)}
+.node.live{box-shadow:0 0 0 3px rgba(75,135,233,.18),var(--soft)}
+.node.sel{box-shadow:0 0 0 3px rgba(75,135,233,.45),0 10px 26px rgba(40,39,51,.12)}
+.node.playing{box-shadow:0 0 0 3px rgba(75,135,233,.3),var(--soft)}
+
+.legend,.zoom,.lodtip{border:0;border-radius:99px;background:rgba(250,250,250,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 0 12px rgba(0,0,0,.1)}
+.legend{padding:9px 16px;gap:6px 14px;font-size:11.5px;border-radius:18px}
+.legend b{font-weight:500;color:var(--ink2)}
+.legend .sw{border-radius:50%}
+.zoom{padding:4px}
+.zoom button{border-radius:99px}.zoom button:hover{background:var(--chip);color:var(--navy)}
+.zoom .fit{font-weight:600;color:var(--navy)}
+.livebar{background:var(--dark);font-weight:500}
+.toast{background:var(--dark);border-radius:99px;font-weight:500}
+
+/* 카드 뷰 */
+.cards{background:var(--bg)}
+.cbrief,.ctodo{border:0;border-radius:24px;background:linear-gradient(180deg,#e4eaf2 0%,#e4eaf2 70%,#fdf8f8 100%)}
+.cbrief .lb,.ctodo .lb{font-size:12px;font-weight:600;letter-spacing:0;color:var(--dim)}
+.cbrief .kd{font-weight:600;background:var(--dark)} .cbrief .kd+.kd{background:#fff;color:var(--navy)}
+.cbrief h2{font-weight:500;color:var(--ink2)}
+.cbrief .fc button:hover,.ctodo li:hover{background:rgba(255,255,255,.55)}
+.cbrief .fc b,.ctodo li em{font-weight:600;letter-spacing:0}
+.cbrief .fc i{font-weight:600;letter-spacing:0} .cbrief .fc i.decision{color:var(--blue)} .cbrief .fc i.conditional{color:var(--amber)}
+.ctodo li .ow{background:#fff;font-weight:600} .ctodo li .ow.none{background:transparent;border-color:rgba(5,10,10,.2)}
+.cbar button{border:0;border-radius:99px;background:var(--card);color:var(--navy);font-weight:500}
+.sc{border:0;border-radius:24px;background:var(--card)}
+.sc .no{padding:3px 9px;border-radius:8px;background:#c7d3e4;color:var(--ink);font-size:12px;font-weight:600;letter-spacing:-.2px}
+.sc h3{font-weight:600}
+.sc .pt,.xp>summary .ct i{background:#fff;color:var(--navy);font-weight:500}
+.th:before{background:#c7d3e4;width:1px;left:6.5px}
+.th>*:before{width:9px;height:9px;left:-19px;top:15px;border-width:1.5px;border-color:#c7d3e4;background:var(--card)}
+.th>.q:before{border-color:var(--dark);background:var(--dark)}
+.th>.res.decision:before{border-color:var(--blue);background:var(--blue)}
+.th>.res.conditional:before{border-color:var(--amber)}
+.sc .q{border-radius:14px;background:var(--dark)} .sc .q em{font-weight:600;letter-spacing:0}
+.sc .q b{font-weight:600}
+.sc li:hover,.xp>summary:hover{background:rgba(255,255,255,.6)}
+.sc li>span{font-weight:600;letter-spacing:0} .sc li>b{font-weight:500}
+.sc li.concern:before{background:var(--violet)} .sc li.concern>span{color:var(--violet)}
+.sc .res{border-radius:14px} .sc .res em{font-weight:600;letter-spacing:0} .sc .res b{font-weight:600}
+.sc .res.decision{background:radial-gradient(70% 120% at 50% 30%,#87d1ff 0%,#aedeff 50%,#d6ebff 100%);color:var(--ink)}
+.sc .res.decision em{color:rgba(5,10,10,.55)}
+.sc .res.conditional{border:0;background:#f6ebcf;color:var(--ink)} .sc .res.conditional em{color:var(--amber)}
+.sc .res.open{border:0;background:#fff;box-shadow:inset 0 0 0 1.5px #d7dff1;color:var(--ink2)}
+.sc .cf{border-radius:14px;border-color:rgba(224,68,62,.4)}
+
+/* 첫 화면 · 설정 */
+.drop{background:var(--bg)}
+.dz{border:0;border-radius:24px;background:#fff;box-shadow:0 24px 60px rgba(20,30,50,.08)}
+.dz h1{font-weight:700}
+.dz .big{height:48px;border-radius:14px;background:var(--dark);font-weight:600}
+.dz .ghost{height:48px;border:0;border-radius:14px;background:var(--card);color:var(--navy);font-weight:500}
+.mlist button{border:0;border-radius:16px;background:var(--card);padding:14px 16px}
+.mlist button:hover{background:var(--chip)}
+.mlist b{font-weight:500}
+.sheet .box{border:0;border-radius:24px}
+.sheet input{border:0;border-radius:12px;background:var(--card);height:44px}
+.sheet button{border:0;border-radius:99px;background:var(--card);color:var(--navy);height:38px}
+.sheet button.pri{background:var(--dark);color:#fff}
+.brun button{border-radius:14px;background:var(--dark);font-weight:600}
+.brun button.ghost{border:0;background:var(--card);color:var(--navy)}
+.player{background:rgba(252,252,254,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top-color:#eef0f4}
+.player #pp{background:var(--dark)}
+.bar .rail2{background:var(--chip)} .bar .fill{background:var(--dark)} .bar .mk{background:var(--violet)}
+.tabs{background:rgba(252,252,254,.9)} .tabs button{font-weight:500} .tabs button.on{font-weight:600;box-shadow:inset 0 -2px 0 var(--dark)}
+
+/* ---------- 새 홈의 '관계 맵' 탭 안에 들어갈 때 (?embed) ---------- */
+/* 겉의 제목·파일·설정은 새 홈이 맡는다. 재생 조절만 떠 있는 알약으로 남긴다 */
+body.embed{--top:0px;--player:0px}
+body.embed .player{display:none}
+body.embed .top{left:calc(var(--rail) + 23px);right:auto;top:auto;bottom:14px;height:44px;padding:0 6px;gap:4px;border:0;border-radius:99px;
+  background:rgba(250,250,250,.72);box-shadow:0 0 12px rgba(0,0,0,.12)}
+body.embed .brand,body.embed .file,body.embed .top .sp,body.embed .seg2,body.embed #opencfg,body.embed #newfile{display:none}
+body.embed .tbtn{height:32px;background:transparent}
+body.embed .tbtn:hover{background:var(--chip)}
+body.embed .rail{border-right:1px solid #eef0f4}
+@media (max-width:900px){body.embed .top{left:14px;bottom:62px}}
 </style>
 </head>
 <body class="idle noaudio">
+<script>if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');</script>
 
 <header class="top">
   <span class="brand">meetnote <i>· 회의 전개</i></span>
@@ -504,7 +712,7 @@ body.noaudio .player{display:none}
     <div class="srcbox">
       <div class="rhead">
         <h2>원문</h2>
-        <label class="search">🔎<input id="q" placeholder="발언 검색"></label>
+        <label class="search"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" style="flex:none;color:#757575"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M13.2 13.2L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="q" placeholder="발언 검색"></label>
         <span id="qn"></span>
         <button class="qai" id="qai" hidden title="회의 내용을 AI에게 묻기 (구독으로 답합니다)">✦ AI</button>
       </div>
@@ -516,16 +724,16 @@ body.noaudio .player{display:none}
 
   <section class="stage" id="vp">
     <div class="legend">
-      <span><span class="sw" style="background:#17181c"></span><b>쟁점</b></span>
-      <span><i style="border-color:#2f6bdd;border-top-width:3px"></i><b>주장</b></span>
-      <span><i style="border-color:#1c7a4e"></i><b>근거·동의</b></span>
-      <span><i style="border-color:#c53f2d;border-top-style:dashed"></i><b>반론</b></span>
-      <span><i style="border-color:#b8564a;border-top-style:dotted"></i><b>우려</b></span>
-      <span><i style="border-color:#c07d22;border-top-style:dashed"></i><b>조건</b></span>
-      <span><i style="border-color:#c53f2d;border-top-style:dashed"></i><b>↔ 대립</b></span>
-      <span><span class="sw" style="background:#e2562a"></span><b>확정</b></span>
-      <span><span class="sw" style="border:1.5px dashed #e2562a"></span><b>조건부</b></span>
-      <span><span class="sw" style="border:1.5px dotted #b6b9bf;background:#f4f4f6"></span><b>미결</b></span>
+      <span><span class="sw" style="background:#222a2a"></span><b>쟁점</b></span>
+      <span><i style="border-color:#4b87e9;border-top-width:3px"></i><b>주장</b></span>
+      <span><i style="border-color:#2f9e5b"></i><b>근거·동의</b></span>
+      <span><i style="border-color:#e0443e;border-top-style:dashed"></i><b>반론</b></span>
+      <span><i style="border-color:#8a6fd1;border-top-style:dotted"></i><b>우려</b></span>
+      <span><i style="border-color:#d9892b;border-top-style:dashed"></i><b>조건</b></span>
+      <span><i style="border-color:#e0443e;border-top-style:dashed"></i><b>↔ 대립</b></span>
+      <span><span class="sw" style="background:radial-gradient(#87d1ff,#d6ebff)"></span><b>확정</b></span>
+      <span><span class="sw" style="background:#f1e1b8;border:1.5px solid rgba(217,137,43,.5)"></span><b>조건부</b></span>
+      <span><span class="sw" style="border:1.5px solid #d7dff1;background:#f2f5fa"></span><b>미결</b></span>
     </div>
     <div id="cv"><svg id="edges"></svg></div>
     <div class="blank" id="blank">
@@ -1108,7 +1316,7 @@ function build(map) {
     const walk = (n, depth) => {
       n.col = depth;
       const kids = (n.kids || []).sort((a, b) => a.t - b.t);
-      if (!kids.length) { n.ly = slot * 142; slot++; }
+      if (!kids.length) { n.ly = slot * ROWH; slot++; }
       else { kids.forEach(k => walk(k, depth + 1)); n.ly = (kids[0].ly + kids[kids.length - 1].ly) / 2; }
     };
     roots.sort((a, b) => a.t - b.t).forEach(n => walk(n, 0));
@@ -1136,12 +1344,12 @@ function build(map) {
 }
 
 /* ================= 4. 섹션 배치 ================= */
-const COL = 296, PAD = 26, HEAD = 30, GAPX = 104, GAPY = 128;
+const COL = 296, PAD = 26, HEAD = 30, GAPX = 104, GAPY = 128, ROWH = 172;   /* ROWH: 노드 한 줄 높이 — 카드가 커지면 같이 올린다 */
 function layout(g) {
   g.frames.forEach(f => {
     const ys = f.nodes.map(n => n.ly);
-    f.h = Math.max(...ys) - Math.min(...ys) + 142 + PAD * 2 + HEAD;
-    f.w = (f.cols - 1) * COL + 252 + PAD * 2;
+    f.h = Math.max(...ys) - Math.min(...ys) + ROWH + PAD * 2 + HEAD;
+    f.w = (f.cols - 1) * COL + 256 + PAD * 2;
   });
   const S = g.frames.reduce((a, f) => a + f.w + GAPX, 0);
   const H = Math.max(...g.frames.map(f => f.h)) + GAPY;
@@ -1163,9 +1371,10 @@ function layout(g) {
 }
 
 /* ================= 5. 그리기 ================= */
-const ARROW = { raise: '#b4b7bd', pro: '#1c7a4e', con: '#c53f2d', concern: '#b8564a',
-  condition: '#c07d22', resolve: '#e2562a', conflict: '#c53f2d', flow: '#c2c4c9' };
-const RESDOT = { decision: '#e2562a', conditional: '#e8873f', open: '#9aa0a8' };
+const ARROW = { raise: '#b7c3d6', pro: '#2f9e5b', con: '#e0443e', concern: '#8a6fd1',
+  condition: '#d9892b', resolve: '#4b87e9', conflict: '#e0443e', flow: '#d7dff1' };
+const RESDOT = { decision: '#4b87e9', conditional: '#d9892b', open: '#8d9299' };
+const TAGC = ['#c7d3e4', '#d5e3d0', '#f1e1b8', '#b8d4f1', '#e7d3e6', '#dcd6ef'];   /* 새 홈의 쟁점 칩과 같은 색 */
 function defs() {
   const d = svgEl('defs');
   Object.entries(ARROW).forEach(([k, c]) => ['e', 's'].forEach(side => {
@@ -1183,7 +1392,7 @@ function render(g) {
 
   g.frames.forEach(f => {
     const d = el('div', 'frame');
-    d.style.cssText = `left:${f.x + OX}px;top:${f.y + OY}px;width:${f.w}px;height:${f.h}px`;
+    d.style.cssText = `left:${f.x + OX}px;top:${f.y + OY}px;width:${f.w}px;height:${f.h}px;--c:${TAGC[(f.sec.no - 1) % TAGC.length]}`;
     const s = f.sec, rk = f.res ? f.res.kind : 'open';
     d.append(el('div', 'fhead',
       `<span class="no">논의 ${String(s.no).padStart(2, '0')}</span><b>${esc(s.title)}</b>`
@@ -1433,7 +1642,7 @@ function footer(key) {
 }
 
 /* 확정·조건부·미결 카드의 ⋯ — 내용 수정과 상태 변경 */
-const RES_KINDS = [['decision', '확정', '#e2562a'], ['conditional', '조건부', '#e8873f'], ['open', '미결', '#9aa0a8']];
+const RES_KINDS = [['decision', '확정', '#4b87e9'], ['conditional', '조건부', '#d9892b'], ['open', '미결', '#8d9299']];
 function hamburger(n, card) {
   const m = el('div', 'menu', '<button title="수정 · 상태 변경">⋯</button>');
   const ul = el('ul');
@@ -1756,7 +1965,7 @@ vp.addEventListener('pointermove', e => {
 ['pointerup', 'pointercancel'].forEach(ev => vp.addEventListener(ev, e => { pts.delete(e.pointerId); if (pts.size < 2) vp._pd = 0; }));
 
 /* ================= 11. 원문 ================= */
-const AVCOLOR = ['#2f7d63', '#4a6da8', '#8a5a86', '#a8703c', '#5f6b7a', '#3f7d8a'];
+const AVCOLOR = ['#f18fd8', '#6fa8f5', '#7cc49a', '#e8b04b', '#9a8ce6', '#ef8a74', '#5cc3d9', '#a3a9b0'];
 function renderTranscript() {
   const w = $('#tr'); w.textContent = '';
   const funAt = new Set(FUN.map(f => f.i));

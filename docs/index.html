@@ -80,9 +80,29 @@ main{min-width:0;padding:34px 40px 140px}
 .todo:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(40,39,51,.1)}
 .todo .top{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:500;color:var(--ink2)}
 .todo .top em{font-style:normal;color:rgba(5,10,10,.45)}
+.todo{cursor:pointer}
+.tool{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#fff;border:.6px solid #fff;box-shadow:0 1px 4px rgba(40,39,51,.12);transition:transform .2s var(--ease)}
+.tool:hover{transform:scale(1.12)}
+.hh{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.mt{display:flex;gap:4px;margin-top:4px}
+.mt a{display:grid;place-items:center;width:40px;height:32px;border-radius:9px;transition:background .2s}
+.mt a:hover{background:var(--card)}
+.mt a.on{background:var(--dark)}
+.mt img{width:20px;height:20px}
+.meis{display:inline-flex;align-items:center;gap:5px}
+.avi{display:inline-grid;place-items:center;border-radius:50%;object-fit:cover;color:#fff;font-size:11px;font-weight:600;flex:none;box-shadow:0 0 0 1.5px #fff}
+.stk{display:inline-flex;margin-right:6px}.stk .avi+.avi{margin-left:-8px}
+.tg{margin:-4px 0 12px}
+.tg button{display:inline-flex;align-items:center;height:44px;padding:0 14px 0 8px;color:var(--dim2)}
+.tg button:not(.on) .stk{opacity:.5}
+.tg button.on{background:var(--card);color:var(--ink2);font-weight:500}
+.cs .c .by{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;margin-bottom:4px}
+img.av{object-fit:cover}
 .todo h3{margin-top:14px;font-size:20px;font-weight:600;line-height:1.4;letter-spacing:-.4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .todo .bt{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--ink2)}
-.todo .bt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo .bt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.todo .bt i{font-style:normal;white-space:nowrap}
+.todo .bt svg{margin-left:auto}
 .g0{background:radial-gradient(60% 60% at 50% 40%,#87d1ff 0%,#aedeff 49%,#d6ebff 98%)}
 .g1{background:radial-gradient(55% 55% at 50% 50%,#d8be49 0%,#e5d872 50%,#f1f29a 100%)}
 .g2{background:radial-gradient(85% 70% at 50% 45%,#43bde6 25%,#5ec9ea 39%,#79d5ee 52%,#afecf5 79%,#fefde7 97%)}
@@ -379,11 +399,11 @@ function route() {
   if (kind === 'm' && meetingOf(a)) { p = projOf(a); page = { kind: 'meeting', id: meetingOf(a).id, tab: b || 'sum' }; }
   else {
     p = D.projects.find(x => x.id === a) || D.projects.find(x => x.id === store.get('mn.project')) || D.projects[0];
-    page = { kind: b === 'list' ? 'list' : 'home' };
+    page = { kind: b === 'list' ? 'list' : 'home', mode: b === 'team' ? 'team' : 'my' };
   }
   if (!p) { $('#view').innerHTML = '<div class="empty">아직 정리된 회의가 없어요. 왼쪽 아래 ＋ 새 회의 정리로 시작하세요.</div>'; return; }
   store.set('mn.project', p.id);
-  const same = CUR.p === p && CUR.kind === page.kind && CUR.id === page.id;
+  const same = CUR.p === p && CUR.kind === page.kind && CUR.id === page.id && CUR.mode === page.mode;
   CUR = { p, ...page };
   side();
   if (same && page.kind === 'meeting') return meetingTab(page.tab);
@@ -412,18 +432,52 @@ function side() {
 addEventListener('click', e => { if (!e.target.closest('.proj')) $('#pmenu').hidden = true; });
 
 /* ================= 3. 홈 — 다음 해야 할 일 · 미해결 안건 · 최근 회의 ================= */
-async function home(p) {
+/* 나 · 팀 — 모바일 홈처럼 나뉜다. projects.json 의 me · teams 가 있을 때만 */
+const avatarOf = (p, name) => (p && p.avatars || {})[name];
+function av(p, name, size = 28) {
+  const src = avatarOf(p, name);
+  return src ? `<img class="avi" src="${esc(src)}" alt="${esc(name)}" style="width:${size}px;height:${size}px">`
+    : `<span class="avi" style="width:${size}px;height:${size}px;background:${AVC[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % AVC.length]}">${esc([...name][0] || '?')}</span>`;
+}
+/* 할 일이 어느 팀 것인가 — 사람 이름, 파트 이름(ID·UX), 전원 */
+const teamsOf = (p, owner) => (p.teams || []).filter(t => owner === '전원' || owner === t.part || owner === t.name || t.members.includes(owner));
+/* 나의 할 일 = 내 이름 · 전원 · 우리 팀 단위(UX 처럼 파트로 맡긴 것). 같은 팀 다른 사람 이름으로 맡은 건 빼고 */
+const isMine = (p, d) => { const t = (p.teams || []).find(x => x.members.includes(p.me));
+  return d.owner === p.me || d.owner === '전원' || !!t && (d.owner === t.part || d.owner === t.name); };
+
+/* 업무 도구 — 할 일이 특정 도구를 떠올리게 하면 카드 오른쪽 위에 그 로고를 둥글게 단다. 누르면 그 도구가 열린다 */
+const TOOLS = [
+  { re: /메일|튜터님께|요청 보내|연락/, name: 'Gmail', url: 'https://mail.google.com/', logo: '<img src="assets/gmail.png" alt="" style="width:16px;height:13px;object-fit:contain">' },
+  { re: /장표|슬라이드|발표 자료/, name: 'Google Slides', url: 'https://docs.google.com/presentation/',
+    logo: '<svg width="11" height="14" viewBox="0 0 16 20"><path d="M2 0h8l6 6v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z" fill="#f4b400"/><path d="M10 0l6 6h-4a2 2 0 0 1-2-2z" fill="#f8d56b"/><rect x="3.5" y="9" width="9" height="6" rx=".8" fill="none" stroke="#fff" stroke-width="1.5"/></svg>' },
+  { re: /피그마|figma|레퍼런스|와이어프레임|로고/i, name: 'Figma', url: 'https://www.figma.com/files/',
+    logo: '<svg width="10" height="15" viewBox="0 0 38 57"><path fill="#1abcfe" d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z"/><path fill="#0acf83" d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z"/><path fill="#ff7262" d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z"/><path fill="#f24e1e" d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z"/><path fill="#a259ff" d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z"/></svg>' },
+  { re: /온라인으로 모여|화상|온라인 회의/, name: 'Google Meet', url: 'https://meet.google.com/',
+    logo: '<svg width="15" height="12" viewBox="0 0 20 16"><rect y="2" width="13" height="12" rx="2.5" fill="#00ac47"/><path d="M13 6.5l6-4v11l-6-4z" fill="#00832d"/></svg>' },
+  { re: /일정 (잡|정하)|날짜 정하/, name: 'Google Calendar', url: 'https://calendar.google.com/',
+    logo: '<svg width="14" height="14" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="3" fill="#fff" stroke="#4285f4" stroke-width="1.6"/><path d="M1 5h14" stroke="#4285f4" stroke-width="1.6"/><text x="8" y="13" font-size="7" font-weight="700" text-anchor="middle" fill="#4285f4" font-family="Arial">31</text></svg>' },
+];
+const toolOf = d => TOOLS.find(t => t.re.test(d.text));
+
+async function home(p, page) {
   const ms = inProj(p), maps = await Promise.all(ms.map(getMap));
   if (CUR.p !== p || CUR.kind !== 'home') return;
-  const todos = ms.flatMap((m, i) => (maps[i].todos || []).map(d => ({ ...d, m, i })));
-  const owners = [...new Set(todos.map(d => d.owner).filter(Boolean))];
+  const mode = p.me ? page.mode : 'all';
+  /* 같은 회의를 두 번 정리한 경우가 있어 같은 할 일은 최근 회의 것 하나만 */
+  const seen = new Set();
+  const todos = ms.flatMap((m, i) => (maps[i].todos || []).map(d => ({ ...d, m, i })))
+    .filter(d => { const k = d.text + '|' + d.owner; if (seen.has(k)) return false; seen.add(k); return true; });
   const opens = ms.flatMap((m, i) => maps[i].sections.filter(s => s.resolution && s.resolution.kind !== 'decision').map(s => ({ s, m })));
   const v = $('#view');
+  const toggle = p.me ? `<div class="mt">
+      <a href="#/p/${esc(p.id)}" class="${mode === 'my' ? 'on' : ''}" aria-label="나"><img src="assets/me-${mode === 'my' ? 'on' : 'off'}.svg" alt=""></a>
+      <a href="#/p/${esc(p.id)}/team" class="${mode === 'team' ? 'on' : ''}" aria-label="팀"><img src="assets/team-${mode === 'team' ? 'on' : 'off'}.svg" alt=""></a></div>` : '';
+  const title = { my: '나의 할 일', team: '할 일', all: '다음 해야 할 일' }[mode];
   v.innerHTML = `
-    <h1 class="h1">${esc(p.name)}</h1>
-    <div class="sub"><span>회의 ${ms.length}개</span><span>최근 ${esc(fdate(ms[0].date))}</span></div>
-    <section class="sec"><header><h2>다음 해야 할 일<b>${todos.length}</b></h2><div class="pills" id="ow"></div></header>
-      <div class="todos" id="todos"></div></section>
+    <div class="hh"><div><h1 class="h1">${esc(p.name)}</h1>
+      <div class="sub"><span>회의 ${ms.length}개</span><span>최근 ${esc(fdate(ms[0].date))}</span>${p.me ? `<span class="meis">${mode === 'my' ? `${av(p, p.me, 18)}${esc(p.me)} (나)` : `<span class="stk">${p.teams.flatMap(t => t.members).map(n => av(p, n, 18)).join('')}</span>팀 전체`}</span>` : ''}</div></div>${toggle}</div>
+    <section class="sec"><header><h2>${title}<b id="tn"></b></h2></header>
+      <div class="pills tg" id="ow"></div><div class="todos" id="todos"></div></section>
     <section class="sec"><header><h2>미해결 안건<b>${opens.length}</b></h2></header>
       <div class="grid2" id="opens">${opens.map(({ s, m }, k) => `
         <button class="row tap" data-o="${k}"><div class="tx"><div class="meta">${esc(m.title)}<i>· 논의 ${s.no}</i></div>
@@ -433,23 +487,49 @@ async function home(p) {
       ${opens.length > 6 ? `<button class="more tap" id="more">${opens.length - 6}개 더 보기</button>` : ''}</section>
     <section class="sec"><header><h2>최근 회의</h2><a class="back" style="margin:0" href="#/p/${esc(p.id)}/list">전체 보기</a></header>
       <div class="rows">${ms.slice(0, 3).map((m, i) => meetRow(m, maps[i], i === 0)).join('')}</div></section>`;
-  let who = '';
+
+  /* 할 일 묶음 — 나: 내 것만 / 팀: 팀 칩으로 고른다 / 설정 없는 프로젝트: 담당자 칩 */
+  let groups;
+  if (mode === 'my') groups = [{ key: 'me', list: todos.filter(d => isMine(p, d)) }];
+  else if (mode === 'team') {
+    groups = p.teams.map(t => ({ key: t.name, chip: `<span class="stk">${t.members.map(n => av(p, n)).join('')}</span>${esc(t.name)}`, list: todos.filter(d => teamsOf(p, d.owner).includes(t)) }));
+    const rest = todos.filter(d => !teamsOf(p, d.owner).length);
+    if (rest.length) groups.push({ key: 'rest', chip: '담당 미정', list: rest });
+  } else {
+    const owners = [...new Set(todos.map(d => d.owner).filter(Boolean))];
+    groups = [{ key: '', chip: '전체', list: todos }, ...owners.map(o => ({ key: o, chip: esc(o), list: todos.filter(d => d.owner === o) }))];
+  }
+  const myTeam = (p.teams || []).find(t => t.members.includes(p.me));
+  let cur = store.get('mn.group.' + p.id + mode);
+  if (!groups.some(g => g.key === cur)) cur = mode === 'team' && myTeam ? myTeam.name : groups[0].key;
+  const badge = d => mode === 'my' ? (d.owner === p.me ? '나' : d.owner === '전원' ? '전원' : (teamsOf(p, d.owner)[0] || {}).name || d.owner)
+    : ((p.teams || []).find(t => d.owner === t.part) || {}).name || d.owner || '담당 미정';
   const draw = () => {
-    const list = todos.filter(d => !who || d.owner === who);
-    $('#ow').innerHTML = ['', ...owners].map(o => `<button class="${o === who ? 'on' : ''}" data-w="${esc(o)}">${o ? esc(o) : '전체'}</button>`).join('');
-    $('#todos').innerHTML = list.map((d, k) => todoCard(d, k)).join('') || '<div class="empty">정리된 할 일이 없어요</div>';
-    $('#todos').onclick = e => { const c = e.target.closest('[data-k]'); if (!c) return; const d = list[+c.dataset.k]; openEvidence(d.m.id, d.ev, d.who, d.t); };
+    const g = groups.find(x => x.key === cur), list = g.list;
+    $('#tn').textContent = list.length;
+    $('#ow').innerHTML = groups.length > 1 ? groups.map(x => `<button class="${x.key === cur ? 'on' : ''}" data-w="${esc(x.key)}">${x.chip}</button>`).join('') : '';
+    $('#todos').innerHTML = list.map((d, k) => todoCard(d, k, badge(d))).join('') || '<div class="empty">정리된 할 일이 없어요</div>';
+    $('#todos').onclick = e => {
+      if (e.target.closest('.tool')) return;                 /* 로고는 도구를 연다 */
+      const c = e.target.closest('[data-k]'); if (!c) return; const d = list[+c.dataset.k]; openEvidence(d.m.id, d.ev, d.who, d.t);
+    };
   };
-  $('#ow').onclick = e => { const b = e.target.closest('[data-w]'); if (!b) return; who = b.dataset.w; draw(); };
+  $('#ow').onclick = e => { const b = e.target.closest('[data-w]'); if (!b) return; cur = b.dataset.w; store.set('mn.group.' + p.id + mode, cur); draw(); };
   draw();
   const more = $('#more');
   if (more) { $('#opens').classList.add('fold'); more.onclick = () => { $('#opens').classList.remove('fold'); more.remove(); }; }
-  v.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { const { s, m } = opens[+b.dataset.o]; commentSheet(m, s, () => home(p)); });
+  /* 모바일처럼 — 나의 홈에서는 안건을 누르면 그 회의로, 팀 홈에서는 의견을 남긴다 */
+  v.querySelectorAll('[data-o]').forEach(b => b.onclick = () => {
+    const { s, m } = opens[+b.dataset.o];
+    mode === 'my' ? go(`#/m/${m.id}/sum/${s.no}`) : commentSheet(m, s, () => home(p, page));
+  });
 }
-const todoCard = (d, k) => `<button class="todo tap g${k % 6}" data-k="${k}">
-  <div><div class="top"><span class="own ${d.owner ? '' : 'none'}">${esc(d.owner || '담당 미정')}</span><em>${esc(d.t)}</em></div>
+const todoCard = (d, k, badge) => { const t = toolOf(d);
+  return `<div class="todo tap g${k % 6}" data-k="${k}" role="button" tabindex="0">
+  <div><div class="top"><span class="own ${d.owner ? '' : 'none'}">${esc(badge)}</span>
+    ${t ? `<a class="tool" href="${t.url}" target="_blank" rel="noopener" title="${esc(t.name)} 열기">${t.logo}</a>` : `<em>${esc(d.t)}</em>`}</div>
   <h3>${esc(d.text)}</h3></div>
-  <div class="bt"><span>${esc(d.m.title)}</span>${I.arrow}</div></button>`;
+  <div class="bt"><span>${esc(d.m.title)}</span><i>· ${esc(d.t)}</i>${I.arrow}</div></div>`; };
 const meetRow = (m, map, isNew) => `<a class="row tap" href="#/m/${esc(m.id)}"><div class="tx">
   <div class="meta">${esc(fdate(m.date))}<i>•</i>${esc(dur(m.duration))}${(map && map.brief && map.brief.kind || []).map(k => `<i>· ${esc(k)}</i>`).join('')}</div>
   <h3>${esc(m.title)}</h3>${map && map.brief && map.brief.line ? `<p>${esc(map.brief.line)}</p>` : ''}</div>${isNew ? '<span class="nw">new</span>' : ''}</a>`;
@@ -573,9 +653,10 @@ function bindSummary(map) {
 /* ---------- 원문 ---------- */
 function transHTML(segs) {
   const avatar = {}; [...new Set(segs.map(s => s.s))].forEach((p, i) => avatar[p] = AVC[i % AVC.length]);
+  const pic = n => avatarOf(CUR.p, n);
   return `<section class="tr"><div class="trh"><h5>원문</h5>
       <label class="srch">${I.search}<input id="q" placeholder="발언 검색" autocomplete="off"><i id="qn"></i></label></div>
-    <div class="segs" id="segs">${segs.map((g, i) => `<div class="seg" data-i="${i}"><span class="av" style="background:${avatar[g.s]}">${esc([...g.s][0])}</span>
+    <div class="segs" id="segs">${segs.map((g, i) => `<div class="seg" data-i="${i}">${pic(g.s) ? `<img class="av" src="${esc(pic(g.s))}" alt="">` : `<span class="av" style="background:${avatar[g.s]}">${esc([...g.s][0])}</span>`}
       <div><div class="who">${esc(g.s)}<button data-seek="${g.t}">${mmss(g.t)}</button></div>${g.l.map((l, li) => `<p data-li="${li}">${esc(l)}</p>`).join('')}</div></div>`).join('')}</div></section>`;
 }
 let HITS = [], HIT = 0;
@@ -662,7 +743,7 @@ function seek(t) { if (AU && !$('#player').hidden) { AU.currentTime = t; AU.play
 
 /* ---------- 의견 시트 (미해결 안건) ---------- */
 function commentSheet(m, s, after) {
-  const key = s.no + '-res';
+  const key = s.no + '-res', me = CUR.p && CUR.p.me;
   const bg = document.createElement('div'); bg.className = 'dim-bg';
   const sh = document.createElement('aside'); sh.className = 'cs';
   const close = () => { bg.remove(); sh.remove(); removeEventListener('keydown', onk); after && after(); };
@@ -672,7 +753,7 @@ function commentSheet(m, s, after) {
     sh.innerHTML = `<header>의견<button aria-label="닫기">${I.x}</button></header>
       <div class="ctx"><small>${esc(m.title)} · 논의 ${s.no} · <span class="st ${s.resolution.kind}">${KO[s.resolution.kind]}</span></small><h3>${esc(s.resolution.title)}</h3>
         <a href="#/m/${esc(m.id)}/sum/${s.no}">회의에서 보기 →</a></div>
-      <div class="list">${cs.map((c, i) => `<div class="c">${esc(c.text)}<time>${esc(c.at)}</time><button data-d="${i}">지우기</button></div>`).join('') || '<div class="empty" style="background:rgba(255,255,255,.5)">아직 의견이 없어요</div>'}</div>
+      <div class="list">${cs.map((c, i) => `<div class="c">${me ? `<b class="by">${av(CUR.p, me, 22)}나</b>` : ''}${esc(c.text)}<time>${esc(c.at)}</time><button data-d="${i}">지우기</button></div>`).join('') || '<div class="empty" style="background:rgba(255,255,255,.5)">아직 의견이 없어요</div>'}</div>
       <form><input placeholder="의견 남기기" autofocus><button>남기기</button></form>`;
     sh.querySelector('header button').onclick = close;
     sh.querySelector('.ctx a').onclick = close;

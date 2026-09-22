@@ -2,7 +2,7 @@
 
     python server.py        # http://127.0.0.1:8787
 """
-import json, os, subprocess, sys, threading, traceback
+import json, mimetypes, os, subprocess, sys, threading, traceback
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -260,7 +260,7 @@ class Handler(BaseHTTPRequestHandler):
         partial = rng.startswith("bytes=")
         self.send_response(206 if partial else 200)
         self._cors()
-        self.send_header("Content-Type", self.MIME.get(f.suffix, "application/octet-stream"))
+        self.send_header("Content-Type", self.MIME.get(f.suffix) or mimetypes.guess_type(f.name)[0] or "application/octet-stream")
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(end - start + 1))
         if partial:

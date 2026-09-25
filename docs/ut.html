@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>meetnote · 사용성 테스트 결과</title>
+<style>
+@font-face{font-family:SFKR;font-weight:400;src:local("SF Pro +KR Display Regular"),local("SFProKR-Regular")}
+@font-face{font-family:SFKR;font-weight:500;src:local("SF Pro +KR Display Medium"),local("SFProKR-Medium")}
+@font-face{font-family:SFKR;font-weight:600;src:local("SF Pro +KR Display Semibold"),local("SFProKR-Semibold")}
+@font-face{font-family:SFKR;font-weight:700;src:local("SF Pro +KR Display Bold"),local("SFProKR-Bold")}
+:root{--ink:#050a0a;--ink2:#3b3b3b;--dim:#757575;--dim2:#a3a3a3;--line:#eceef2;--line2:#f0f1f4;--card:#f2f5fa;--dark:#222a2a;--blue:#4b87e9}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f3f4f7;color:var(--ink);font:400 14px/1.5 SFKR,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+button,input,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+button{background:none;border:0;cursor:pointer}
+.wrap{max-width:1280px;margin:0 auto;padding:32px 24px 80px}
+a{color:var(--dim);text-decoration:none}a:hover{color:var(--ink)}
+.top{margin-top:10px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.top .lb{font-size:12px;letter-spacing:.12em;color:var(--dim)}
+h1{font-size:26px;font-weight:700;letter-spacing:-.5px}
+.tools{margin-left:auto;display:flex;gap:8px;font-size:13px}
+.tools>*{padding:8px 13px;border-radius:10px;background:#fff;box-shadow:0 0 0 1px #e5e7eb;cursor:pointer}
+.tools>*:hover{background:#fafbfc}
+.box{margin-top:20px;background:#fff;border-radius:16px;overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+th{padding:8px 12px;text-align:left;font-weight:600;color:#525252;white-space:nowrap;border-bottom:1px solid #e5e7eb}
+td{padding:10px 12px;white-space:nowrap;border-bottom:1px solid var(--line2)}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#fafbfc}
+tbody tr.on{background:var(--card)}
+.tnum{font-variant-numeric:tabular-nums}
+.v{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600}
+.v.success{background:#e3f3e6;color:#1f7a35} .v.fail{background:#fde8e8;color:#b42323}
+.v.pending{background:#f1ecdf;color:#8a6d1d} .v.running{background:#e4ecfb;color:#2f5fb8}
+.v.waiting,.v.never{background:#eef1f6;color:#757575}
+.hint{margin-top:8px;font-size:12px;color:var(--dim2)}
+.who{margin-top:20px;padding:14px 20px;background:#fff;border-radius:16px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;font-size:13px}
+.who label{display:flex;gap:8px;align-items:center}.who span{color:var(--dim)}
+.who input{width:130px;padding:2px 0;border:0;border-bottom:1px solid #dfe3ea;outline:none}
+.who input:focus{border-color:var(--dark)}
+.who .del{margin-left:auto;color:var(--dim2)}.who .del:hover{color:#b42323}
+section.task{margin-top:12px;padding:20px;background:#fff;border-radius:16px}
+section.task h2{font-size:17px;font-weight:600}
+.tt{display:flex;gap:10px;align-items:center}
+.tt i{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:var(--dark);color:#fff;font-style:normal;font-size:12px;font-weight:600}
+.tt em{margin-left:auto;font-style:normal;font-size:12px;color:var(--dim2)}
+.sc{margin-top:8px;font-size:13px;color:var(--dim);white-space:pre-line}
+.run{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.run:first-child{margin-top:16px;padding-top:0;border:0}
+.rh{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;color:var(--dim2)}
+.rh .btns{margin-left:auto;display:flex;gap:6px}
+.rh .btns button{padding:4px 10px;border-radius:6px;font-size:12px;color:#525252;box-shadow:0 0 0 1px #dfe3ea}
+.rh .btns button.on{background:var(--dark);color:#fff;box-shadow:none}
+.rh .btns .del{box-shadow:none;color:var(--dim2)}.rh .btns .del:hover{color:#b42323}
+.nums{margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.nums div{padding:10px 12px;border-radius:10px;background:#f7f8fa}
+.nums p:first-child{font-size:11px;color:var(--dim)}
+.nums p:last-child{font-size:18px;font-weight:600}
+.nums .warn p:last-child{color:#b42323}
+.ms{margin-top:10px;font-size:13px;color:var(--ink2)}
+.path{margin-top:10px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px}
+.path b{padding:1px 6px;border-radius:4px;background:#eef1f6;color:var(--ink2);font-weight:400}
+.path b.off{background:#fde8e8;color:#b42323}
+.path s{color:#c7c7c7;text-decoration:none}
+.tl{margin-top:8px;width:100%;font-size:12px}
+.tl td{padding:4px 10px 4px 0;white-space:normal;border-top:1px solid var(--line2);border-bottom:0}
+.tl tr.bad td{color:#b42323}
+.tl .ms0{width:64px;color:var(--dim2)}
+.tl .kind{width:70px}
+.tl .at{text-align:right;color:var(--dim2)}
+.more{margin-top:10px;font-size:12px;color:#2f5fb8}
+.note{margin-top:12px;width:100%;min-height:64px;padding:10px;border-radius:10px;border:1px solid #e5e7eb;background:#fafbfc;outline:none;resize:vertical}
+.note:focus{border-color:#9aa3b2}
+.none{padding:40px;text-align:center;font-size:14px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="./?ut">← 테스트 화면으로</a>
+  <div class="top">
+    <div><p class="lb">MEETNOTE / USABILITY TEST</p><h1>결과 보기</h1></div>
+    <div class="tools">
+      <button id="csv">CSV 내보내기</button><button id="json">JSON 내보내기</button>
+      <label>JSON 가져오기<input id="imp" type="file" accept=".json" hidden></label>
+    </div>
+  </div>
+  <div class="box" id="sheet"></div>
+  <p class="hint">행을 누르면 아래에 태스크별 상세(이동 경로 · 타임라인 · 판정 · 메모)가 열립니다. ● = 지금 테스트 중인 참여자.</p>
+  <div id="detail"></div>
+</div>
+
+<script src="ut.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const { TASKS, SCREEN_NAME, load, save } = UT;
+const sec = ms => (ms == null ? '—' : `${(ms / 1000).toFixed(1)}초`);
+const stamp = ms => `${String(Math.floor(ms / 60000)).padStart(2, '0')}:${((ms % 60000) / 1000).toFixed(1).padStart(4, '0')}`;
+const nameOf = s => SCREEN_NAME[s] || s || '';
+const V = { success: '성공', fail: '실패', pending: '판정 대기', running: '진행 중', waiting: '시작 대기', never: '시작 안 함' };
+const verdictOf = r => r.verdict ?? (!r.startedAt ? (r.endedAt ? 'never' : 'waiting') : r.endedAt ? 'pending' : 'running');
+const stats = r => {
+  const nav = r.events.filter(e => e.type === 'nav');
+  return { off: nav.filter(e => e.off).length, dead: r.events.filter(e => e.type === 'tap' && e.dead).length,
+    taps: r.events.filter(e => e.type === 'tap').length, path: nav.map(e => e.screen),
+    offSet: new Set(nav.filter(e => e.off).map(e => e.screen)) };
+};
+const latest = (s, id) => s.runs.filter(r => r.task === id).pop();
+const cellTime = r => (r && r.startedAt ? sec(r.successMs ?? r.durationMs ?? (r.endedAt ? null : Date.now() - r.startedAt)) : '');
+
+let DB = load();
+let sel = new URLSearchParams(location.search).get('s');
+const open = new Set();                           /* 타임라인을 펼친 run */
+const commit = fn => { const d = load(); fn(d); save(d); DB = d; draw(); };
+
+function drawSheet() {
+  const w = $('#sheet');
+  if (!DB.sessions.length) { w.innerHTML = '<p class="none">아직 결과가 없습니다. <b>테스트 화면</b>에서 참여자 정보를 넣고 태스크를 진행하면 여기에 쌓입니다.</p>'; return; }
+  w.innerHTML = `<table><thead><tr>
+      <th rowspan="2">#</th><th rowspan="2">이름</th><th rowspan="2">나이</th><th rowspan="2">직업</th><th rowspan="2">일자</th>
+      ${TASKS.map(t => `<th colspan="4" title="${esc(t.title)}">T${t.id}. ${esc(t.title)}</th>`).join('')}
+      <th rowspan="2">성공</th></tr><tr>
+      ${TASKS.map(() => ['결과', '시간', '이탈', '빈 터치'].map(k => `<th style="font-weight:500;font-size:12px">${k}</th>`).join('')).join('')}
+    </tr></thead><tbody>
+    ${DB.sessions.map((s, n) => `<tr class="${sel === s.id ? 'on' : ''}" data-s="${s.id}">
+      <td style="color:var(--dim2)">${n + 1}${DB.current === s.id ? ' ●' : ''}</td>
+      <td style="font-weight:600">${esc(s.name || '무기명')}</td><td>${esc(s.age)}</td><td>${esc(s.job)}</td><td style="color:var(--dim)">${esc(s.date)}</td>
+      ${TASKS.map(t => { const r = latest(s, t.id), st = r && stats(r), tries = s.runs.filter(x => x.task === t.id).length;
+        return `<td>${r ? `<span class="v ${verdictOf(r)}">${V[verdictOf(r)]}${tries > 1 ? ` · ${tries}회` : ''}</span>` : '<span style="color:#d1d5db">—</span>'}</td>
+          <td class="tnum">${cellTime(r)}</td>
+          <td class="tnum" style="${st && st.off ? 'color:#b42323;font-weight:600' : ''}">${r ? st.off : ''}</td>
+          <td class="tnum" style="${st && st.dead ? 'color:#b42323;font-weight:600' : ''}">${r ? st.dead : ''}</td>`; }).join('')}
+      <td class="tnum" style="font-weight:600">${TASKS.filter(t => (latest(s, t.id) || {}).verdict === 'success').length}/${TASKS.length}</td>
+    </tr>`).join('')}</tbody></table>`;
+  w.querySelectorAll('[data-s]').forEach(tr => tr.onclick = () => { sel = sel === tr.dataset.s ? null : tr.dataset.s; draw(); });
+}
+
+function runHTML(r, n) {
+  const st = stats(r), v = verdictOf(r);
+  const live = !r.endedAt && r.startedAt ? Date.now() - r.startedAt : null;
+  const time = r.successMs ?? r.durationMs ?? live;
+  const nums = [[r.successMs != null ? '성공까지' : r.endedAt ? '총 소요' : '경과', sec(time)],
+    ['경로 이탈', `${st.off}회`, st.off > 0], ['빈 곳 터치', `${st.dead}회`, st.dead > 0], ['전체 클릭', `${st.taps}회`]];
+  return `<div class="run" data-r="${r.id}">
+    <div class="rh"><span>${n}회차 · ${new Date(r.startedAt ?? r.selectedAt).toLocaleTimeString('ko-KR')}${r.endReason ? ` · ${esc(r.endReason)}` : ''}</span>
+      <span class="v ${v}">${V[v]}${r.verdict === 'success' && r.successMs != null && !r.manual ? ' (자동)' : ''}</span>
+      <span class="btns"><button data-v="success" class="${r.verdict === 'success' ? 'on' : ''}">성공</button>
+        <button data-v="fail" class="${r.verdict === 'fail' ? 'on' : ''}">실패</button>
+        <button class="del">삭제</button></span></div>
+    <div class="nums">${nums.map(([k, val, warn]) => `<div class="${warn ? 'warn' : ''}"><p>${k}</p><p class="tnum">${val}</p></div>`).join('')}</div>
+    ${r.milestones.length ? `<p class="ms">${r.milestones.map(m => `${esc(m.label)} (${sec(m.ms)})`).join(' · ')}</p>` : ''}
+    <div class="path">${st.path.map((p, i) => `${i ? '<s>→</s>' : ''}<b class="${st.offSet.has(p) ? 'off' : ''}">${esc(nameOf(p))}</b>`).join('')}</div>
+    <button class="more">${open.has(r.id) ? '타임라인 접기' : `타임라인 보기 (${r.events.length})`}</button>
+    ${open.has(r.id) ? `<table class="tl"><tbody>${r.events.map(e => `<tr class="${e.off || e.dead ? 'bad' : ''}">
+      <td class="ms0 tnum">${stamp(e.ms)}</td>
+      <td class="kind">${e.pre ? '시작 전 클릭' : { nav: '화면 이동', tap: '클릭', act: '행동' }[e.type] || e.type}</td>
+      <td>${esc(e.type === 'nav' ? nameOf(e.screen) + (e.ctx ? ` · ${e.ctx}` : '') : e.label)}</td>
+      <td class="at">${esc(e.type !== 'nav' ? nameOf(e.screen) : '')}${e.off ? ' · 경로 이탈' : ''}${e.dead ? ' · 반응 없는 곳' : ''}</td></tr>`).join('')}</tbody></table>` : ''}
+    <textarea class="note" placeholder="실제 사용자 결과 (진행자 메모)">${esc(r.note)}</textarea></div>`;
+}
+
+function drawDetail() {
+  const w = $('#detail'), s = DB.sessions.find(x => x.id === sel);
+  if (!s) { w.innerHTML = ''; return; }
+  w.innerHTML = `<div class="who">
+      ${[['name', '이름'], ['age', '나이'], ['job', '직업'], ['date', '일자']].map(([k, l]) =>
+        `<label><span>${l}</span><input data-k="${k}" type="${k === 'date' ? 'date' : k === 'age' ? 'number' : 'text'}" value="${esc(s[k] || '')}"></label>`).join('')}
+      <button class="del" id="delp">참여자 삭제</button></div>
+    ${TASKS.map(t => { const runs = s.runs.filter(r => r.task === t.id);
+      return `<section class="task"><div class="tt"><i>${String(t.id).padStart(2, '0')}</i><h2>${esc(t.title)}</h2><em>${esc(t.rule || '진행자 판정')}</em></div>
+        <p class="sc">${esc(t.scenario)}</p>
+        ${runs.length ? runs.map((r, i) => runHTML(r, i + 1)).reverse().join('') : '<p class="sc" style="color:#c7c7c7;margin-top:16px">기록 없음</p>'}</section>`; }).join('')}`;
+
+  w.querySelectorAll('.who input').forEach(i => i.onchange = () => commit(d => { d.sessions.find(x => x.id === s.id)[i.dataset.k] = i.value; }));
+  $('#delp').onclick = () => confirm(`${s.name || '무기명'} 님의 모든 결과를 지울까요?`) && commit(d => {
+    d.sessions = d.sessions.filter(x => x.id !== s.id); if (d.current === s.id) d.current = null; sel = null;
+  });
+  w.querySelectorAll('.run').forEach(box => {
+    const id = box.dataset.r;
+    const edit = fn => commit(d => { const ss = d.sessions.find(x => x.id === s.id); fn(ss.runs.find(r => r.id === id), ss); });
+    box.querySelectorAll('[data-v]').forEach(b => b.onclick = () => edit(r => { r.verdict = r.verdict === b.dataset.v ? null : b.dataset.v; r.manual = true; }));
+    box.querySelector('.del').onclick = () => confirm('이 기록을 지울까요?') && commit(d => {
+      const ss = d.sessions.find(x => x.id === s.id); ss.runs = ss.runs.filter(r => r.id !== id);
+    });
+    box.querySelector('.more').onclick = () => { open.has(id) ? open.delete(id) : open.add(id); draw(); };
+    box.querySelector('.note').onblur = e => edit(r => { r.note = e.target.value; });
+  });
+}
+const draw = () => { drawSheet(); drawDetail(); };
+draw();
+
+/* 진행 중인 테스트 탭과 실시간 연동 */
+addEventListener('storage', () => { DB = load(); draw(); });
+setInterval(() => { DB = load(); if (!document.activeElement || !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) draw(); }, 1000);
+
+/* 내보내기 · 가져오기 */
+const download = (name, text, type) => { const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
+$('#csv').onclick = () => {
+  const head = ['이름', '나이', '직업', '일자', ...TASKS.flatMap(t => [`T${t.id} 결과`, `T${t.id} 시간(초)`, `T${t.id} 경로 이탈`, `T${t.id} 빈 곳 터치`, `T${t.id} 이동 경로`, `T${t.id} 메모`])];
+  const rows = DB.sessions.map(s => [s.name || '무기명', s.age, s.job, s.date, ...TASKS.flatMap(t => {
+    const r = latest(s, t.id); if (!r) return ['', '', '', '', '', ''];
+    const st = stats(r);
+    return [V[verdictOf(r)], ((r.successMs ?? r.durationMs ?? 0) / 1000).toFixed(1), st.off, st.dead, st.path.map(nameOf).join(' → '), r.note];
+  })]);
+  download('meetnote-ut.csv', '﻿' + [head, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+};
+$('#json').onclick = () => download('meetnote-ut.json', JSON.stringify(DB, null, 2), 'application/json');
+$('#imp').onchange = e => e.target.files[0] && e.target.files[0].text().then(t => {
+  const inc = JSON.parse(t);
+  commit(d => (inc.sessions || []).forEach(s => { if (!d.sessions.some(x => x.id === s.id)) d.sessions.push(s); }));
+});
+document.querySelector('label').onclick = () => $('#imp').click();
+</script>
+</body>
+</html>

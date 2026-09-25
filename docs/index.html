@@ -283,6 +283,43 @@ mark.ev{background:linear-gradient(transparent 55%,#ffe27a 55%);box-shadow:none}
 .cite p{font-size:14px;color:var(--ink2)}
 .warn{margin-top:20px;padding:14px 16px;border-radius:14px;background:#fff6e6;color:#8a5a12;font-size:13.5px}
 
+
+/* ---------- 사용성 테스트(UT) — ?ut 로 켠다 ---------- */
+.utbar{position:fixed;z-index:70;left:0;top:0;bottom:0;width:240px;padding:22px 14px;display:flex;flex-direction:column;gap:4px;overflow:auto;background:#eceef2}
+body.ut .app{margin-left:240px}
+body.ut .askbar{left:calc(504px + (100vw - 504px)/2)}
+.utbar .utlb{margin-bottom:10px;font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--dim)}
+.uttask{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;text-align:left;font-size:14px;line-height:1.4;color:#525252}
+.uttask:hover{background:rgba(255,255,255,.6)}
+.uttask.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(40,39,51,.1)}
+.uttask i{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:6px;background:#dfe3ea;font-style:normal;font-size:11px;font-weight:600}
+.uttask.on i{background:var(--dark);color:#fff}
+.utend{margin-top:20px;align-self:flex-start;padding:0 12px;font-size:12px;color:#b8bcc4}
+.utend:hover{color:var(--dim)}
+.utdone{margin-top:20px;height:48px;border-radius:12px;background:var(--dark);color:#fff;font-weight:600;animation:rise .4s var(--ease) both}
+.uth{font-size:14px;font-weight:600}
+#utform{display:grid;gap:8px;margin-top:4px}
+#utform input{height:40px;padding:0 12px;border-radius:10px;border:1px solid transparent;background:#fff;font-size:14px;outline:none}
+#utform input:focus{border-color:var(--dark)}
+#utform button{height:44px;border-radius:10px;background:var(--dark);color:#fff;font-weight:600}
+.utsub{margin-top:10px;font-size:12px;color:#b8bcc4;text-decoration:none}
+/* 시나리오 막 — 모바일처럼 흰 블러가 위에서 내려와 덮는다 */
+.utcover{position:fixed;inset:0;z-index:90;display:grid;place-items:center;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(253,248,248,.75));animation:coverDown .8s var(--ease) both}
+.utcover.out{animation:coverUp .8s var(--ease) both}
+@keyframes coverDown{from{clip-path:inset(0 0 100% 0 round 0 0 40px 40px)}to{clip-path:inset(0 0 0 0)}}
+@keyframes coverUp{from{clip-path:inset(0 0 0 0)}to{clip-path:inset(0 0 100% 0 round 0 0 40px 40px)}}
+.utc{display:grid;gap:14px;justify-items:center;max-width:640px;padding:0 36px;text-align:center;animation:rise .6s .55s var(--ease) both}
+.utc span{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--dim)}
+.utc p{font-size:22px;font-weight:600;line-height:1.55;letter-spacing:-.3px;white-space:pre-line}
+.utc button{margin-top:10px;height:52px;padding:0 28px;border-radius:14px;background:var(--dark);color:#fff;font-size:16px;font-weight:600}
+.utc i{font-style:normal;font-size:13px;color:var(--dim2)}
+@media (max-width:860px){
+  .utbar{position:static;width:auto;height:auto;flex-direction:row;align-items:center;gap:6px;padding:10px 12px;overflow-x:auto}
+  .utbar .utlb,.utbar .utsub{display:none}
+  .uttask{flex:none;max-width:260px}
+  body.ut .app{margin-left:0}
+}
 /* ---------- 좁은 화면: 모바일처럼 좌상단 프로젝트 · 하단 떠 있는 내비 ---------- */
 .bnav{display:none}
 @media (max-width:860px){
@@ -320,6 +357,7 @@ mark.ev{background:linear-gradient(transparent 55%,#ffe27a 55%);box-shadow:none}
 <button class="askbar tap" id="askbar"><b class="spark">✦</b><span id="askhint">이 프로젝트에 대해 물어보기</span><kbd>⌘K</kbd></button>
 <div class="bnav" id="bnav"></div>
 
+<script src="ut.js"></script>
 <script>
 /* ================= 0. 조각 ================= */
 const $ = s => document.querySelector(s);
@@ -391,6 +429,13 @@ async function boot() {
 }
 
 /* ================= 2. 길찾기 ================= */
+/* 사용성 테스트 기록용 화면 이름 (ut.js) */
+const screenName = () => ASK ? 'ask'
+  : CUR.kind === 'home' ? (CUR.mode === 'team' ? 'home_team' : 'home_my')
+  : CUR.kind === 'list' ? (CUR.by === 'agenda' ? 'list_agenda' : 'list_new')
+  : CUR.kind === 'meeting' ? 'meeting_' + (['src', 'map'].includes(CUR.tab) ? CUR.tab : 'sum') : 'home_my';
+const utNav = () => window.UT && UT.nav(screenName(), CUR.kind === 'meeting' ? CUR.id : '');
+const utAct = (t, l) => window.UT && UT.act(t, l);
 /* #/p/<프로젝트>  ·  #/p/<프로젝트>/list  ·  #/m/<회의>/<요약|원문|맵> */
 let CUR = {};
 function route() {
@@ -409,6 +454,7 @@ function route() {
   if (same && page.kind === 'meeting') return meetingTab(page.tab);
   scrollTo(0, 0);
   ({ home, list, meeting: meetingPage })[page.kind](p, page);
+  if (page.kind !== 'meeting') utNav();      /* 회의는 탭이 정해진 뒤 meetingTab 에서 기록한다 */
 }
 const go = h => { location.hash = h; };
 
@@ -514,7 +560,8 @@ async function home(p, page) {
       const c = e.target.closest('[data-k]'); if (!c) return; const d = list[+c.dataset.k]; openEvidence(d.m.id, d.ev, d.who, d.t);
     };
   };
-  $('#ow').onclick = e => { const b = e.target.closest('[data-w]'); if (!b) return; cur = b.dataset.w; store.set('mn.group.' + p.id + mode, cur); draw(); };
+  $('#ow').onclick = e => { const b = e.target.closest('[data-w]'); if (!b) return; cur = b.dataset.w; store.set('mn.group.' + p.id + mode, cur); draw();
+    utAct(cur === 'Team UX' ? 'team-ux' : 'group', cur + ' 할 일'); };
   draw();
   const more = $('#more');
   if (more) { $('#opens').classList.add('fold'); more.onclick = () => { $('#opens').classList.remove('fold'); more.remove(); }; }
@@ -540,8 +587,10 @@ async function list(p) {
   if (CUR.p !== p || CUR.kind !== 'list') return;
   let by = store.get('mn.by') || 'new';
   const v = $('#view');
+  CUR.by = by;
   const draw = () => {
     let body;
+    CUR.by = by;
     if (by === 'new') body = `<div class="rows">${ms.map((m, i) => meetRow(m, maps[i], i === 0)).join('')}</div>`;
     else {
       const all = ms.flatMap((m, i) => maps[i].sections.map(s => ({ s, m })));
@@ -556,7 +605,7 @@ async function list(p) {
     v.innerHTML = `<h1 class="h1">${esc(p.name)}</h1><div class="sub"><span>회의 ${ms.length}개</span></div>
       <div class="pills" style="margin-top:26px" id="by"><button class="${by === 'new' ? 'on' : ''}" data-b="new">최신순</button><button class="${by === 'agenda' ? 'on' : ''}" data-b="agenda">안건별</button></div>
       <div style="margin-top:16px">${body}</div>`;
-    $('#by').onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; by = b.dataset.b; store.set('mn.by', by); draw(); };
+    $('#by').onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; by = b.dataset.b; store.set('mn.by', by); draw(); utNav(); };
   };
   draw();
 }
@@ -585,6 +634,7 @@ async function meetingPage(p, page) {
 }
 function meetingTab(tab) {
   const { m, map, segs } = M;
+  CUR.tab = tab; utNav();
   const focusNo = +decodeURIComponent(location.hash).split('/')[4] || 0;
   document.querySelectorAll('#mtabs button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   const body = $('#mbody');
@@ -643,6 +693,9 @@ function bindSummary(map) {
     pickSection(map.sections.find(s => s.no === +b.dataset.go), false);
   });
   body.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => pickSection(map.sections.find(s => s.no === +b.dataset.sec), true));
+  body.querySelectorAll('.iss details').forEach(d => d.addEventListener('toggle', () => {
+    if (d.open) utAct('talk-open', `쟁점 ${d.closest('.iss').dataset.no} 오간 이야기`);
+  }));
   body.querySelectorAll('[data-n]').forEach(b => b.onclick = () => {
     const n = map.sections.flatMap(s => s.nodes).find(x => x.id === b.dataset.n); showEv(n.ev, n.who, n.t);
   });
@@ -761,12 +814,14 @@ function commentSheet(m, s, after) {
     sh.querySelector('form').onsubmit = e => {
       e.preventDefault(); const v = e.target.querySelector('input').value.trim(); if (!v) return;
       putCmts(m.id, key, [...cmts(m.id, key), { text: v, at: new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }]);
+      utAct('comment', `의견 등록: ${v.slice(0, 30)}`);
       draw();
     };
     sh.querySelector('input').focus();
   };
   bg.onclick = close; addEventListener('keydown', onk);
   document.body.append(bg, sh); draw();
+  utAct('comment-open', `${s.resolution.title} 의견창`);
 }
 
 /* ================= 6. AI 물어보기 ================= */
@@ -787,9 +842,10 @@ function openAsk(from) {
     ${LOCALSRV ? '' : '<div class="warn">AI 답변은 이 맥에서 연 로컬 주소(127.0.0.1:8787/notes/)에서만 동작해요. 구독 안에서만 돌리기 위해서예요.</div>'}
     <div id="ans"></div></div>`;
   document.body.append(o); ASK = o;
+  utAct('ask-open', '물어보기 열기');
   const inp = o.querySelector('input'); setTimeout(() => inp.focus(), 250);
   o.querySelector('.x').onclick = closeAsk;
-  o.querySelector('form').onsubmit = e => { e.preventDefault(); const q = inp.value.trim(); if (q) askRun(q, scope); };
+  o.querySelector('form').onsubmit = e => { e.preventDefault(); const q = inp.value.trim(); if (q) { utAct('ask', `질문: ${q.slice(0, 30)}`); askRun(q, scope); } };
   const mic = o.querySelector('.mic');
   if (mic) mic.onclick = () => {
     const rec = new SR(); rec.lang = 'ko-KR'; rec.interimResults = true;
@@ -814,6 +870,7 @@ async function askRun(q, scope) {
     if (!r.ok) throw new Error(a.error || r.status);
     if (!ASK) return;
     box.innerHTML = `<div class="ans"><div class="qq">${esc(q)}</div><div class="aa" id="aa"></div><div class="cites" id="ci"></div></div>`;
+    utAct('ask-answer', (a.answer || '').slice(0, 40));
     await typeOut($('#aa'), a.answer || '답을 찾지 못했어요.');
     const cites = (a.cites || []).map(c => ({ ...c, m: (parts.find(x => x.segs.some(g => g.s === c.who && g.l.some(l => l.includes(c.quote)))) || parts[0]).m }));
     if (cites.length && ASK) {
@@ -838,7 +895,9 @@ addEventListener('keydown', e => {
 });
 if (!/Mac/.test(navigator.platform)) $('#askbar kbd').textContent = 'Ctrl K';
 
-boot();
+boot().then(() => {
+  if (window.UT && UT.on) UT.mount({ screen: screenName, ctx: () => (CUR.kind === 'meeting' ? CUR.id : ''), reload: () => { CUR = {}; } });
+});
 </script>
 </body>
 </html>

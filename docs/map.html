@@ -700,6 +700,25 @@ b,h2,h3,h4,h5{font-weight:600}
   box-shadow:0 0 0 3px rgba(40,39,51,.05),0 18px 40px rgba(40,39,51,.16);opacity:0}
 .bud.on{opacity:1;transition:transform .34s cubic-bezier(.3,0,.2,1),opacity .2s}
 #cv:not(.lod) .neck,#cv:not(.lod) .bud{opacity:0}
+
+/* ---------- 실시간 따라가기 ---------- */
+.follow{position:absolute;left:14px;bottom:14px;z-index:6;height:40px;padding:0 18px;border-radius:99px;
+  background:rgba(250,250,250,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 0 12px rgba(0,0,0,.1);font-size:13px;font-weight:600;color:var(--navy)}
+.follow:hover{background:#fff}
+.follow.on{background:var(--dark);color:#fff}
+.follow.rate{left:190px;padding:0 14px;font-variant-numeric:tabular-nums}
+body.following .fbig{display:none!important}
+/* 인식 중 — 카드 아래 작은 말풍선 (피그마) */
+.think{position:absolute;z-index:5;display:flex;align-items:center;justify-content:center;gap:7px;
+  width:96px;height:56px;margin-left:-48px;border-radius:28px;background:#fff;
+  box-shadow:0 0 0 2px rgba(40,39,51,.04),0 16px 32px rgba(40,39,51,.1);opacity:0;transform:scale(.7);
+  transition:opacity .25s,transform .3s cubic-bezier(.3,0,.2,1)}
+.think.on{opacity:1;transform:none}
+.think i{width:9px;height:9px;border-radius:50%;background:#c3ccdb;animation:bob 1.1s ease-in-out infinite}
+.think i:nth-child(2){animation-delay:.15s}
+.think i:nth-child(3){animation-delay:.3s}
+@keyframes bob{30%{transform:translateY(-5px);background:#9fb0c8}}
 /* ---------- 새 홈의 '관계 맵' 탭 안에 들어갈 때 (?embed) ---------- */
 /* 겉의 제목·파일·설정은 새 홈이 맡는다. 재생 조절만 떠 있는 알약으로 남긴다 */
 body.embed{--top:0px;--player:0px}
@@ -761,6 +780,8 @@ body.norail .rail,body.norail .rz-x{display:none}
     </div>
     <div class="lodtip">논의 카드 · 확대하면 안쪽 내용이 열립니다</div>
     <div class="livebar" id="livebar"></div>
+    <button class="follow" id="follow">▶ 실시간 따라가기</button>
+    <button class="follow rate" id="frate" hidden>2×</button>
     <div class="zoom">
       <button id="zout">−</button><span class="lv" id="zlv">100%</span><button id="zin">＋</button>
       <button class="fit" id="zfit">폭 맞춤</button>
@@ -1842,6 +1863,117 @@ function sprout(done) {
   };
   at(260, () => one(0));
 }
+
+/* ================= 실시간 따라가기 =================
+   회의를 처음부터 틀고, 그 시각까지 오간 것을 하나씩 세운다.
+   새 카드는 방울처럼 부모 자리에서 내려와 자라고, 그 다음 선이 이어진다.
+   다음 이야기가 앞과 다른 흐름이면 '인식 중' 말풍선을 먼저 띄운다. */
+let FL = null;
+function followItems() {
+  const out = [];
+  FRAMES.forEach(f => out.push({ t: secs(f.sec.t), frame: f }));
+  NODES.forEach(n => out.push({ t: n.t, node: n }));
+  return out.sort((a, b) => a.t - b.t || (a.frame ? -1 : 1));
+}
+function followStart() {
+  clearTimeout(SPROUT);
+  document.body.classList.add('following');
+  const think = $('#think') || (() => { const d = el('div', 'think', '<i></i><i></i><i></i>'); d.id = 'think'; cv.append(d); return d; })();
+  FRAMES.forEach(f => { f.dom.classList.remove('in', 'seed', 'grow', 'wrote'); if (f.neck) f.neck.classList.remove('on'); });
+  NODES.forEach(n => { n.dom.classList.remove('in', 'live', 'sel'); if (n.hug) n.hug.dom.style.opacity = 0; });
+  EDGES.forEach(e => { e.path.classList.remove('on'); (e.tips || []).forEach(t => t.style.opacity = 0); });
+  $('#bud').classList.remove('on');
+  FL = { q: followItems(), i: 0, busy: false, at: -1, lastSec: null, think };
+  view.z = Math.max(LOD + .12, Math.min(.62, (vp.getBoundingClientRect().width - 60) / 1400));
+  apply();
+  $('#follow').classList.add('on');
+  $('#follow').textContent = '■ 멈추기';
+  $('#frate').hidden = false;
+}
+function followStop() {
+  FL = null;
+  document.body.classList.remove('following');
+  const t = $('#think'); if (t) t.classList.remove('on');
+  $('#follow').classList.remove('on');
+  $('#follow').textContent = '▶ 실시간 따라가기';
+  $('#frate').hidden = true;
+}
+/* 부모(회의 페이지)가 넘겨 주는 재생 시각 */
+addEventListener('message', e => {
+  const d = e.data;
+  if (!d || d.mn !== 't' || !FL) return;
+  if (d.t < 0) return followStop();
+  FL.at = d.t;
+  followTick();
+});
+function followTick() {
+  if (!FL || FL.busy) return;
+  const it = FL.q[FL.i];
+  if (!it) return;
+  if (it.t > FL.at) {                                  /* 아직 안 나온 이야기 — 듣고 있는 중 */
+    const last = FL.q[FL.i - 1], a = last && (last.node || last.frame);
+    const r = vp.getBoundingClientRect();
+    const x = a ? a.x + OX + (a.dom ? a.dom.offsetWidth / 2 : 160) : (r.width / 2 - view.x) / view.z;
+    const y = a ? a.y + OY + (a.dom ? a.dom.offsetHeight : 90) + 46 : (r.height / 2 - view.y) / view.z;
+    FL.think.style.cssText = `left:${x}px;top:${y}px`;
+    FL.think.classList.add('on');
+    if (it.t - FL.at > 10 && FL.seek !== it.t) {       /* 조용한 구간은 다음 이야기 앞으로 건너뛴다 */
+      FL.seek = it.t;
+      try { parent.postMessage({ mn: 'seek', t: Math.max(0, it.t - 4) }, '*'); } catch {}
+    }
+    return;
+  }
+  FL.think.classList.remove('on');
+  FL.busy = true;
+  FL.i++;
+  const done = () => { FL.busy = false; followTick(); };
+  if (it.frame) {                                       /* 새 논의가 열린다 */
+    const f = it.frame;
+    f.dom.classList.add('in');
+    if (f.neck) f.neck.classList.add('on');
+    ensureVisible(f.x, f.y, f.w, Math.min(f.h, 420));
+    setTimeout(done, 260);
+    return;
+  }
+  const n = it.node, bud = $('#bud');
+  const from = n.p || (n.sec && n.sec.frame);
+  const fx = (n.p ? n.p.x + OX + n.p.dom.offsetWidth / 2 : n.x + OX + 60);
+  const fy = (n.p ? n.p.y + OY + n.p.dom.offsetHeight : n.y + OY - 40);
+  bud.style.transition = 'none';
+  bud.style.transform = `translate(${fx}px, ${fy}px)`;
+  bud.classList.add('on');
+  requestAnimationFrame(() => {                          /* 방울이 새 카드 자리로 */
+    bud.style.transition = '';
+    bud.style.transform = `translate(${n.x + OX + n.dom.offsetWidth / 2}px, ${n.y + OY + n.dom.offsetHeight / 2}px)`;
+  });
+  ensureVisible(n.x, n.y, n.dom.offsetWidth, n.dom.offsetHeight);
+  setTimeout(() => {
+    bud.classList.remove('on');
+    n.dom.classList.add('in');                           /* 카드가 자라고 */
+    NODES.forEach(o => o.dom.classList.toggle('live', o === n));
+    if (n.hug) n.hug.dom.style.opacity = '';
+    if (n.p && n.p.hug) n.p.hug.dom.style.opacity = '';
+    setTimeout(() => {                                   /* 그 다음 선이 이어진다 */
+      EDGES.forEach(e => {
+        if (e.b === n && e.a.dom.classList.contains('in')) {
+          e.path.classList.add('on'); (e.tips || []).forEach(t => t.style.opacity = '');
+        }
+      });
+      done();
+    }, 220);
+  }, 320);
+}
+$('#follow').onclick = () => {
+  const on = !FL;
+  if (on) followStart(); else followStop();
+  $('#frate').hidden = !on;
+  try { parent.postMessage({ mn: 'follow', on }, '*'); } catch {}
+};
+$('#frate').onclick = e => {                       /* 듣는 속도 */
+  const next = { 1: 2, 2: 4, 4: 1 }[+e.currentTarget.textContent.replace('×', '')] || 2;
+  e.currentTarget.textContent = next + '×';
+  try { parent.postMessage({ mn: 'rate', v: next }, '*'); } catch {}
+};
 
 /* ================= 8. 시간순 전개 ================= */
 let timer = null, step = 0, speed = 2, paused = false;

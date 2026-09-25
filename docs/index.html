@@ -142,9 +142,15 @@ img.av{object-fit:cover}
 .player time{font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
 .player .bar{flex:1;height:3px;border-radius:2px;background:#d4dbe6;position:relative;cursor:pointer}
 .player .bar i{position:absolute;inset:0 auto 0 0;border-radius:2px;background:var(--dark)}
-.tabs{margin-top:22px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.tabs{margin-top:22px;display:flex;align-items:center;gap:10px}
+.tabs .srctog{margin-left:auto}
 .mgrid{margin-top:18px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:24px;align-items:start}
-.mgrid.wide{grid-template-columns:320px minmax(0,1fr);gap:16px}   /* 관계 맵은 넓게 */
+.mgrid.wide{grid-template-columns:0 minmax(0,1fr);gap:0;transition:grid-template-columns .35s var(--ease),gap .35s}
+.mgrid.wide.open{grid-template-columns:360px minmax(0,1fr);gap:16px}
+.mgrid.wide:not(.open) .tr{width:0;min-width:0;padding:0;overflow:hidden;opacity:0;pointer-events:none;box-shadow:none}
+.mgrid.wide .tr{transition:opacity .3s}
+.srctog{height:32px;padding:0 14px;border-radius:99px;background:var(--card);color:var(--navy);font-size:12.5px;font-weight:500}
+.srctog:hover{background:var(--chip)}
 .only-narrow{display:none}
 .mgrid.solo{grid-template-columns:minmax(0,1fr)}
 /* 요약 시트 — 모바일 요약 모달의 그라데이션 */
@@ -683,6 +689,12 @@ async function list(p) {
 
 /* ================= 5. 회의 페이지 — 요약 · 원문 · 관계 맵 ================= */
 let M = null;   /* 지금 열린 회의 {m, map, segs} */
+let SRCOPEN = false;                  /* 관계 맵에서 왼쪽 원문을 펼쳐 두었는가 */
+function showSrc(on) {
+  SRCOPEN = on;
+  const g = $('.mgrid.wide'); if (g) g.classList.toggle('open', on);
+  const t = $('#srctog'); if (t) t.textContent = on ? '원문 접기' : '원문 펼치기';
+}
 async function meetingPage(p, page) {
   const m = meetingOf(page.id);
   const [map, segs] = await Promise.all([getMap(m), getTrans(m)]);
@@ -697,7 +709,8 @@ async function meetingPage(p, page) {
         <span>참석 ${who.map(esc).join(' · ')}</span></div></div>
       <div class="player" id="player" hidden><button id="pp" aria-label="재생">${I.play}</button><time id="pt">0:00</time><div class="bar" id="pb"><i></i></div><time>${esc(map.meeting.duration)}</time></div></div>
     <div class="tabs"><div class="pills" id="mtabs">
-      <button data-t="sum">요약</button><button data-t="map">관계 맵</button><button data-t="src" class="only-narrow">원문</button></div></div>
+      <button data-t="sum">요약</button><button data-t="map">관계 맵</button><button data-t="src" class="only-narrow">원문</button></div>
+      <button class="srctog" id="srctog" hidden>원문 펼치기</button></div>
     <div id="mbody"></div>`;
   $('#mtabs').onclick = e => { const b = e.target.closest('[data-t]'); if (b) go(`#/m/${m.id}/${b.dataset.t}`); };
   audio(map);
@@ -713,7 +726,11 @@ function meetingTab(tab) {
   const inner = tab === 'map'
     ? `<div class="map"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map&embed=1&norail=1" title="관계 맵"></iframe></div>`
     : summaryHTML(map);
-  body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : tab === 'map' ? 'wide' : ''}">${transHTML(segs)}${tab === 'src' ? '' : inner}</div>`;
+  body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : tab === 'map' ? 'wide' : ''} ${tab === 'map' && SRCOPEN ? 'open' : ''}">${transHTML(segs)}${tab === 'src' ? '' : inner}</div>`;
+  const tg = $('#srctog');
+  tg.hidden = tab !== 'map';
+  tg.textContent = SRCOPEN ? '원문 접기' : '원문 펼치기';
+  tg.onclick = () => showSrc(!SRCOPEN);
   if (tab === 'sum') bindSummary(map);
   bindTrans();
   if (focusNo) { const el = body.querySelector(`[data-no="${focusNo}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); pickSection(map.sections.find(s => s.no === focusNo), false); } }
@@ -902,12 +919,41 @@ function commentSheet(m, s, after) {
 
 /* 관계 맵(iframe)에서 카드를 누르면 왼쪽 원문을 짚는다 */
 addEventListener('message', e => {
-  const d = e.data;
-  if (!d || d.mn !== 'ev' || !M) return;
-  if (d.ev && showEv(d.ev, d.who, d.t)) return;
-  const sec = M.map.sections.find(s => s.no === d.no);
-  if (sec) pickSection(sec, false, secs(d.t));
+  const d = e.data; if (!d || !M) return;
+  if (d.mn === 'ev') {
+    showSrc(true);                                  /* 카드를 누르면 왼쪽 원문이 나타난다 */
+    setTimeout(() => {
+      if (d.ev && showEv(d.ev, d.who, d.t)) return;
+      const sec = M.map.sections.find(s => s.no === d.no);
+      if (sec) pickSection(sec, false, secs(d.t));
+    }, 360);
+  }
+  if (d.mn === 'follow') follow(d.on);
+  if (d.mn === 'rate') { FRATE = d.v; if (AU) AU.playbackRate = d.v; }
+  if (d.mn === 'seek' && FOLLOW) { if (AU && AU.duration) AU.currentTime = d.t; else FSKIP = d.t; }
 });
+
+/* 실시간 따라가기 — 맵이 부르면 회의를 처음부터 틀고 시각을 넘겨 준다.
+   음성이 없으면 가상 시계로 빠르게 흘린다 (8배속). */
+let FOLLOW = null, FRATE = 2, FSKIP = null;
+function follow(on) {
+  clearInterval(FOLLOW); FOLLOW = null;
+  const send = t => { const f = $('.map iframe'); if (f) f.contentWindow.postMessage({ mn: 't', t }, '*'); };
+  if (AU) { AU.pause(); AU.currentTime = 0; }
+  if (!on) { send(-1); return; }
+  if (AU && AU.duration) {                          /* 음성이 있으면 실제로 듣는다 */
+    AU.playbackRate = FRATE;
+    AU.play().catch(() => {});
+    FOLLOW = setInterval(() => { if (!AU.paused) send(AU.currentTime); }, 200);
+  } else {
+    let t = 0, end = secs(M.map.meeting.duration || '1:00:00');
+    FOLLOW = setInterval(() => {
+      if (FSKIP != null) { t = FSKIP; FSKIP = null; }
+      t += 0.2 * FRATE * 4; send(t);
+      if (t > end) { clearInterval(FOLLOW); FOLLOW = null; }
+    }, 200);
+  }
+}
 
 /* ================= 6. AI 물어보기 ================= */
 /* 모바일의 '전원 버튼 길게 누르기' 대신: 화면 아래 떠 있는 입력줄을 누르거나 ⌘K / Ctrl+K.

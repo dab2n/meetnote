@@ -155,38 +155,30 @@ img.av{object-fit:cover}
 .focus button:hover{background:rgba(255,255,255,.55)}
 .focus b{font-size:11.5px;font-weight:600;color:var(--dim);white-space:nowrap}
 .focus span{flex:1}
-.issues{display:grid;gap:26px}
-.iss .hd{display:flex;align-items:center;gap:8px;cursor:pointer}
-.iss .tag{padding:4px 8px;border-radius:8px;font-size:15px;font-weight:600;letter-spacing:-.3px}
-.iss .hd time{font-size:13px;color:var(--dim)}
-.iss .hd .pt{margin-left:auto;font-size:11.5px;color:var(--dim2)}
-.iss .bd{margin:6px 0 0 11px;padding:4px 0 2px 14px;border-left:1px solid var(--c,#c7d3e4);display:grid;gap:10px;position:relative}
-.iss .bd:after{content:"";position:absolute;left:-2.5px;bottom:-2px;width:4px;height:4px;border-radius:50%;background:var(--c,#c7d3e4)}
-.iss .q{font-size:16px;font-weight:600;letter-spacing:-.3px;line-height:1.5;cursor:pointer}
-.iss .q:hover{text-decoration:underline;text-decoration-color:rgba(5,10,10,.2);text-underline-offset:4px}
-.xp summary{list-style:none;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim2);cursor:pointer;width:max-content}
-.xp summary::-webkit-details-marker{display:none}
-.xp summary .ar{font-size:9px;transition:transform .2s}
-.xp[open] summary .ar{transform:rotate(90deg)}
-.xp summary:hover{color:var(--dim)}
-.cnt{display:flex;gap:4px;flex-wrap:wrap}
-.cnt i{font-style:normal;padding:1px 7px;border-radius:6px;background:rgba(255,255,255,.6);color:var(--navy);font-size:11px;font-weight:500}
-.cnt i.con{background:#fde8e8;color:#c93a35}
-.talk{display:grid;gap:14px;padding:12px 0 4px}
-.talk .kids{margin-left:3px;padding-left:12px;border-left:1px solid var(--line2);display:grid;gap:12px}
-.nd{display:grid;gap:1px;cursor:pointer;animation:rise .4s var(--ease) both}
-.nd .k{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600}
-.nd .k:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
-.nd .t{font-size:14px;font-weight:500;line-height:1.45}
-.nd .m{font-size:12px;color:var(--dim2)}
-.nd:hover .t{text-decoration:underline;text-decoration-color:rgba(5,10,10,.2);text-underline-offset:3px}
-.k.position{color:var(--blue)} .k.pro{color:var(--green)} .k.con{color:var(--red)} .k.concern{color:var(--violet)} .k.condition{color:var(--amber)} .k.open{color:var(--grey)}
-.cf{font-size:12.5px;color:var(--dim)} .cf b{color:var(--red);font-weight:600;margin:0 4px}
-@keyframes rise{from{opacity:0;transform:translateY(8px)}}
-.res{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
-.res b{flex:1;font-size:15px;font-weight:500;line-height:1.55}
-.res .st{margin-top:3px}
-.fx{display:flex;gap:6px;align-items:center}
+.brief .line{font-size:17px;font-weight:600;line-height:1.6;letter-spacing:-.2px}
+.brief .story{margin-top:12px;display:grid;gap:9px}
+.brief .story p{font-size:14.5px;line-height:1.75;color:var(--ink2)}
+.sheet h5 em{margin-left:6px;font-style:normal;font-size:12px;font-weight:500;color:var(--dim)}
+.groups{display:grid;gap:26px}
+.gp h6{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--ink2)}
+.gp h6 i{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border-radius:8px;background:var(--c,#c7d3e4);color:var(--ink);font-style:normal;font-size:11.5px;font-weight:700}
+.gp h6 b{font-weight:500;font-size:12px;color:var(--dim2)}
+.iss{padding:18px 20px;border-radius:18px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(40,39,51,.04)}
+.iss+.iss{margin-top:10px}
+/* 쟁점 문장 — 이 카드에서 가장 크고 진하게, 왼쪽에 색 막대 */
+.qq{cursor:pointer;padding-left:14px;border-left:3px solid var(--c,#c7d3e4)}
+.qq h4{font-size:18px;font-weight:700;line-height:1.5;letter-spacing:-.3px}
+.qq:hover h4{text-decoration:underline;text-decoration-color:rgba(5,10,10,.18);text-underline-offset:4px}
+.qm{margin-top:5px;display:flex;gap:10px;font-size:11.5px;color:var(--dim2)}
+.qm time{font-variant-numeric:tabular-nums}
+.flow{margin-top:12px;display:grid;gap:8px;padding-left:17px}
+.flow p{font-size:14px;line-height:1.75;color:var(--ink2)}
+.res{margin-top:14px;padding:12px 14px;border-radius:14px;background:#fff;display:grid;gap:3px;cursor:pointer;box-shadow:0 0 0 1px rgba(40,39,51,.04)}
+.res:hover{box-shadow:0 0 0 1px rgba(40,39,51,.1)}
+.res em{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.06em}
+.res b{font-size:15px;font-weight:600;line-height:1.55;letter-spacing:-.2px}
+.res.none{color:var(--dim)}
+.fx{margin-top:10px;display:flex;gap:6px;align-items:center}
 .cmb{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 9px;border-radius:99px;font-size:12px;color:var(--dim);background:rgba(255,255,255,.5)}
 .cmb:hover{background:#fff;color:var(--ink2)}
 .tlist{display:grid;gap:2px}
@@ -674,63 +666,49 @@ function meetingTab(tab) {
   body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : ''}">${transHTML(segs)}${tab === 'src' ? '' : inner}</div>`;
   if (tab === 'sum') bindSummary(map);
   bindTrans();
-  if (focusNo) { const el = body.querySelector(`[data-no="${focusNo}"]`); if (el) { el.querySelector('details')?.setAttribute('open', ''); el.scrollIntoView({ block: 'start', behavior: 'smooth' }); pickSection(map.sections.find(s => s.no === focusNo), false); } }
+  if (focusNo) { const el = body.querySelector(`[data-no="${focusNo}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); pickSection(map.sections.find(s => s.no === focusNo), false); } }
   if (PENDING) { const x = PENDING; PENDING = null; setTimeout(() => showEv(x.ev, x.who, x.t), 60); }
 }
 
 function summaryHTML(map) {
   const b = map.brief || {}, todos = map.todos || [];
-  const fc = (b.focus || []).map(f => [f, map.sections.find(s => s.no === f.no)]).filter(x => x[1]);
+  /* 논의를 상위 카테고리로 묶는다 — 카테고리가 없으면 논의 하나씩 */
+  const groups = [];
+  map.sections.forEach((sec, i) => {
+    const key = sec.group || sec.title;
+    const g = groups.find(x => x.key === key);
+    (g || groups[groups.push({ key, i, list: [] }) - 1]).list.push(sec);
+  });
   return `<div class="sheet">
     <div class="brief"><h5>한 줄 브리핑</h5>
       ${(b.kind || []).length ? `<div class="kinds">${b.kind.map(k => `<span class="kd">${esc(k)}</span>`).join('')}</div>` : ''}
-      <p>${esc(b.line || map.headline || '')}</p>
-      ${fc.length ? `<div class="focus">${fc.map(([f, s]) => `<button data-go="${s.no}"><b>논의 ${String(s.no).padStart(2, '0')}</b><span>${esc(f.text)}</span><em class="st ${s.resolution.kind}">${KO[s.resolution.kind]}</em></button>`).join('')}</div>` : ''}</div>
+      <p class="line">${esc(b.line || map.headline || '')}</p>
+      ${(b.story || []).length ? `<div class="story">${b.story.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : ''}</div>
     <hr>
-    <h5>논의 쟁점</h5>
-    <div class="issues">${map.sections.map((s, i) => issueHTML(s, i)).join('')}</div>
+    <h5>논의 쟁점<em>${groups.length}</em></h5>
+    <div class="groups">${groups.map((g, gi) => `<section class="gp" style="--c:${TAGC[gi % TAGC.length]}">
+      <h6><i>${String(gi + 1).padStart(2, '0')}</i>${esc(g.key)}<b>${g.list.length}</b></h6>
+      ${g.list.map(sec => issueHTML(sec)).join('')}</section>`).join('')}</div>
     ${todos.length ? `<hr><h5>다음 해야 할 일</h5><div class="tlist">${todos.map((d, k) => `<button data-td="${k}"><span>${esc(d.text)}</span>
       <em class="own ${d.owner ? '' : 'none'}">${esc(d.owner || '담당 미정')}</em><time>${esc(d.t)}</time></button>`).join('')}</div>` : ''}
     ${(map.carry || []).length ? `<hr><h5>다음 회의로 넘어가는 것</h5><div class="carry">${map.carry.map(c => `<div><i>${esc(c.part)}</i><span>${esc(c.label)}</span></div>`).join('')}</div>` : ''}
   </div>`;
 }
-function issueHTML(s, i) {
+/* 논의 한 개 — 쟁점 문장을 앞세우고, 오간 이야기는 문장으로, 결론은 따로 */
+function issueHTML(s) {
   const iss = s.nodes.find(n => n.kind === 'issue'), r = s.resolution || {};
-  const body = s.nodes.filter(n => n.kind !== 'issue');
-  const cnt = k => body.filter(n => n.kind === k).length;
-  const chips = ['position', 'pro', 'con', 'concern', 'condition', 'open'].filter(cnt).map(k => `<i class="${k === 'con' ? 'con' : ''}">${KO[k]} ${cnt(k)}</i>`).join('');
-  const tree = parent => {
-    const kids = body.filter(n => n.parent === parent).sort((a, b) => secs(a.t) - secs(b.t));
-    return kids.map(n => { const sub = tree(n.id);
-      return `<div class="nd" data-n="${esc(n.id)}"><span class="k ${n.kind}">${KO[n.kind]}</span><span class="t">${esc(n.title)}</span><span class="m">${esc(n.who)} · ${esc(n.t)}</span></div>${sub ? `<div class="kids">${sub}</div>` : ''}`; }).join('');
-  };
-  const byId = Object.fromEntries(s.nodes.map(n => [n.id, n]));
-  const cf = (s.conflicts || []).filter(([a, b]) => byId[a] && byId[b]).map(([a, b]) => `<div class="cf">대립 · ${esc(byId[a].title)}<b>↔</b>${esc(byId[b].title)}</div>`).join('');
   const nc = cmts(M.m.id, s.no + '-res').length;
-  return `<div class="iss" data-no="${s.no}" style="--c:${TAGC[i % TAGC.length]}">
-    <div class="hd" data-sec="${s.no}"><span class="tag" style="background:${TAGC[i % TAGC.length]}">쟁점 ${s.no}</span><time>${esc(s.t)}~${esc(s.t1)}</time><span class="pt">${esc(s.part)}</span></div>
-    <div class="bd">
-      <div class="q" data-sec="${s.no}">${esc(iss ? iss.title : s.title)}</div>
-      ${body.length ? `<details class="xp"><summary><span class="ar">▶</span>오간 이야기 ${body.length}<span class="cnt">${chips}</span></summary>
-        <div class="talk">${tree(iss ? iss.id : '')}${cf}</div></details>` : ''}
-      <div class="res" data-sec="${s.no}"><b>${esc(r.title || '결론 없이 넘어갔어요')}</b><span class="st ${r.kind}">${KO[r.kind] || ''}</span></div>
-      <div class="fx"><button class="cmb" data-c="${s.no}">${I.cmt}${nc ? `의견 ${nc}` : '의견 남기기'}</button></div>
-    </div></div>`;
+  return `<article class="iss" data-no="${s.no}">
+    <div class="qq" data-sec="${s.no}"><h4>${esc(iss ? iss.title : s.title)}</h4>
+      <div class="qm"><time>${esc(s.t)}~${esc(s.t1)}</time><span>${esc(s.part)}</span></div></div>
+    ${(s.flow || []).length ? `<div class="flow">${s.flow.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : ''}
+    <div class="res" data-sec="${s.no}"><em class="st ${r.kind}">${KO[r.kind] || ''}</em><b>${esc(r.title || '결론 없이 넘어갔어요')}</b></div>
+    <div class="fx"><button class="cmb" data-c="${s.no}">${I.cmt}${nc ? `의견 ${nc}` : '의견 남기기'}</button></div>
+  </article>`;
 }
 function bindSummary(map) {
   const body = $('#mbody');
-  body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
-    const el = body.querySelector(`.iss[data-no="${b.dataset.go}"]`);
-    el.querySelector('details')?.setAttribute('open', ''); el.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    pickSection(map.sections.find(s => s.no === +b.dataset.go), false);
-  });
   body.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => pickSection(map.sections.find(s => s.no === +b.dataset.sec), true));
-  body.querySelectorAll('.iss details').forEach(d => d.addEventListener('toggle', () => {
-    if (d.open) utAct('talk-open', `쟁점 ${d.closest('.iss').dataset.no} 오간 이야기`);
-  }));
-  body.querySelectorAll('[data-n]').forEach(b => b.onclick = () => {
-    const n = map.sections.flatMap(s => s.nodes).find(x => x.id === b.dataset.n); showEv(n.ev, n.who, n.t);
-  });
   body.querySelectorAll('[data-td]').forEach(b => b.onclick = () => { const d = map.todos[+b.dataset.td]; showEv(d.ev, d.who, d.t); });
   body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => commentSheet(M.m, map.sections.find(s => s.no === +b.dataset.c), () => meetingTab('sum')));
 }

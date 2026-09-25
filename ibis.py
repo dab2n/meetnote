@@ -363,6 +363,48 @@ def ask(question: str, segs: list[dict], m: dict | None = None, model: str = "so
     return {"answer": (out.get("answer") or "").strip(), "cites": cites, "dropped": len(raw) - len(cites)}
 
 
+# ---------- 요약 다듬기 (브리핑 보충 · 문장형 과정 · 상위 카테고리) ----------
+
+ENRICH = """너는 이미 만들어진 회의 정리 맵을 읽고, 사람이 읽을 요약 문장을 쓴다.
+맵에 있는 것과 전사문에 있는 것만 쓴다. 없는 내용은 지어내지 않는다.
+
+## 1. story — 회의 전체 이야기 (4~6문장)
+핵심이 된 쟁점이 무엇이었는지로 열고, 초반 · 중반 · 후반에 이야기가 어떻게 옮겨 갔는지를 따라가고,
+마지막에 정리된 방향으로 닫는다. 각 문장 40~120자. 사람 이름은 꼭 필요할 때만.
+'~했다' 체로 담백하게 쓴다. 표현을 부풀리지 않는다.
+
+## 2. group — 논의를 묶는 상위 카테고리
+비슷한 주제의 논의를 한 덩어리로 묶는다. 전체가 3~6개 카테고리가 되게 한다.
+이름은 4~20자 명사구 (예: 제품 가치와 모드, 착용 부위와 구조, 일정과 준비).
+같은 카테고리에 드는 논의에는 같은 이름을 쓴다.
+
+## 3. flow — 논의마다 '오간 이야기'를 문장으로 (2~4문장)
+누가 무엇을 주장했고, 무엇이 부딪혔고, 어떤 근거·조건이 붙어 결론으로 갔는지를 이야기로 쓴다.
+각 문장 40~140자. 목록·기호·표를 쓰지 않는다. 노드 종류 이름(주장·반론 같은 말)을 그대로 나열하지 않는다.
+수치나 구체적인 말이 맵에 있으면 살린다. 결론 문장은 다시 쓰지 않는다 — 결론에 이르기까지를 쓴다.
+
+출력은 JSON 하나뿐이다. 설명을 붙이지 마라.
+{"story": ["문장", ...], "sections": [{"no": 1, "group": "카테고리", "flow": ["문장", ...]}, ...]}
+맵에 있는 모든 논의 번호(no)를 빠짐없이 담는다."""
+
+
+def enrich(m: dict, segs: list[dict], model: str = "opus") -> dict:
+    """맵에 story · group · flow 를 채워 돌려준다."""
+    user = (f"<transcript>\n{as_prompt(segs)}\n</transcript>\n"
+            f"<map>\n{as_map_text(m)}\n</map>\n\n"
+            f"회의: {m['meeting']['title']} · 한 줄: {(m.get('brief') or {}).get('line', '')}")
+    out = _cli(ENRICH, user, model=model)
+    story = [x.strip() for x in (out.get("story") or []) if isinstance(x, str) and x.strip()]
+    by = {int(x["no"]): x for x in (out.get("sections") or []) if str(x.get("no", "")).isdigit()}
+    m = json.loads(json.dumps(m))
+    m.setdefault("brief", {})["story"] = story
+    for sec in m["sections"]:
+        got = by.get(sec["no"]) or {}
+        sec["group"] = (got.get("group") or "").strip()
+        sec["flow"] = [x.strip() for x in (got.get("flow") or []) if isinstance(x, str) and x.strip()]
+    return m
+
+
 # ---------- 생성 ----------
 
 def _key() -> str | None:
@@ -767,6 +809,30 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
     if not partial and secs_ and dec > len(secs_) * 2 / 3:
         v.append(f"[결론] 확정이 {dec}/{len(secs_)}개다. 3분의 2를 넘으면 대개 오탐이다")
 
+    b = m.get("brief") or {}                           # SPEC 0.3 이야기
+    story = b.get("story") or []
+    if not partial and story:
+        if not 4 <= len(story) <= 6:
+            v.append(f"[브리핑] 이야기(story)가 {len(story)}문장이다. 4~6문장이어야 한다")
+        for i, x in enumerate(story, 1):
+            if not 30 <= len(x) <= 140:
+                v.append(f"[브리핑] 이야기 {i}번째 문장이 {len(x)}자다. 30~140자여야 한다")
+    if not partial and secs_ and any(s.get("group") for s in secs_):
+        groups = [s.get("group", "") for s in secs_]
+        uniq = [g for g in dict.fromkeys(groups) if g]
+        if not 3 <= len(uniq) <= 6:
+            v.append(f"[구조] 상위 카테고리(group)가 {len(uniq)}개다. 3~6개로 묶어야 한다")
+        for s_ in secs_:
+            g = s_.get("group", "")
+            if not 4 <= len(g) <= 20:
+                v.append(f"논의 {s_.get('no')} 카테고리가 {len(g)}자다. 4~20자여야 한다 — “{g}”")
+            f = s_.get("flow") or []
+            if f and not 2 <= len(f) <= 4:
+                v.append(f"논의 {s_.get('no')} 과정(flow)이 {len(f)}문장이다. 2~4문장이어야 한다")
+            for x in f:
+                if not 30 <= len(x) <= 160:
+                    v.append(f"논의 {s_.get('no')} 과정 문장이 {len(x)}자다. 30~160자여야 한다")
+
     todos = m.get("todos") or []                       # SPEC 8절 할 일
     if len(todos) > 10:
         v.append(f"[할 일] {len(todos)}개다. 10개를 넘기지 않는다")
@@ -881,6 +947,7 @@ def main():
     ap.add_argument("transcript", type=Path,
                     help="'이름 00:00' 형식의 전사 txt (--audit 이면 검사할 맵)")
     ap.add_argument("--audit", action="store_true", help="이미 있는 맵을 표준(SPEC.md)으로 검사만 한다")
+    ap.add_argument("--enrich", action="store_true", help="이미 있는 맵에 이야기·카테고리·과정 문장을 채운다")
     ap.add_argument("--read", action="store_true", help="전사문을 구간별로 찍는다 (손으로 정리할 때)")
     ap.add_argument("--range", nargs="*", default=None, metavar="시각", help="--read 구간 (예: --range 10:00 25:00)")
     ap.add_argument("--width", type=int, default=150, help="--read 한 줄 길이")
@@ -902,6 +969,20 @@ def main():
     if a.draft:
         a.id = a.id or a.draft.stem.replace(".draft", "")
         sys.exit(finalize(a))
+    if a.enrich:
+        f = a.transcript
+        m = json.loads(f.read_text(encoding="utf-8"))
+        tp = f.parent / m["meeting"]["transcript"].split("/")[-1]
+        segs = json.loads(tp.read_text(encoding="utf-8"))["segments"]
+        print(f"{f.name} · 논의 {len(m['sections'])}개 — 요약 문장을 만드는 중…", flush=True)
+        m2 = enrich(m, segs, model="opus")
+        bad = audit(m2, segs)
+        f.write_text(json.dumps(m2, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"  이야기 {len(m2['brief'].get('story', []))}문장 · 카테고리 "
+              f"{len({s['group'] for s in m2['sections']})}개 · 위반 {len(bad)}건")
+        for x in bad:
+            print("   -", x)
+        sys.exit(0)
     if a.audit:
         m = json.loads(a.transcript.read_text(encoding="utf-8"))
         tp = a.transcript.parent / (m["meeting"]["transcript"].split("/")[-1])

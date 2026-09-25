@@ -22,6 +22,31 @@ h1{font-size:26px;font-weight:700;letter-spacing:-.5px}
 .tools{margin-left:auto;display:flex;gap:8px;font-size:13px}
 .tools>*{padding:8px 13px;border-radius:10px;background:#fff;box-shadow:0 0 0 1px #e5e7eb;cursor:pointer}
 .tools>*:hover{background:#fafbfc}
+
+/* 진행자 콘솔 — 참여자 화면(?ut)을 이 창에서 몬다 */
+.con{margin-top:20px;padding:20px;background:#fff;border-radius:16px}
+.con .hd{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.con h2{font-size:17px;font-weight:600}
+.dot{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}
+.dot:before{content:"";width:7px;height:7px;border-radius:50%;background:#d1d5db}
+.dot.on:before{background:#2f9e5b}
+.con .open{margin-left:auto;padding:8px 14px;border-radius:10px;background:var(--dark);color:#fff;font-size:13px;font-weight:600}
+.con .who2{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.con .who2 input{height:38px;padding:0 12px;border-radius:10px;border:1px solid #e5e7eb;outline:none;width:140px}
+.con .who2 input:focus{border-color:var(--dark)}
+.con .who2 button{height:38px;padding:0 16px;border-radius:10px;background:var(--dark);color:#fff;font-weight:600}
+.con .who2 .cur{font-weight:600}
+.con .who2 .nw{background:var(--card);color:var(--ink2)}
+.tasks{margin-top:14px;display:grid;gap:6px}
+.tasks button{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;background:#f7f8fa;text-align:left;font-size:14.5px}
+.tasks button:hover{background:var(--card)}
+.tasks button.on{background:var(--card);box-shadow:inset 0 0 0 1.5px var(--dark)}
+.tasks i{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#dfe3ea;font-style:normal;font-size:11px;font-weight:600}
+.tasks button.on i{background:var(--dark);color:#fff}
+.tasks .st{margin-left:auto;font-size:12px;color:var(--dim2)}
+.con .foot{margin-top:12px;display:flex;gap:10px;align-items:center;font-size:12px;color:var(--dim2)}
+.con .foot button{margin-left:auto;font-size:12px;color:var(--dim)}
+.con .foot button:hover{color:#b42323}
 .box{margin-top:20px;background:#fff;border-radius:16px;overflow-x:auto}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
 th{padding:8px 12px;text-align:left;font-weight:600;color:#525252;white-space:nowrap;border-bottom:1px solid #e5e7eb}
@@ -85,6 +110,7 @@ section.task h2{font-size:17px;font-weight:600}
       <label>JSON 가져오기<input id="imp" type="file" accept=".json" hidden></label>
     </div>
   </div>
+  <section class="con" id="con"></section>
   <div class="box" id="sheet"></div>
   <p class="hint">행을 누르면 아래에 태스크별 상세(이동 경로 · 타임라인 · 판정 · 메모)가 열립니다. ● = 지금 테스트 중인 참여자.</p>
   <div id="detail"></div>
@@ -187,7 +213,46 @@ function drawDetail() {
     box.querySelector('.note').onblur = e => edit(r => { r.note = e.target.value; });
   });
 }
-const draw = () => { drawSheet(); drawDetail(); };
+
+/* ---------- 진행자 콘솔 ---------- */
+const ch = (() => { try { return new BroadcastChannel('mn-ut'); } catch { return null; } })();
+let live = { task: null, running: false, waiting: false, at: 0 };
+if (ch) ch.onmessage = e => { if ((e.data || {}).type === 'state') { live = { ...e.data, at: Date.now() }; drawCon(); } };
+const send = msg => ch && ch.postMessage(msg);
+setInterval(() => send({ cmd: 'ping' }), 2000);
+const connected = () => Date.now() - live.at < 5000;
+
+function drawCon() {
+  const w = $('#con');
+  const cur = DB.sessions.find(s => s.id === DB.current);
+  const stOf = t => {
+    const r = cur && latest(cur, t.id);
+    if (live.task === t.id && live.waiting) return '시나리오 읽는 중';
+    if (live.task === t.id && live.running) return '진행 중';
+    return r ? V[verdictOf(r)] : '';
+  };
+  w.innerHTML = `<div class="hd"><h2>진행</h2><span class="dot ${connected() ? 'on' : ''}">${connected() ? '테스트 화면 연결됨' : '테스트 화면 없음'}</span>
+      <button class="open" id="openut">테스트 화면 열기</button></div>
+    <div class="who2">${cur
+      ? `<span class="cur">${esc(cur.name || '무기명')}</span><span style="color:var(--dim)">${esc(cur.age || '')} · ${esc(cur.job || '')}</span>
+         <button class="nw" id="newp">새 참여자</button>`
+      : `<input id="pn" placeholder="이름"><input id="pa" type="number" placeholder="나이"><input id="pj" placeholder="직업"><button id="padd">참여자 등록</button>`}</div>
+    <div class="tasks">${TASKS.map(t => `<button data-t="${t.id}" class="${live.task === t.id ? 'on' : ''}" ${cur ? '' : 'disabled style="opacity:.45"'}>
+      <i>${String(t.id).padStart(2, '0')}</i><span>${esc(t.title)}</span><span class="st">${stOf(t)}</span></button>`).join('')}</div>
+    <div class="foot"><span>태스크를 누르면 참여자 화면에 시나리오가 뜹니다. 참여자가 ‘시작하기’를 누르면 기록이 시작됩니다.</span>
+      <button id="endnow">현재 태스크 종료</button></div>`;
+  $('#openut').onclick = () => window.open('./?ut', 'mn-ut-participant');
+  const add = () => {
+    UT.newSession({ name: ($('#pn').value || '').trim(), age: $('#pa').value, job: ($('#pj').value || '').trim() });
+    DB = load(); draw();
+  };
+  if ($('#padd')) { $('#padd').onclick = add; w.querySelectorAll('.who2 input').forEach(i => i.onkeydown = e => e.key === 'Enter' && add()); }
+  if ($('#newp')) $('#newp').onclick = () => { commit(d => { d.current = null; }); sel = null; };
+  w.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { if (cur) send({ cmd: 'pick', id: +b.dataset.t }); });
+  $('#endnow').onclick = () => send({ cmd: 'end', why: '진행자 종료' });
+}
+
+const draw = () => { drawCon(); drawSheet(); drawDetail(); };
 draw();
 
 /* 진행 중인 테스트 탭과 실시간 연동 */

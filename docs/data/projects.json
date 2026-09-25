@@ -1,15 +1,50 @@
 {
   "projects": [
     {
-      "id": "newton", "name": "NEWTON",
+      "id": "newton",
+      "name": "NEWTON",
       "me": "다빈",
       "teams": [
-        {"name": "Team UX", "part": "UX", "members": ["다빈", "일여"]},
-        {"name": "무적 ID", "part": "ID", "members": ["시헌", "소진"]}
+        {
+          "name": "Team UX",
+          "part": "UX",
+          "members": [
+            "다빈",
+            "일여"
+          ]
+        },
+        {
+          "name": "무적 ID",
+          "part": "ID",
+          "members": [
+            "시헌",
+            "소진"
+          ]
+        }
       ],
-      "avatars": {"다빈": "assets/av-glasses.png", "일여": "assets/av-red.png", "시헌": "assets/av-cap.png", "소진": "assets/av-dog.png"},
-      "meetings": ["새로운 노트 (3)", "2026-06-15", "2026-05-30"]
+      "avatars": {
+        "다빈": "assets/av-glasses.png",
+        "일여": "assets/av-red.png",
+        "시헌": "assets/av-cap.png",
+        "소진": "assets/av-dog.png"
+      },
+      "meetings": [
+        "새로운 노트 (3)",
+        "2026-06-15",
+        "2026-05-30"
+      ],
+      "titles": {
+        "새로운 노트 (3)": "2주차 중간 회의",
+        "2026-06-15": "1주차 회의",
+        "2026-05-30": "킥오프"
+      }
     },
-    {"id": "research", "name": "회의록 리서치", "meetings": ["2026-09-08-ai-interview"]}
+    {
+      "id": "research",
+      "name": "회의록 리서치",
+      "meetings": [
+        "2026-09-08-ai-interview"
+      ]
+    }
   ]
 }

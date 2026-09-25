@@ -285,28 +285,44 @@ mark.ev{background:linear-gradient(transparent 55%,#ffe27a 55%);box-shadow:none}
 
 
 /* ---------- 사용성 테스트(UT) — ?ut 로 켠다 ----------
-   참여자 화면에는 아무 장치도 두지 않는다. 태스크는 진행자 콘솔(ut.html)이나
-   Alt+Shift+T 팔레트에서 고른다. */
-.utpal{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(5,10,10,.28);animation:fade .2s both}
-.utp{width:min(520px,92vw);padding:18px;border-radius:24px;background:#fff;box-shadow:0 24px 60px rgba(20,30,50,.24);display:grid;gap:4px;animation:rise .3s var(--ease) both}
-.utp p{display:flex;align-items:center;padding:4px 10px 10px;font-size:13px;font-weight:600;color:var(--dim)}
-.utp p b{margin-left:auto;font-weight:500;font-size:11.5px;color:var(--dim2)}
-.utp button{display:flex;gap:10px;align-items:center;padding:12px;border-radius:14px;text-align:left;font-size:14.5px}
-.utp button:hover{background:var(--card)}
-.utp i{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#dfe3ea;font-style:normal;font-size:11px;font-weight:600}
-.utp .fin{margin-top:6px;justify-content:center;background:var(--card);color:var(--navy);font-weight:600}
-.utp .fin:hover{background:var(--chip)}
-/* 시나리오 막 — 모바일처럼 흰 블러가 위에서 내려와 덮는다 */
+   진행에 필요한 것(참여자 등록 · 태스크 고르기 · 시나리오)은 전체를 덮는 한 겹 안에만 있다.
+   태스크가 도는 동안 화면에 남는 것은 왼쪽 아래 작은 점 하나뿐. */
+.uttop{position:fixed;z-index:80;left:50%;top:10px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:min(520px,86vw);
+  height:30px;padding:0 14px 0 8px;border-radius:99px;background:rgba(250,250,250,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 0 10px rgba(0,0,0,.08);opacity:.5;transition:opacity .2s}
+.uttop:hover{opacity:1}
+.uttop i{flex:none;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--navy);font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.06em}
+.uttop span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:500;color:var(--ink2)}
+/* 진행 레이어 — 모바일처럼 흰 블러가 위에서 내려와 덮는다 */
 .utcover{position:fixed;inset:0;z-index:90;display:grid;place-items:center;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(253,248,248,.75));animation:coverDown .8s var(--ease) both}
+  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(253,248,248,.78));animation:coverDown .8s var(--ease) both}
+.utcover.stay{animation:none}
 .utcover.out{animation:coverUp .8s var(--ease) both}
 @keyframes coverDown{from{clip-path:inset(0 0 100% 0 round 0 0 40px 40px)}to{clip-path:inset(0 0 0 0)}}
 @keyframes coverUp{from{clip-path:inset(0 0 0 0)}to{clip-path:inset(0 0 100% 0 round 0 0 40px 40px)}}
-.utc{display:grid;gap:14px;justify-items:center;max-width:640px;padding:0 36px;text-align:center;animation:rise .6s .55s var(--ease) both}
+.utc{display:grid;gap:14px;justify-items:center;width:min(560px,92vw);padding:0 24px;text-align:center;animation:rise .5s .2s var(--ease) both}
+.utcover[data-mode="scenario"] .utc{animation-delay:.55s}
 .utc span{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--dim)}
+.utc h3{font-size:20px;font-weight:600;letter-spacing:-.3px}
 .utc p{font-size:22px;font-weight:600;line-height:1.55;letter-spacing:-.3px;white-space:pre-line}
-.utc button{margin-top:10px;height:52px;padding:0 28px;border-radius:14px;background:var(--dark);color:#fff;font-size:16px;font-weight:600}
-.utc i{font-style:normal;font-size:13px;color:var(--dim2)}
+.utc>button{margin-top:10px;height:52px;padding:0 28px;border-radius:14px;background:var(--dark);color:#fff;font-size:16px;font-weight:600}
+.utc>i{font-style:normal;font-size:13px;color:var(--dim2)}
+.utc>a{margin-top:2px;font-size:12.5px;color:var(--dim2);text-decoration:none}
+.utc>a:hover{color:var(--dim)}
+.utlist{width:100%;display:grid;gap:6px;margin-top:4px}
+.utlist button{display:flex;gap:10px;align-items:center;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.75);text-align:left;font-size:15px;
+  box-shadow:0 0 0 1px rgba(40,39,51,.05)}
+.utlist button:hover{background:#fff;box-shadow:0 0 0 1px rgba(40,39,51,.12),0 6px 18px rgba(40,39,51,.08)}
+.utlist i{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--chip);font-style:normal;font-size:11.5px;font-weight:600;color:var(--navy)}
+.utlist span{flex:1}
+.utlist em{font-style:normal;font-size:12px;font-weight:600;color:#2f9e5b}
+.utrow{margin-top:6px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;font-size:12.5px;color:var(--dim2)}
+.utrow .gh{padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.7);font-size:12.5px;color:var(--navy);font-weight:500}
+.utrow .gh:hover{background:#fff}
+#utform{width:100%;display:grid;gap:8px;margin-top:2px}
+#utform input{height:46px;padding:0 14px;border-radius:12px;border:1px solid transparent;background:#fff;font-size:15px;outline:none;text-align:center}
+#utform input:focus{border-color:var(--dark)}
+#utform button{margin-top:4px;height:50px;border-radius:14px;background:var(--dark);color:#fff;font-size:15px;font-weight:600}
 /* ---------- 좁은 화면: 모바일처럼 좌상단 프로젝트 · 하단 떠 있는 내비 ---------- */
 .bnav{display:none}
 @media (max-width:860px){
@@ -392,6 +408,8 @@ async function getTrans(m) {
 }
 const nfc = x => String(x).normalize('NFC');           /* 맥 파일명은 NFD 로 온다 */
 const meetingOf = id => D.index.find(m => nfc(m.id) === nfc(id));
+/* 회의 이름 — 프로젝트에 별칭이 있으면 그 이름으로 보여준다 (모바일 디자인과 같게) */
+const titleOf = (m, p) => { const t = ((p || CUR.p || {}).titles) || {}; return t[nfc(m.id)] || t[m.id] || m.title; };
 const projOf = id => D.projects.find(p => p.meetings.some(x => nfc(x) === nfc(id))) || D.projects[0];
 const inProj = p => p.meetings.map(meetingOf).filter(Boolean).sort((a, b) => dkey(b.date) - dkey(a.date));
 /* 왼쪽 카드·스레드와 같은 메모 저장소를 쓴다 (map.html 과 공유) */
@@ -459,7 +477,7 @@ function side() {
     <button class="fab tap" id="fab" aria-label="물어보기">✦</button>`;
   $('#fab').onclick = e => openAsk(e.currentTarget);
   $('#slist').innerHTML = `<h6>회의</h6>` + inProj(p).map(m =>
-    `<a href="#/m/${esc(m.id)}" class="${CUR.id === m.id ? 'on' : ''}"><b>${esc(m.title)}</b><time>${esc(fdate(m.date))}</time></a>`).join('');
+    `<a href="#/m/${esc(m.id)}" class="${CUR.id === m.id ? 'on' : ''}"><b>${esc(titleOf(m, p))}</b><time>${esc(fdate(m.date))}</time></a>`).join('');
   $('#askhint').textContent = CUR.kind === 'meeting' ? '이 회의에 대해 물어보기' : `${p.name}에 대해 물어보기`;
 }
 addEventListener('click', e => { if (!e.target.closest('.proj')) $('#pmenu').hidden = true; });
@@ -513,7 +531,7 @@ async function home(p, page) {
       <div class="pills tg" id="ow"></div><div class="todos" id="todos"></div></section>
     <section class="sec"><header><h2>미해결 안건<b>${opens.length}</b></h2></header>
       <div class="grid2" id="opens">${opens.map(({ s, m }, k) => `
-        <button class="row tap" data-o="${k}"><div class="tx"><div class="meta">${esc(m.title)}<i>· 논의 ${s.no}</i></div>
+        <button class="row tap" data-o="${k}"><div class="tx"><div class="meta">${esc(titleOf(m))}<i>· 논의 ${s.no}</i></div>
           <h3>${esc(s.resolution.title)}</h3></div>
           <span class="st ${s.resolution.kind}">${KO[s.resolution.kind]}</span>
           <span class="cm">${I.cmt}${cmts(m.id, s.no + '-res').length || ''}</span></button>`).join('') || '<div class="empty">모두 결론이 났어요</div>'}</div>
@@ -563,10 +581,10 @@ const todoCard = (d, k, badge) => { const t = toolOf(d);
   <div><div class="top"><span class="own ${d.owner ? '' : 'none'}">${esc(badge)}</span>
     ${t ? `<a class="tool" href="${t.url}" target="_blank" rel="noopener" title="${esc(t.name)} 열기">${t.logo}</a>` : `<em>${esc(d.t)}</em>`}</div>
   <h3>${esc(d.text)}</h3></div>
-  <div class="bt"><span>${esc(d.m.title)}</span><i>· ${esc(d.t)}</i>${I.arrow}</div></div>`; };
+  <div class="bt"><span>${esc(titleOf(d.m))}</span><i>· ${esc(d.t)}</i>${I.arrow}</div></div>`; };
 const meetRow = (m, map, isNew) => `<a class="row tap" href="#/m/${esc(m.id)}"><div class="tx">
   <div class="meta">${esc(fdate(m.date))}<i>•</i>${esc(dur(m.duration))}${(map && map.brief && map.brief.kind || []).map(k => `<i>· ${esc(k)}</i>`).join('')}</div>
-  <h3>${esc(m.title)}</h3>${map && map.brief && map.brief.line ? `<p>${esc(map.brief.line)}</p>` : ''}</div>${isNew ? '<span class="nw">new</span>' : ''}</a>`;
+  <h3>${esc(titleOf(m))}</h3>${map && map.brief && map.brief.line ? `<p>${esc(map.brief.line)}</p>` : ''}</div>${isNew ? '<span class="nw">new</span>' : ''}</a>`;
 
 /* ================= 4. 회의록 — 최신순 · 안건별 ================= */
 async function list(p) {
@@ -585,7 +603,7 @@ async function list(p) {
         const g = all.filter(x => (x.s.resolution || {}).kind === k);
         return g.length ? `<div class="grp"><h4><span class="st ${k}">${KO[k]}</span><i>${g.length}</i></h4><div class="grid2">${g.map(({ s, m }) => {
           const iss = s.nodes.find(n => n.kind === 'issue');
-          return `<a class="row tap" href="#/m/${esc(m.id)}/sum/${s.no}"><div class="tx"><div class="meta">${esc(m.title)}<i>· 논의 ${s.no}</i></div>
+          return `<a class="row tap" href="#/m/${esc(m.id)}/sum/${s.no}"><div class="tx"><div class="meta">${esc(titleOf(m))}<i>· 논의 ${s.no}</i></div>
             <h3>${esc(iss ? iss.title : s.title)}</h3><p>${esc(s.resolution.title)}</p></div></a>`; }).join('')}</div></div>` : '';
       }).join('');
     }
@@ -608,7 +626,7 @@ async function meetingPage(p, page) {
   const v = $('#view');
   v.innerHTML = `
     <a class="back" href="#/p/${esc(p.id)}/list">${I.back}회의록</a>
-    <div class="mhead"><div><h1 class="h1">${esc(map.meeting.title)}</h1>
+    <div class="mhead"><div><h1 class="h1">${esc(titleOf(m))}</h1>
       <div class="sub"><span>${esc(fdate(map.meeting.date))}</span><span>${esc(dur(map.meeting.duration))}</span>
         <span>참석 ${who.map(esc).join(' · ')}</span></div></div>
       <div class="player" id="player" hidden><button id="pp" aria-label="재생">${I.play}</button><time id="pt">0:00</time><div class="bar" id="pb"><i></i></div><time>${esc(map.meeting.duration)}</time></div></div>
@@ -791,7 +809,7 @@ function commentSheet(m, s, after) {
   const draw = () => {
     const cs = cmts(m.id, key);
     sh.innerHTML = `<header>의견<button aria-label="닫기">${I.x}</button></header>
-      <div class="ctx"><small>${esc(m.title)} · 논의 ${s.no} · <span class="st ${s.resolution.kind}">${KO[s.resolution.kind]}</span></small><h3>${esc(s.resolution.title)}</h3>
+      <div class="ctx"><small>${esc(titleOf(m))} · 논의 ${s.no} · <span class="st ${s.resolution.kind}">${KO[s.resolution.kind]}</span></small><h3>${esc(s.resolution.title)}</h3>
         <a href="#/m/${esc(m.id)}/sum/${s.no}">회의에서 보기 →</a></div>
       <div class="list">${cs.map((c, i) => `<div class="c">${me ? `<b class="by">${av(CUR.p, me, 22)}나</b>` : ''}${esc(c.text)}<time>${esc(c.at)}</time><button data-d="${i}">지우기</button></div>`).join('') || '<div class="empty" style="background:rgba(255,255,255,.5)">아직 의견이 없어요</div>'}</div>
       <form><input placeholder="의견 남기기" autofocus><button>남기기</button></form>`;
@@ -818,7 +836,7 @@ let ASK = null;
 function openAsk(from) {
   if (ASK) return;
   const r = from ? from.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight - 50, width: 0, height: 0 };
-  const scope = CUR.kind === 'meeting' ? { label: M.m.title, ms: [M.m] } : { label: `${CUR.p.name} 전체 회의`, ms: inProj(CUR.p) };
+  const scope = CUR.kind === 'meeting' ? { label: titleOf(M.m), ms: [M.m] } : { label: `${CUR.p.name} 전체 회의`, ms: inProj(CUR.p) };
   const o = document.createElement('div'); o.className = 'ask';
   o.style.setProperty('--px', (r.left + r.width / 2) + 'px'); o.style.setProperty('--py', (r.top + r.height / 2) + 'px');
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -850,8 +868,8 @@ async function askRun(q, scope) {
   try {
     /* 여러 회의를 한 번에 물으면 회의마다 머리말 줄을 끼워 구분한다 */
     const parts = await Promise.all(scope.ms.map(async m => ({ m, segs: await getTrans(m), map: await getMap(m) })));
-    const segs = parts.length === 1 ? parts[0].segs : parts.flatMap(x => [{ s: '—', t: 0, l: [`[회의: ${x.m.title} · ${x.m.date}]`] }, ...x.segs]);
-    const map = parts.length === 1 ? parts[0].map : { sections: parts.flatMap(x => x.map.sections.map(s => ({ ...s, title: `[${x.m.title}] ${s.title}` }))) };
+    const segs = parts.length === 1 ? parts[0].segs : parts.flatMap(x => [{ s: '—', t: 0, l: [`[회의: ${titleOf(x.m)} · ${x.m.date}]`] }, ...x.segs]);
+    const map = parts.length === 1 ? parts[0].map : { sections: parts.flatMap(x => x.map.sections.map(s => ({ ...s, title: `[${titleOf(x.m)}] ${s.title}` }))) };
     const r = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, segments: segs, map }) });
     const a = await r.json();
     if (!r.ok) throw new Error(a.error || r.status);
@@ -862,7 +880,7 @@ async function askRun(q, scope) {
     const cites = (a.cites || []).map(c => ({ ...c, m: (parts.find(x => x.segs.some(g => g.s === c.who && g.l.some(l => l.includes(c.quote)))) || parts[0]).m }));
     if (cites.length && ASK) {
       $('#ci').innerHTML = `<h6>근거가 된 발언</h6>` + cites.map((c, i) => `<button class="cite" data-i="${i}" style="animation-delay:${i * 60}ms">
-        <small><b>${esc(c.who)}</b> · ${esc(c.t)}${parts.length > 1 ? ` · ${esc(c.m.title)}` : ''}</small><p>“${esc(c.quote)}”</p></button>`).join('');
+        <small><b>${esc(c.who)}</b> · ${esc(c.t)}${parts.length > 1 ? ` · ${esc(titleOf(c.m))}` : ''}</small><p>“${esc(c.quote)}”</p></button>`).join('');
       $('#ci').onclick = e => { const b = e.target.closest('[data-i]'); if (!b) return; const c = cites[+b.dataset.i]; closeAsk(); openEvidence(c.m.id, c.quote, c.who, c.t); };
     }
   } catch (e) {

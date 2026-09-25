@@ -9,13 +9,13 @@
   const TASKS = UT.TASKS = [
     {
       id: 1, title: "참여하지 못한 '2주차 중간 회의'의 쟁점 1 결론 찾기",
-      scenario: "당신은 팀의 가장 최근 회의에\n참여하지 못했습니다.\n이 회의의 쟁점 1 결론을 찾아\n그 내용을 확인해주세요.",
+      scenario: "당신은 '2주차 중간 회의'에\n참여하지 못했습니다.\n이 회의의 쟁점 1 결론을 찾아\n그 내용을 확인해주세요.",
       start: { hash: '#/p/newton', reset: true },
-      target: '새로운 노트 (3)',                 /* 가장 최근 회의 */
+      target: '새로운 노트 (3)',                 /* 표시 이름 '2주차 중간 회의' */
       path: ['home_my', 'list_new', 'list_agenda', 'meeting_sum'],
       reach: { meeting_sum: '회의 요약(쟁점 1 결론) 도달', 'talk-open': '쟁점 1 오간 이야기 펼침' },
       success: ['meeting_sum'],
-      rule: '가장 최근 회의의 요약 화면 도달 시 자동 성공',
+      rule: "'2주차 중간 회의' 요약 화면 도달 시 자동 성공",
     },
     {
       id: 2, title: 'Team UX의 내일까지 할 일 찾기',
@@ -114,96 +114,125 @@
   }
 
   /* ---------- 진행 화면 ----------
-     참여자 화면(?ut)에는 서비스와 시나리오 막만 둔다 — 태스크 목록은 진행자 콘솔(ut.html)에 있고,
-     두 창은 BroadcastChannel 로 이어진다. 한 화면에서 혼자 돌릴 때는 Alt+Shift+T 로 태스크 팔레트. */
+     화면에 상시로 붙는 것은 없다. 태스크 고르기 · 시나리오 · 참여자 등록은 모두
+     전체를 덮는 한 겹(진행 레이어)에서 일어나고, 태스크가 도는 동안에는 서비스만 남는다.
+     레이어를 다시 부르는 길: 왼쪽 아래 작은 점, Alt+Shift+T, Esc(진행 중이면 종료하고 연다) */
   UT.on = new URLSearchParams(location.search).has('ut');
   let run = null, task = null, app = null;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const chan = () => { try { return new BroadcastChannel('mn-ut'); } catch { return null; } };
-  const ch = UT.ch = chan();
+  const num = n => String(n).padStart(2, '0');
 
   UT.mount = a => {
     app = a;
     document.body.classList.add('ut');
+    const tag = document.createElement('button');
+    tag.className = 'uttop'; tag.id = 'uttop'; tag.title = '태스크 바꾸기 (Alt+Shift+T)';
+    tag.onclick = () => openLayer();
+    document.body.append(tag);
+    top();
     addEventListener('click', logTap, true);
     addEventListener('keydown', e => {
-      if (e.key === 'Escape' && run) { endRun('진행자 종료 (Esc)'); state(); }
-      if (e.key === 'Enter' && document.querySelector('.utcover.ready') && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) begin();
-      if (e.altKey && e.shiftKey && (e.key === 'T' || e.key === 't')) palette();
+      if (/INPUT|TEXTAREA/.test(e.target.tagName || '')) return;
+      if (e.key === 'Enter' && document.querySelector('.utcover.ready')) begin();
+      else if (e.key === 'Escape' && (run || document.querySelector('.utcover'))) { endRun('진행자 종료 (Esc)'); openLayer(); }
+      else if (e.altKey && e.shiftKey && (e.key === 'T' || e.key === 't')) openLayer();
     });
-    if (ch) ch.onmessage = e => {
-      const d = e.data || {};
-      if (d.cmd === 'pick') pick(TASKS.find(t => t.id === d.id));
-      if (d.cmd === 'end') { endRun(d.why || '진행자 종료'); state(); }
-      if (d.cmd === 'ping') state();
-    };
-    state();
+    openLayer();                                 /* 들어오면 참여자 등록 · 태스크 고르기부터 */
   };
-  /* 진행자 콘솔에 지금 상태를 알린다 */
-  function state() {
-    if (ch) ch.postMessage({ type: 'state', task: task && task.id, running: !!run, waiting: !!document.querySelector('.utcover'), screen: app ? app.screen() : '' });
+
+  /* 지금 하는 태스크를 화면 위에 살짝 — 진행자가 눈으로 확인하는 용도 */
+  function top() {
+    const t = document.getElementById('uttop'); if (!t) return;
+    t.hidden = !(task && run);
+    if (task) t.innerHTML = `<i>TASK ${num(task.id)}</i><span>${esc(task.title)}</span>`;
   }
 
-  function pick(t) {
+  /* 진행 레이어 — mode: 'roster'(참여자) | 'list'(태스크 고르기) | 'scenario'(시나리오) */
+  function layer(mode, body, cls) {
+    const old = document.querySelector('.utcover'); if (old) old.remove();
+    const d = document.createElement('div');
+    d.className = 'utcover' + (cls ? ' ' + cls : '');
+    d.dataset.mode = mode;
+    d.innerHTML = `<div class="utc">${body}</div>`;
+    document.body.append(d);
+    return d;
+  }
+  function closeLayer(d) { d.classList.add('out'); setTimeout(() => d.remove(), 800); }
+
+  function openLayer() {
+    endRun('진행자 종료');
+    if (!UT.currentId()) return roster();
+    list();
+  }
+  function roster() {
+    const d = layer('roster', `<span>MEETNOTE · 사용성 테스트</span><h3>참여자 정보</h3>
+      <form id="utform"><input name="name" placeholder="이름" required><input name="age" type="number" placeholder="나이" required>
+        <input name="job" placeholder="직업" required><button type="submit">테스트 시작</button></form>
+      <a href="ut.html">지난 결과 보기</a>`);
+    const f = d.querySelector('form');
+    setTimeout(() => f.name.focus(), 300);
+    f.onsubmit = e => {
+      e.preventDefault();
+      const v = new FormData(f);
+      UT.newSession({ name: (v.get('name') || '').trim(), age: v.get('age'), job: (v.get('job') || '').trim() });
+      list();
+    };
+  }
+  function list() {
+    const db = load(), s = db.sessions.find(x => x.id === db.current) || { runs: [] };
+    const stOf = t => {
+      const r = s.runs.filter(x => x.task === t.id).pop();
+      if (!r) return '';
+      return r.verdict === 'success' ? '성공' : r.verdict === 'fail' ? '실패' : r.startedAt ? '기록됨' : '';
+    };
+    const d = layer('list', `<span>진행할 태스크를 고르세요</span>
+      <div class="utlist">${TASKS.map(t => `<button data-t="${t.id}"><i>${num(t.id)}</i><span>${esc(t.title)}</span><em>${stOf(t)}</em></button>`).join('')}</div>
+      <div class="utrow"><span>참여자 ${esc((s.name || '무기명'))}</span>
+        <button class="gh" data-new>새 참여자</button><button class="gh" data-fin>테스트 종료 · 결과 보기</button></div>`);
+    d.onclick = e => {
+      const b = e.target.closest('[data-t]');
+      if (b) return pick(TASKS.find(t => t.id === +b.dataset.t), d);
+      if (e.target.closest('[data-new]')) { const db2 = load(); db2.current = null; save(db2); roster(); }
+      if (e.target.closest('[data-fin]')) location.href = 'ut.html?s=' + UT.currentId();
+    };
+  }
+
+  function pick(t, from) {
     if (!t) return;
     endRun('다음 태스크 선택');
     task = t;
-    cover(t);
-    setTimeout(() => {                          /* 막에 가려진 사이에 시작 화면으로 되돌린다 */
+    if (from) from.remove();                     /* 고르기 → 시나리오, 막은 그대로 덮은 채로 */
+    const d = layer('scenario', `<span>TASK ${num(t.id)}</span><p>${esc(t.scenario)}</p>
+      <button id="utgo">시작하기</button><i>시작하려면 버튼을 누르거나 Enter 를 누르세요</i>`, from ? 'stay' : '');
+    d.querySelector('#utgo').onclick = begin;
+    setTimeout(() => {                           /* 막에 가려진 사이에 시작 화면으로 되돌린다 */
       if (t.start) {
         if (t.start.reset) reset();
         location.hash = t.start.hash;
       }
       run = startRun(t.id);
-      const c = document.querySelector('.utcover'); if (c) c.classList.add('ready');
-      state();
-    }, 800);
+      d.classList.add('ready');
+    }, from ? 300 : 800);
   }
   /* 태스크 1 은 처음부터 — 프로젝트·탭 선택과 남아 있던 의견을 지운다 */
   function reset() {
     try { Object.keys(localStorage).filter(k => /^mn\.(local|group|by|project)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch {}
     if (app && app.reload) app.reload();
   }
-  function cover(t) {
-    const old = document.querySelector('.utcover'); if (old) old.remove();
-    const d = document.createElement('div');
-    d.className = 'utcover';
-    d.innerHTML = `<div class="utc"><span>TASK ${String(t.id).padStart(2, '0')}</span><p>${esc(t.scenario)}</p>
-      <button id="utgo">시작하기</button><i>시작하려면 버튼을 누르거나 Enter 를 누르세요</i></div>`;
-    document.body.append(d);
-    d.querySelector('#utgo').onclick = begin;
-  }
   function begin() {
     const d = document.querySelector('.utcover'); if (!d || !d.classList.contains('ready')) return;
-    d.classList.add('out'); setTimeout(() => d.remove(), 800);
+    closeLayer(d);
     if (!run) run = startRun(task.id);
     run.begin();
     run.nav(app.screen(), app.ctx(), true);
-    state();
+    top();
   }
-  function endRun(why) { if (run) { run.end(why); run = null; } }
-
-  /* 혼자 돌릴 때 쓰는 태스크 팔레트 (Alt+Shift+T) — 평소에는 화면에 아무것도 없다 */
-  function palette() {
-    const old = document.querySelector('.utpal'); if (old) { old.remove(); return; }
-    const d = document.createElement('div');
-    d.className = 'utpal';
-    d.innerHTML = `<div class="utp"><p>태스크 고르기<b>Alt+Shift+T</b></p>
-      ${TASKS.map(t => `<button data-t="${t.id}"><i>${String(t.id).padStart(2, '0')}</i><span>${esc(t.title)}</span></button>`).join('')}
-      <button class="fin" data-fin>테스트 종료 · 결과 보기</button></div>`;
-    document.body.append(d);
-    d.onclick = e => {
-      if (e.target === d) return d.remove();
-      const b = e.target.closest('[data-t]');
-      if (b) { d.remove(); pick(TASKS.find(t => t.id === +b.dataset.t)); }
-      if (e.target.closest('[data-fin]')) { endRun('테스트 종료'); location.href = 'ut.html?s=' + UT.currentId(); }
-    };
-  }
+  function endRun(why) { if (run) { run.end(why); run = null; } top(); }
 
   function logTap(e) {
     if (!run) return;
     const el = e.target;
-    if (el.closest('.utcover') || el.closest('.utpal')) return;
+    if (el.closest('.utcover') || el.closest('.uttop')) return;
     const hit = el.closest('a,button,input,label,summary,[role="button"],[data-k],[data-o],[data-n],[data-sec]');
     const label = (el.closest('[aria-label]') && el.closest('[aria-label]').getAttribute('aria-label'))
       || ((hit || el).innerText || '').split('\n').map(x => x.trim()).filter(Boolean).join(' · ').slice(0, 40)
@@ -212,6 +241,6 @@
   }
 
   /* 앱이 부르는 두 곳 */
-  UT.nav = (screen, ctx) => { if (run) { run.nav(screen, ctx); state(); } };
-  UT.act = (type, label) => { if (run) { run.act(type, label, app.screen()); state(); } };
+  UT.nav = (screen, ctx) => { if (run) run.nav(screen, ctx); };
+  UT.act = (type, label) => { if (run) { run.act(type, label, app.screen()); top(); } };
 })();

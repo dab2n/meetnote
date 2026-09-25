@@ -198,7 +198,7 @@ body.view-cards .stage{display:none}
 #edges text.on{opacity:1}
 .e-raise{stroke:#b4b7bd}                            .l-raise{fill:#8b8e96}
 .e-pro{stroke:var(--green)}                         .l-pro{fill:var(--green)}
-.e-con{stroke:var(--red);stroke-dasharray:6 5}      .l-con{fill:var(--red)}
+.e-con{stroke:var(--red);stroke-width:2px}          .l-con{fill:var(--red)}
 .e-concern{stroke:#b8564a;stroke-dasharray:2 4}     .l-concern{fill:#b8564a}
 .e-condition{stroke:var(--amber);stroke-dasharray:3 4} .l-condition{fill:var(--amber)}
 .e-resolve{stroke:var(--gold);stroke-width:2px}     .l-resolve{fill:var(--gold)}
@@ -461,7 +461,7 @@ body.noaudio .player{display:none}
 .now{max-width:30vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--dim)}
 
 /* ---------- 모바일 ---------- */
-.tabs{display:none}
+.tabs{display:none!important}
 @media (max-width:900px){
   main{grid-template-columns:1fr;bottom:calc(var(--player) + 48px)}
   .rail,.rz-x{display:none}
@@ -679,15 +679,13 @@ b,h2,h3,h4,h5{font-weight:600}
 /* 겉의 제목·파일·설정은 새 홈이 맡는다. 재생 조절만 떠 있는 알약으로 남긴다 */
 body.embed{--top:0px;--player:0px}
 body.embed .player{display:none}
-body.embed .top{left:calc(var(--rail) + 23px);right:auto;top:auto;bottom:14px;height:44px;padding:0 6px;gap:4px;border:0;border-radius:99px;
-  background:rgba(250,250,250,.72);box-shadow:0 0 12px rgba(0,0,0,.12)}
+body.embed .top{display:none}   /* 재생 조절이 없어졌으니 떠 있는 막대도 없앤다 */
 body.embed .brand,body.embed .file,body.embed .top .sp,body.embed .seg2,body.embed #opencfg,body.embed #newfile{display:none}
 body.embed .tbtn{height:32px;background:transparent}
 body.embed .tbtn:hover{background:var(--chip)}
 body.embed .rail{border-right:1px solid #eef0f4}
 body.norail main{grid-template-columns:minmax(0,1fr)}
 body.norail .rail,body.norail .rz-x{display:none}
-@media (max-width:900px){body.embed .top{left:14px;bottom:62px}}
 </style>
 </head>
 <body class="idle noaudio">
@@ -702,7 +700,7 @@ body.norail .rail,body.norail .rz-x{display:none}
   <button class="tbtn only-run" id="pause" hidden>❚❚ 일시정지</button>
   <button class="tbtn only-run" id="speed" hidden>2×</button>
   <button class="tbtn only-run" id="replay" hidden>↻ 다시</button>
-  <button class="tbtn" id="rehearse" hidden>▶︎ 리허설</button>
+  <button class="tbtn" id="rehearse" hidden style="display:none">▶︎ 리허설</button>
   <button class="tbtn" id="opencfg" title="API 키">⚙︎</button>
   <button class="tbtn pri" id="newfile">＋ 파일</button>
 </header>
@@ -732,10 +730,9 @@ body.norail .rail,body.norail .rz-x{display:none}
       <span><span class="sw" style="background:#222a2a"></span><b>쟁점</b></span>
       <span><i style="border-color:#4b87e9;border-top-width:3px"></i><b>주장</b></span>
       <span><i style="border-color:#2f9e5b"></i><b>근거·동의</b></span>
-      <span><i style="border-color:#e0443e;border-top-style:dashed"></i><b>반론</b></span>
+      <span><i style="border-color:#e0443e"></i><b>↔ 반론</b></span>
       <span><i style="border-color:#8a6fd1;border-top-style:dotted"></i><b>우려</b></span>
       <span><i style="border-color:#d9892b;border-top-style:dashed"></i><b>조건</b></span>
-      <span><i style="border-color:#e0443e;border-top-style:dashed"></i><b>↔ 대립</b></span>
       <span><span class="sw" style="background:radial-gradient(#87d1ff,#d6ebff)"></span><b>확정</b></span>
       <span><span class="sw" style="background:#f1e1b8;border:1.5px solid rgba(217,137,43,.5)"></span><b>조건부</b></span>
       <span><span class="sw" style="border:1.5px solid #d7dff1;background:#f2f5fa"></span><b>미결</b></span>
@@ -752,17 +749,13 @@ body.norail .rail,body.norail .rz-x{display:none}
     <div class="livebar" id="livebar"></div>
     <div class="zoom">
       <button id="zout">−</button><span class="lv" id="zlv">100%</span><button id="zin">＋</button>
-      <button class="fit" id="zfit">전체 보기</button>
+      <button class="fit" id="zfit">폭 맞춤</button>
     </div>
   </section>
 
   <section class="cards" id="cards"><div class="cbrief" id="cbrief"></div><div class="ctodo" id="ctodo"></div><div class="cbar" id="cbar"></div><div class="cgrid" id="cgrid"></div></section>
 </main>
 
-<nav class="tabs">
-  <button data-tab="graph" class="on">논의</button>
-  <button data-tab="src">요약 · 원문</button>
-</nav>
 
 <div class="player">
   <button id="pp">▶</button>
@@ -1307,12 +1300,14 @@ function build(map) {
     const r = sec.resolution;
     const res = r && push(Object.assign({}, r, { id: sec.no + '-res', t: secs(r.t), at: (r.at || []).map(secs) }));
 
-    mine.forEach(n => { if (n.p) edges.push({ a: n.p, b: n, kind: EDGE_OF[n.kind] || 'raise', label: EDGE_KO[EDGE_OF[n.kind] || 'raise'] }); });
-    sec.conflictPairs = [];
-    (sec.conflicts || []).forEach(([x, y]) => {
-      if (byId[x] && byId[y]) { edges.push({ a: byId[x], b: byId[y], kind: 'conflict', label: '대립', both: true });
-        sec.conflictPairs.push([byId[x], byId[y]]); }
+    /* 근거·동의는 선으로 잇지 않는다 — 주장 바로 아래 같은 열에 놓아 한 덩어리로 읽힌다.
+       반론은 그 주장과 맞선다는 뜻이므로 양쪽 화살표로 잇는다. 대립 표시는 쓰지 않는다. */
+    mine.forEach(n => {
+      if (!n.p || n.kind === 'pro') return;
+      const kind = EDGE_OF[n.kind] || 'raise';
+      edges.push({ a: n.p, b: n, kind, label: EDGE_KO[kind], both: n.kind === 'con' });
     });
+    sec.conflictPairs = [];
     if (res) (r.from || []).map(id => byId[id]).filter(Boolean)
       .forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
 
@@ -1321,8 +1316,11 @@ function build(map) {
     const walk = (n, depth) => {
       n.col = depth;
       const kids = (n.kids || []).sort((a, b) => a.t - b.t);
-      if (!kids.length) { n.ly = slot * ROWH; slot++; }
-      else { kids.forEach(k => walk(k, depth + 1)); n.ly = (kids[0].ly + kids[kids.length - 1].ly) / 2; }
+      const same = kids.filter(k => k.kind === 'pro');      /* 근거·동의 — 같은 열 아래로 */
+      const out = kids.filter(k => k.kind !== 'pro');
+      if (!out.length) { n.ly = slot * ROWH; slot++; }
+      else { out.forEach(k => walk(k, depth + 1)); n.ly = (out[0].ly + out[out.length - 1].ly) / 2; }
+      same.forEach(k => { k.col = depth; k.ly = slot * ROWH; slot++; });
     };
     roots.sort((a, b) => a.t - b.t).forEach(n => walk(n, 0));
     const maxCol = Math.max(...mine.map(n => n.col));
@@ -1356,16 +1354,13 @@ function layout(g) {
     f.h = Math.max(...ys) - Math.min(...ys) + ROWH + PAD * 2 + HEAD;
     f.w = (f.cols - 1) * COL + 256 + PAD * 2;
   });
-  const S = g.frames.reduce((a, f) => a + f.w + GAPX, 0);
-  const H = Math.max(...g.frames.map(f => f.h)) + GAPY;
-  const ROWW = Math.max(3600, Math.min(9000, Math.sqrt(2.1 * S * H)));
-  let x = 0, y = 0, rowH = 0;
+  /* 논의 카드는 시간순으로 위에서 아래로 한 줄. 읽는 방향이 회의 흐름과 같아진다 */
+  let y = 0;
   g.frames.forEach(f => {
     const ys = f.nodes.map(n => n.ly), y0 = Math.min(...ys);
-    if (x && x + f.w > ROWW) { x = 0; y += rowH + GAPY; rowH = 0; }
-    f.x = x; f.y = y;
-    f.nodes.forEach(n => { n.x = x + PAD + n.col * COL; n.y = y + PAD + HEAD + (n.ly - y0); });
-    rowH = Math.max(rowH, f.h); x += f.w + GAPX;
+    f.x = 0; f.y = y;
+    f.nodes.forEach(n => { n.x = PAD + n.col * COL; n.y = y + PAD + HEAD + (n.ly - y0); });
+    y += f.h + GAPY;
   });
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   g.frames.forEach(f => {
@@ -1900,17 +1895,19 @@ function zoomAt(cx, cy, nz) {
   view.y = cy - (cy - view.y) * (nz / view.z);
   view.z = nz; apply();
 }
+/* 논의 카드가 세로 한 줄이라, 폭에 맞춰 놓고 위에서부터 내려 읽는다.
+   initial=false(전체 보기)는 폭 맞춤 + 맨 위, 'all' 은 세로까지 다 담는다 */
 function fit(initial) {
   const r = vp.getBoundingClientRect(), padT = 92, padB = 62, padX = 26;
   const aw = r.width - padX * 2, ah = r.height - padT - padB;
-  if (initial && FRAMES.length) {
-    view.z = .72;
-    view.x = padX - (FRAMES[0].x + OX) * view.z + 20;
-    view.y = padT + 20 - (FRAMES[0].y + OY) * view.z;
-  } else {
-    view.z = Math.max(.06, Math.min(1, Math.min(aw / bounds.w, ah / bounds.h)));
+  if (initial === 'all') {
+    view.z = Math.max(.04, Math.min(1, Math.min(aw / bounds.w, ah / bounds.h)));
     view.x = padX - bounds.x0 * view.z + (aw - bounds.w * view.z) / 2;
     view.y = padT - bounds.y0 * view.z + (ah - bounds.h * view.z) / 2;
+  } else {
+    view.z = Math.max(.2, Math.min(.9, aw / bounds.w));
+    view.x = padX - bounds.x0 * view.z + (aw - bounds.w * view.z) / 2;
+    view.y = padT - bounds.y0 * view.z;
   }
   apply();
 }

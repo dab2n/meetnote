@@ -144,6 +144,7 @@ img.av{object-fit:cover}
 .player .bar i{position:absolute;inset:0 auto 0 0;border-radius:2px;background:var(--dark)}
 .tabs{margin-top:22px;display:flex;align-items:center;gap:10px;justify-content:space-between}
 .mgrid{margin-top:18px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:24px;align-items:start}
+.mgrid.wide{grid-template-columns:320px minmax(0,1fr);gap:16px}   /* 관계 맵은 넓게 */
 .only-narrow{display:none}
 .mgrid.solo{grid-template-columns:minmax(0,1fr)}
 /* 요약 시트 — 모바일 요약 모달의 그라데이션 */
@@ -691,7 +692,7 @@ function meetingTab(tab) {
   const inner = tab === 'map'
     ? `<div class="map"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map&embed=1&norail=1" title="관계 맵"></iframe></div>`
     : summaryHTML(map);
-  body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : ''}">${transHTML(segs)}${tab === 'src' ? '' : inner}</div>`;
+  body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : tab === 'map' ? 'wide' : ''}">${transHTML(segs)}${tab === 'src' ? '' : inner}</div>`;
   if (tab === 'sum') bindSummary(map);
   bindTrans();
   if (focusNo) { const el = body.querySelector(`[data-no="${focusNo}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); pickSection(map.sections.find(s => s.no === focusNo), false); } }

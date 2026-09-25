@@ -216,11 +216,11 @@ body.view-cards .stage{display:none}
 .fhead time{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 
 /* 멀리서 보면 섹션 흐름만 */
-.fbig{display:none;position:absolute;inset:0;padding:60px;flex-direction:column;justify-content:center;gap:26px}
-.fbig .n{font-size:44px;font-weight:800;color:#b3b6bc;letter-spacing:.06em}
-.fbig .t{font-size:86px;font-weight:800;line-height:1.18;letter-spacing:-.02em}
-.fbig .s{display:flex;align-items:center;gap:22px;font-size:40px;font-weight:700;color:#8b8e96}
-.fbig .dot{width:34px;height:34px;border-radius:10px}
+.fbig{display:none;position:absolute;inset:0;padding:72px 80px;flex-direction:column;justify-content:center;gap:18px}
+.fbig .n{font-size:38px;font-weight:500;color:#a3a3a3;letter-spacing:0}
+.fbig .t{font-size:76px;font-weight:700;line-height:1.25;letter-spacing:-.03em}
+.fbig .s{display:flex;align-items:center;gap:16px;font-size:34px;font-weight:500;color:#757575}
+.fbig .dot{width:26px;height:26px;border-radius:50%}
 #cv.lod .fbig{display:flex}
 #cv.lod .fhead,#cv.lod .node{opacity:0!important;pointer-events:none}
 #cv.lod path:not(.e-flow),#cv.lod text{opacity:0!important}
@@ -579,7 +579,7 @@ b,h2,h3,h4,h5{font-weight:600}
 .fhead time{color:var(--dim2)}
 .fbig .n{font-weight:600;color:var(--dim2)} .fbig .t{font-weight:700;letter-spacing:-.03em} .fbig .s{font-weight:500;color:var(--dim)}
 .fbig .dot{border-radius:50%}
-#cv.lod .frame{background:var(--card);box-shadow:inset 0 0 0 3px var(--c,#c7d3e4)}
+#cv.lod .frame{border-radius:64px;background:#fff;box-shadow:0 0 0 2px rgba(40,39,51,.04),0 24px 60px rgba(40,39,51,.08)}
 
 .node{width:232px;padding:14px 16px;border:0;border-radius:18px;background:#fff;box-shadow:var(--soft)}
 .node:hover{box-shadow:0 0 0 1px rgba(40,39,51,.06),0 10px 26px rgba(40,39,51,.12)}
@@ -726,17 +726,6 @@ body.norail .rail,body.norail .rz-x{display:none}
   <div class="rz rz-x" id="rzx"></div>
 
   <section class="stage" id="vp">
-    <div class="legend">
-      <span><span class="sw" style="background:#222a2a"></span><b>쟁점</b></span>
-      <span><i style="border-color:#4b87e9;border-top-width:3px"></i><b>주장</b></span>
-      <span><i style="border-color:#2f9e5b"></i><b>근거·동의</b></span>
-      <span><i style="border-color:#e0443e"></i><b>↔ 반론</b></span>
-      <span><i style="border-color:#8a6fd1;border-top-style:dotted"></i><b>우려</b></span>
-      <span><i style="border-color:#d9892b;border-top-style:dashed"></i><b>조건</b></span>
-      <span><span class="sw" style="background:radial-gradient(#87d1ff,#d6ebff)"></span><b>확정</b></span>
-      <span><span class="sw" style="background:#f1e1b8;border:1.5px solid rgba(217,137,43,.5)"></span><b>조건부</b></span>
-      <span><span class="sw" style="border:1.5px solid #d7dff1;background:#f2f5fa"></span><b>미결</b></span>
-    </div>
     <div id="cv"><svg id="edges"></svg></div>
     <div class="blank" id="blank">
       <b id="bt">이 회의는 아직 정리 맵이 없습니다</b>
@@ -1354,7 +1343,9 @@ function layout(g) {
     f.h = Math.max(...ys) - Math.min(...ys) + ROWH + PAD * 2 + HEAD;
     f.w = (f.cols - 1) * COL + 256 + PAD * 2;
   });
-  /* 논의 카드는 시간순으로 위에서 아래로 한 줄. 읽는 방향이 회의 흐름과 같아진다 */
+  /* 논의 카드는 시간순으로 위에서 아래로 한 줄. 폭은 모두 같게 맞춘다 */
+  const W = Math.max(...g.frames.map(f => f.w));
+  g.frames.forEach(f => { f.w = W; });
   let y = 0;
   g.frames.forEach(f => {
     const ys = f.nodes.map(n => n.ly), y0 = Math.min(...ys);
@@ -1418,37 +1409,27 @@ function render(g) {
 
   g.edges.forEach(e => {
     const A = e.a, B = e.b, aw = A.dom.offsetWidth, ah = A.dom.offsetHeight, bh = B.dom.offsetHeight;
-    let d, lx, ly;
-    if (e.kind === 'conflict') {
-      const up = A.y <= B.y ? A : B, dn = A.y <= B.y ? B : A, uh = up.dom.offsetHeight;
-      if (Math.abs(A.x - B.x) < 12) {
-        const cx = up.x + OX + up.dom.offsetWidth / 2;
-        d = `M ${cx} ${up.y + OY + uh + 3} L ${cx} ${dn.y + OY - 3}`;
-        lx = cx + 24; ly = (up.y + OY + uh + dn.y + OY) / 2 + 4;
-      } else {
-        const ax = A.x + OX, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2, off = 60;
-        d = `M ${ax} ${ay} C ${ax - off} ${ay}, ${Math.min(ax, bx) - off} ${by}, ${bx} ${by}`;
-        lx = Math.min(ax, bx) - off + 24; ly = (ay + by) / 2;
+    const ax = A.x + OX + aw, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2;
+    const R = 14;
+    let d, lx = (ax + bx) / 2, ly = (ay + by) / 2 - 8;
+    if (bx >= ax) {                       /* 오른쪽으로 — 나갔다가 한 번 꺾어 들어간다 */
+      const m = Math.round((ax + bx) / 2);
+      if (Math.abs(by - ay) < 3) d = `M ${ax} ${ay} H ${bx}`;
+      else {
+        const s_ = by > ay ? 1 : -1, r = Math.min(R, Math.abs(by - ay) / 2, Math.abs(m - ax), Math.abs(bx - m));
+        d = `M ${ax} ${ay} H ${m - r} Q ${m} ${ay} ${m} ${ay + s_ * r} V ${by - s_ * r} Q ${m} ${by} ${m + r} ${by} H ${bx}`;
       }
-    } else {
-      const ax = A.x + OX + aw, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2;
-      if (bx < ax) {
-        const m = Math.min(A.y + OY, B.y + OY) - 74;
-        d = `M ${ax} ${ay} C ${ax + 140} ${ay}, ${ax + 140} ${m}, ${ax} ${m} L ${bx} ${m} C ${bx - 140} ${m}, ${bx - 140} ${by}, ${bx} ${by}`;
-        lx = (ax + bx) / 2; ly = m - 9;
-      } else {
-        const dx = Math.max(46, (bx - ax) * .55);
-        d = `M ${ax} ${ay} C ${ax + dx} ${ay}, ${bx - dx} ${by}, ${bx} ${by}`;
-        lx = (ax + bx) / 2; ly = (ay + by) / 2 - 8;
-      }
+      lx = m;
+    } else {                              /* 되돌아가는 선 — 위로 돌아 나간다 */
+      const m = Math.min(A.y + OY, B.y + OY) - 70, out = ax + 70, s1 = m < ay ? -1 : 1;
+      d = `M ${ax} ${ay} H ${out - R} Q ${out} ${ay} ${out} ${ay + s1 * R} V ${m + (s1 > 0 ? -R : R)} `
+        + `Q ${out} ${m} ${out - R} ${m} H ${bx + R} Q ${bx} ${m} ${bx} ${m + (by > m ? R : -R)} V ${by}`;
+      lx = (out + bx) / 2; ly = m - 9;
     }
     e.path = svgEl('path', { d, class: 'e-' + e.kind, 'marker-end': `url(#ar-${e.kind}-e)` });
     if (e.both) e.path.setAttribute('marker-start', `url(#ar-${e.kind}-s)`);
     sv.append(e.path);
-    if (e.label) {
-      e.text = svgEl('text', { x: lx, y: ly, class: 'l-' + e.kind, 'text-anchor': 'middle' });
-      e.text.textContent = e.label; sv.append(e.text);
-    }
+    void lx; void ly;
   });
   sv.style.width = (bounds.x0 + bounds.w + 300) + 'px';
   sv.style.height = (bounds.y0 + bounds.h + 300) + 'px';
@@ -1905,7 +1886,7 @@ function fit(initial) {
     view.x = padX - bounds.x0 * view.z + (aw - bounds.w * view.z) / 2;
     view.y = padT - bounds.y0 * view.z + (ah - bounds.h * view.z) / 2;
   } else {
-    view.z = Math.max(.2, Math.min(.9, aw / bounds.w));
+    view.z = Math.max(.12, Math.min(LOD - .02, aw / bounds.w));   /* 처음엔 썸네일 카드 — 확대하면 안쪽이 열린다 */
     view.x = padX - bounds.x0 * view.z + (aw - bounds.w * view.z) / 2;
     view.y = padT - bounds.y0 * view.z;
   }

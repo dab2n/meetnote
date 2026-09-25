@@ -148,14 +148,14 @@ img.av{object-fit:cover}
 .only-narrow{display:none}
 .mgrid.solo{grid-template-columns:minmax(0,1fr)}
 /* 요약 시트 — 모바일 요약 모달의 그라데이션 */
-.sheet{border-radius:24px;padding:28px 28px 30px;background:linear-gradient(180deg,#e4eaf2 0%,#e4eaf2 70%,#fdf8f8 100%);box-shadow:0 -10px 30px rgba(40,39,51,.06)}
+.sheet{border-radius:24px;padding:28px 28px 30px;background:#fff;box-shadow:0 0 0 1px #eef0f4,0 8px 24px rgba(40,39,51,.05)}
 .sheet h5{font-size:16px;font-weight:600;letter-spacing:-.16px;margin-bottom:12px}
-.sheet hr{border:0;border-top:1px solid #cfd8ea;margin:26px 0}
+.sheet hr{border:0;border-top:1px solid #eef0f4;margin:26px 0}
 .brief p{font-size:16px;line-height:1.65;color:var(--ink2)}
 .brief .kinds{display:flex;gap:4px;margin-bottom:10px}
 .focus{margin-top:14px;display:grid;gap:2px}
 .focus button{display:flex;align-items:baseline;gap:10px;padding:7px 10px;margin:0 -10px;border-radius:10px;text-align:left;font-size:13.5px}
-.focus button:hover{background:rgba(255,255,255,.55)}
+.focus button:hover{background:var(--card)}
 .focus b{font-size:11.5px;font-weight:600;color:var(--dim);white-space:nowrap}
 .focus span{flex:1}
 .brief .line{font-size:17px;font-weight:600;line-height:1.6;letter-spacing:-.2px}
@@ -163,12 +163,12 @@ img.av{object-fit:cover}
 .brief .story p{font-size:14.5px;line-height:1.75;color:var(--ink2)}
 .sheet h5 em{margin-left:6px;font-style:normal;font-size:12px;font-weight:500;color:var(--dim)}
 .groups{display:grid;gap:22px}
-.gp{padding-top:4px}
+.gp{padding:18px 18px 20px;border-radius:24px;background:color-mix(in srgb, var(--c, #c7d3e4) 26%, #fff)}
 .gp h6{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:21px;font-weight:700;letter-spacing:-.4px;color:var(--ink)}
 .gp h6 i{display:grid;place-items:center;min-width:32px;height:32px;padding:0 10px;border-radius:10px;background:var(--c,#c7d3e4);color:var(--ink);font-style:normal;font-size:13px;font-weight:700}
 .gp h6 b{margin-left:auto;font-weight:500;font-size:12.5px;color:var(--dim2)}
-.gp+.gp{border-top:1px solid #cfd8ea;padding-top:22px}
-.iss{padding:18px 20px;border-radius:18px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(40,39,51,.04)}
+.gp+.gp{border-top:0}
+.iss{padding:18px 20px;border-radius:18px;background:rgba(255,255,255,.72);box-shadow:0 0 0 1px rgba(255,255,255,.6),0 2px 10px rgba(40,39,51,.04)}
 .iss+.iss{margin-top:10px}
 /* 쟁점 문장 — 이 카드에서 가장 크고 진하게, 왼쪽에 색 막대 */
 .qq{cursor:pointer;padding-left:14px;border-left:3px solid var(--c,#c7d3e4)}
@@ -178,21 +178,21 @@ img.av{object-fit:cover}
 .qm time{font-variant-numeric:tabular-nums}
 .flow{margin-top:12px;display:grid;gap:8px;padding-left:17px}
 .flow p{display:flex;gap:10px;align-items:baseline;font-size:14px;line-height:1.75;color:var(--ink2);cursor:pointer;padding:4px 8px;margin:-4px -8px;border-radius:10px}
-.flow p:hover{background:rgba(255,255,255,.7)}
+.flow p:hover{background:#fff}
 .flow p span{flex:1}
 .flow p time{font-size:11px;color:var(--dim2);font-variant-numeric:tabular-nums;opacity:0;transition:opacity .15s}
 .flow p:hover time{opacity:1}
-.res{margin-top:14px;padding:12px 14px;border-radius:14px;background:#fff;display:grid;gap:3px;cursor:pointer;box-shadow:0 0 0 1px rgba(40,39,51,.04)}
-.res:hover{box-shadow:0 0 0 1px rgba(40,39,51,.1)}
+.res{margin-top:14px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb, var(--c, #c7d3e4) 34%, #fff);display:grid;gap:3px;cursor:pointer}
+.res:hover{box-shadow:0 0 0 1px rgba(40,39,51,.12)}
 .res em{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.06em}
 .res b{font-size:15px;font-weight:600;line-height:1.55;letter-spacing:-.2px}
 .res.none{color:var(--dim)}
 .fx{margin-top:10px;display:flex;gap:6px;align-items:center}
-.cmb{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 9px;border-radius:99px;font-size:12px;color:var(--dim);background:rgba(255,255,255,.5)}
+.cmb{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 9px;border-radius:99px;font-size:12px;color:var(--dim);background:rgba(255,255,255,.75)}
 .cmb:hover{background:#fff;color:var(--ink2)}
 .tlist{display:grid;gap:2px}
 .tlist button{display:flex;align-items:baseline;gap:10px;padding:9px 10px;margin:0 -10px;border-radius:10px;text-align:left}
-.tlist button:hover{background:rgba(255,255,255,.55)}
+.tlist button:hover{background:var(--card)}
 .tlist span{flex:1;font-size:14.5px;font-weight:500}
 .tlist .own{background:#fff;font-size:11.5px}
 .tlist time{font-size:11.5px;color:var(--dim2);font-variant-numeric:tabular-nums}

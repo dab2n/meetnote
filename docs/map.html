@@ -247,7 +247,9 @@ body.view-cards .stage{display:none}
 /* 주장 + 그 근거·동의를 감싸는 테두리 — 포함관계 */
 .hug{position:absolute;border-radius:26px;background:rgba(75,135,233,.05);box-shadow:inset 0 0 0 1.5px rgba(75,135,233,.16);pointer-events:none;transition:opacity .4s}
 #cv.lod .hug{opacity:0}
-.node.pro{width:206px}
+.node.pro{width:200px;padding:11px 13px;background:#fbfdfc;box-shadow:inset 3px 0 0 var(--green),0 0 0 1px rgba(40,39,51,.05)}
+.node.pro h4{font-size:13px;font-weight:500}
+.node.pro p{-webkit-line-clamp:2}
 .node.position{border-color:var(--blue);border-width:2px}
 .node.position .k{color:var(--blue)}
 .node.pro{border-color:var(--green)}
@@ -683,20 +685,20 @@ b,h2,h3,h4,h5{font-weight:600}
 
 /* ---------- 논의 카드가 만들어지는 모습 ----------
    동그라미가 내려와 → 사각형으로 자라고 → 그 안에 글이 적힌다 (피그마 3583:4235) */
-.frame.seed{opacity:1;transform:scale(.055);transform-origin:50% 0;border-radius:50%;background:#fff;
+.frame.seed{opacity:1;transform:scale(.18);transform-origin:50% 0;border-radius:50%;background:#fff;
   box-shadow:0 0 0 2px rgba(40,39,51,.04),0 24px 60px rgba(40,39,51,.08)}
-.frame.grow{transition:transform .3s cubic-bezier(.3,0,.2,1),border-radius .3s cubic-bezier(.3,0,.2,1);transform:none;border-radius:64px}
+.frame.grow{transition:transform .46s cubic-bezier(.34,1.2,.5,1),border-radius .46s cubic-bezier(.3,0,.2,1);transform:none;border-radius:64px}
 .frame.seed .fbig,.frame.seed .fhead{opacity:0}
 .fbig>*{opacity:0;transform:translateY(10px)}
 .frame.wrote .fbig>*{opacity:1;transform:none;transition:opacity .26s cubic-bezier(.3,0,.2,1),transform .26s cubic-bezier(.3,0,.2,1)}
 .frame.wrote .fbig>*:nth-child(2){transition-delay:.06s}
 .frame.wrote .fbig>*:nth-child(3){transition-delay:.12s}
 /* 카드에서 다음 카드로 내려가는 목과 방울 */
-.neck{position:absolute;width:3px;border-radius:99px;background:#dfe5ef;transform-origin:50% 0;transform:scaleY(0);transition:transform .3s cubic-bezier(.3,0,.2,1)}
+.neck{position:absolute;width:6px;margin-left:-1.5px;border-radius:99px;background:#d7dfec;transform-origin:50% 0;transform:scaleY(0);transition:transform .3s cubic-bezier(.3,0,.2,1)}
 .neck.on{transform:scaleY(1)}
-.bud{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;
-  box-shadow:0 0 0 2px rgba(40,39,51,.05),0 10px 24px rgba(40,39,51,.12);opacity:0}
-.bud.on{opacity:1;transition:transform .3s cubic-bezier(.3,0,.2,1),opacity .2s}
+.bud{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 3px rgba(40,39,51,.05),0 18px 40px rgba(40,39,51,.16);opacity:0}
+.bud.on{opacity:1;transition:transform .34s cubic-bezier(.3,0,.2,1),opacity .2s}
 #cv:not(.lod) .neck,#cv:not(.lod) .bud{opacity:0}
 /* ---------- 새 홈의 '관계 맵' 탭 안에 들어갈 때 (?embed) ---------- */
 /* 겉의 제목·파일·설정은 새 홈이 맡는다. 재생 조절만 떠 있는 알약으로 남긴다 */
@@ -1323,20 +1325,20 @@ function build(map) {
     if (res) (r.from || []).map(id => byId[id]).filter(Boolean)
       .forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
 
+    /* 위에서 아래로 한 줄씩 자리를 준다. 부모가 먼저, 그 근거·동의는 바로 아래 같은 열,
+       반론·조건처럼 갈라지는 것은 다음 열. 이렇게 하면 서로 겹치지 않는다. */
     const roots = mine.filter(n => !n.p);
     let slot = 0;
     const walk = (n, depth) => {
       n.col = depth;
+      n.ly = slot++ * ROWH;
       const kids = (n.kids || []).sort((a, b) => a.t - b.t);
-      const same = kids.filter(k => k.kind === 'pro');      /* 근거·동의 — 같은 열 아래로 */
-      const out = kids.filter(k => k.kind !== 'pro');
-      if (!out.length) { n.ly = slot * ROWH; slot++; }
-      else { out.forEach(k => walk(k, depth + 1)); n.ly = (out[0].ly + out[out.length - 1].ly) / 2; }
-      same.forEach(k => { k.col = depth; k.ly = slot * ROWH; slot++; });
+      kids.filter(k => k.kind === 'pro').forEach(k => { k.col = depth; k.ly = slot++ * ROWH; k.inside = true; });
+      kids.filter(k => k.kind !== 'pro').forEach(k => walk(k, depth + 1));
     };
     roots.sort((a, b) => a.t - b.t).forEach(n => walk(n, 0));
     const maxCol = Math.max(...mine.map(n => n.col));
-    if (res) { res.col = maxCol + 1; res.ly = (Math.min(...mine.map(n => n.ly)) + Math.max(...mine.map(n => n.ly))) / 2; }
+    if (res) { res.col = maxCol + 1; res.ly = Math.max(...mine.map(n => n.ly)) / 2; }
 
     const all = res ? mine.concat(res) : mine;
     const frame = { sec, nodes: all, res, cols: (res ? maxCol + 1 : maxCol) + 1 };
@@ -1828,16 +1830,17 @@ function sprout(done) {
       bud.style.transition = '';
       bud.style.transform = `translate(${cx}px, ${f.y + OY}px)`;   /* 방울이 다음 자리로 내려온다 */
     });
-    at(140, () => {
-      f.dom.classList.add('grow');                                  /* 사각형으로 자라고 */
-      at(120, () => {
+    at(300, () => {
+      bud.classList.remove('on');                                   /* 방울이 카드 자리에서 사라지고 */
+      f.dom.classList.add('grow');                                  /* 그 자리에서 사각형이 자란다 */
+      at(260, () => {
         f.dom.classList.remove('seed');
         f.dom.classList.add('wrote');                               /* 그 안에 글이 적힌다 */
-        at(60, () => one(i + 1));
+        at(120, () => one(i + 1));
       });
     });
   };
-  at(120, () => one(0));
+  at(260, () => one(0));
 }
 
 /* ================= 8. 시간순 전개 ================= */

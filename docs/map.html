@@ -1923,7 +1923,7 @@ function showEvidence(ev, who, near) {
     if (at < m.index + m[0].length && c > m.index) { w.classList.add('ev'); first = first || w; }
   });
   (first || d).scrollIntoView({ block: 'center', behavior: 'smooth' });
-  if (innerWidth <= 900) showTab('src');
+  if (innerWidth <= 900 && !document.body.classList.contains('norail')) showTab('src');
   seekTo(first ? +first.dataset.t : TRANS[hit.i].t, true);
   if (audioOK) au.play().catch(() => {});
   return true;
@@ -1932,6 +1932,11 @@ function selectNode(n) {
   selected = n;
   NODES.forEach(o => o.dom.classList.toggle('sel', o === n));
   const [a, b] = n.at && n.at.length === 2 ? n.at : [n.t, n.t + 45];
+  if (document.body.classList.contains('norail')) {      /* 원문은 바깥(새 홈) 왼쪽에 있다 */
+    try { parent.postMessage({ mn: 'ev', ev: n.ev || '', who: n.who || '', t: mmss(n.t), no: n.sec && n.sec.no }, '*'); } catch {}
+    if (!document.body.classList.contains('view-cards') && n.dom.classList.contains('in')) centerOn(n);
+    return;
+  }
   if (!showEvidence(n.ev, n.who, n.t)) highlightRange(a, b, false);
   if (!document.body.classList.contains('view-cards') && n.dom.classList.contains('in')) centerOn(n);
 }

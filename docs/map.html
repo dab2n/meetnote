@@ -194,11 +194,12 @@ body.view-cards .stage{display:none}
 #edges{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
 #edges path{fill:none;stroke-width:1.7px;opacity:0;transition:opacity .35s}
 #edges path.on{opacity:1}
+#edges path.tip{opacity:1;stroke:none}
 #edges text{font:650 10.5px var(--font);opacity:0;transition:opacity .35s}
 #edges text.on{opacity:1}
 .e-raise{stroke:#b4b7bd}                            .l-raise{fill:#8b8e96}
 .e-pro{stroke:var(--green)}                         .l-pro{fill:var(--green)}
-.e-con{stroke:var(--red);stroke-width:2px}          .l-con{fill:var(--red)}
+#edges path.e-con{stroke:var(--red);stroke-width:2.4px}   .l-con{fill:var(--red)}
 .e-concern{stroke:#b8564a;stroke-dasharray:2 4}     .l-concern{fill:#b8564a}
 .e-condition{stroke:var(--amber);stroke-dasharray:3 4} .l-condition{fill:var(--amber)}
 .e-resolve{stroke:var(--gold);stroke-width:2px}     .l-resolve{fill:var(--gold)}
@@ -243,6 +244,10 @@ body.view-cards .stage{display:none}
 .node.issue .k{color:rgba(255,255,255,.55)}
 .node.issue h4{font-size:15px;font-weight:800}
 .node.issue p,.node.issue .m{color:rgba(255,255,255,.66)}
+/* 주장 + 그 근거·동의를 감싸는 테두리 — 포함관계 */
+.hug{position:absolute;border-radius:26px;background:rgba(75,135,233,.05);box-shadow:inset 0 0 0 1.5px rgba(75,135,233,.16);pointer-events:none;transition:opacity .4s}
+#cv.lod .hug{opacity:0}
+.node.pro{width:206px}
 .node.position{border-color:var(--blue);border-width:2px}
 .node.position .k{color:var(--blue)}
 .node.pro{border-color:var(--green)}
@@ -675,6 +680,24 @@ b,h2,h3,h4,h5{font-weight:600}
 .bar .rail2{background:var(--chip)} .bar .fill{background:var(--dark)} .bar .mk{background:var(--violet)}
 .tabs{background:rgba(252,252,254,.9)} .tabs button{font-weight:500} .tabs button.on{font-weight:600;box-shadow:inset 0 -2px 0 var(--dark)}
 
+
+/* ---------- 논의 카드가 만들어지는 모습 ----------
+   동그라미가 내려와 → 사각형으로 자라고 → 그 안에 글이 적힌다 (피그마 3583:4235) */
+.frame.seed{opacity:1;transform:scale(.055);transform-origin:50% 0;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 2px rgba(40,39,51,.04),0 24px 60px rgba(40,39,51,.08)}
+.frame.grow{transition:transform .3s cubic-bezier(.3,0,.2,1),border-radius .3s cubic-bezier(.3,0,.2,1);transform:none;border-radius:64px}
+.frame.seed .fbig,.frame.seed .fhead{opacity:0}
+.fbig>*{opacity:0;transform:translateY(10px)}
+.frame.wrote .fbig>*{opacity:1;transform:none;transition:opacity .26s cubic-bezier(.3,0,.2,1),transform .26s cubic-bezier(.3,0,.2,1)}
+.frame.wrote .fbig>*:nth-child(2){transition-delay:.06s}
+.frame.wrote .fbig>*:nth-child(3){transition-delay:.12s}
+/* 카드에서 다음 카드로 내려가는 목과 방울 */
+.neck{position:absolute;width:3px;border-radius:99px;background:#dfe5ef;transform-origin:50% 0;transform:scaleY(0);transition:transform .3s cubic-bezier(.3,0,.2,1)}
+.neck.on{transform:scaleY(1)}
+.bud{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 2px rgba(40,39,51,.05),0 10px 24px rgba(40,39,51,.12);opacity:0}
+.bud.on{opacity:1;transition:transform .3s cubic-bezier(.3,0,.2,1),opacity .2s}
+#cv:not(.lod) .neck,#cv:not(.lod) .bud{opacity:0}
 /* ---------- 새 홈의 '관계 맵' 탭 안에 들어갈 때 (?embed) ---------- */
 /* 겉의 제목·파일·설정은 새 홈이 맡는다. 재생 조절만 떠 있는 알약으로 남긴다 */
 body.embed{--top:0px;--player:0px}
@@ -1350,7 +1373,7 @@ function layout(g) {
   g.frames.forEach(f => {
     const ys = f.nodes.map(n => n.ly), y0 = Math.min(...ys);
     f.x = 0; f.y = y;
-    f.nodes.forEach(n => { n.x = PAD + n.col * COL; n.y = y + PAD + HEAD + (n.ly - y0); });
+    f.nodes.forEach(n => { n.x = PAD + n.col * COL + (n.kind === 'pro' ? 14 : 0); n.y = y + PAD + HEAD + (n.ly - y0); });
     y += f.h + GAPY;
   });
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
@@ -1369,9 +1392,13 @@ const TAGC = ['#c7d3e4', '#d5e3d0', '#f1e1b8', '#b8d4f1', '#e7d3e6', '#dcd6ef'];
 function defs() {
   const d = svgEl('defs');
   Object.entries(ARROW).forEach(([k, c]) => ['e', 's'].forEach(side => {
-    const m = svgEl('marker', { id: 'ar-' + k + '-' + side, markerWidth: 9, markerHeight: 9,
-      refX: side === 'e' ? 7.5 : 1.5, refY: 3, orient: 'auto', markerUnits: 'userSpaceOnUse' });
-    m.append(svgEl('path', { d: side === 'e' ? 'M0,0 L8,3 L0,6 Z' : 'M8,0 L0,3 L8,6 Z', fill: c }));
+    const big = k === 'con', w = big ? 14 : 9;
+    const m = svgEl('marker', { id: 'ar-' + k + '-' + side, markerWidth: w, markerHeight: w,
+      refX: side === 'e' ? w - 1.5 : 1.5, refY: w / 2, orient: 'auto', markerUnits: 'userSpaceOnUse' });
+    const a = w - 1, h = w / 2;
+    /* #edges path{fill:none} 에 지워지지 않게 인라인으로 칠한다 */
+    m.append(svgEl('path', { d: side === 'e' ? `M0,0 L${a},${h} L0,${w - 1} Z` : `M${a},0 L0,${h} L${a},${w - 1} Z`,
+      fill: c, style: `fill:${c}` }));
     d.append(m);
   }));
   return d;
@@ -1380,6 +1407,25 @@ function render(g) {
   const cv = $('#cv'), sv = $('#edges');
   [...cv.children].forEach(c => { if (c !== sv) c.remove(); });
   sv.textContent = ''; sv.append(defs());
+
+  /* 주장과 그 근거·동의를 하나로 감싸는 테두리 — 포함관계로 읽히게 */
+  g.frames.forEach((f, i) => {                 /* 카드와 카드를 잇는 목 */
+    if (i === 0) return;
+    const prev = g.frames[i - 1];
+    const x = f.x + OX + f.w / 2, y0 = prev.y + OY + prev.h, y1 = f.y + OY;
+    const n = el('div', 'neck');
+    n.style.cssText = `left:${x - 1.5}px;top:${y0}px;height:${y1 - y0}px`;
+    f.neck = n; cv.append(n);
+  });
+
+  g.nodes.filter(n => n.kind === 'position' && (n.kids || []).some(k => k.kind === 'pro')).forEach(n => {
+    const kids = n.kids.filter(k => k.kind === 'pro');
+    const last = kids[kids.length - 1];
+    const hug = el('div', 'hug');
+    hug.dataset.for = n.id;
+    n.hug = { dom: hug, n, last };
+    cv.append(hug);
+  });
 
   g.frames.forEach(f => {
     const d = el('div', 'frame');
@@ -1409,7 +1455,9 @@ function render(g) {
 
   g.edges.forEach(e => {
     const A = e.a, B = e.b, aw = A.dom.offsetWidth, ah = A.dom.offsetHeight, bh = B.dom.offsetHeight;
-    const ax = A.x + OX + aw, ay = A.y + OY + ah / 2, bx = B.x + OX, by = B.y + OY + bh / 2;
+    /* 화살촉이 카드에 가리지 않게 양쪽에서 조금 띄운다 */
+    const gap = e.both ? 7 : 2;
+    const ax = A.x + OX + aw + gap, ay = A.y + OY + ah / 2, bx = B.x + OX - gap, by = B.y + OY + bh / 2;
     const R = 14;
     let d, lx = (ax + bx) / 2, ly = (ay + by) / 2 - 8;
     if (bx >= ax) {                       /* 오른쪽으로 — 나갔다가 한 번 꺾어 들어간다 */
@@ -1427,13 +1475,19 @@ function render(g) {
       lx = (out + bx) / 2; ly = m - 9;
     }
     e.path = svgEl('path', { d, class: 'e-' + e.kind, 'marker-end': `url(#ar-${e.kind}-e)` });
-    if (e.both) e.path.setAttribute('marker-start', `url(#ar-${e.kind}-s)`);
     sv.append(e.path);
+    if (e.both) {                       /* 반론은 양쪽 화살촉을 직접 그린다 (마커가 작아 묻힌다) */
+      const c = ARROW[e.kind], tip = (x, y, dir) =>
+        svgEl('path', { d: `M ${x} ${y - 6} L ${x + dir * 11} ${y} L ${x} ${y + 6} Z`, class: 'tip', style: `fill:${c}` });
+      e.tips = [tip(ax - 11, ay, 1), tip(bx + 11, by, -1)];
+      e.tips.forEach(t => sv.append(t));
+    }
     void lx; void ly;
   });
   sv.style.width = (bounds.x0 + bounds.w + 300) + 'px';
   sv.style.height = (bounds.y0 + bounds.h + 300) + 'px';
   NODES = g.nodes; EDGES = g.edges; FRAMES = g.frames; REVEAL = g.reveal;
+  hugs();
 }
 
 /* ================= 6. 카드 뷰 ================= */
@@ -1752,6 +1806,40 @@ function renderDigest() {
   });
 }
 
+/* 논의 카드가 만들어지는 모습 — 방울이 내려와 사각형이 되고, 그 안에 글이 적힌다.
+   한 카드에 260ms 남짓. 빨리 훑고 지나가는 정도로만 보여 준다. */
+let SPROUT = null;
+function sprout(done) {
+  clearTimeout(SPROUT);
+  const bud = $('#bud') || (() => { const b = el('div', 'bud'); b.id = 'bud'; cv.append(b); return b; })();
+  FRAMES.forEach(f => { f.dom.classList.remove('grow', 'wrote'); f.dom.classList.add('in', 'seed'); if (f.neck) f.neck.classList.remove('on'); });
+  bud.classList.remove('on');
+  const at = (ms, fn) => { SPROUT = setTimeout(fn, ms); };
+  const one = i => {
+    const f = FRAMES[i];
+    if (!f) { bud.classList.remove('on'); done && done(); return; }
+    const cx = f.x + OX + f.w / 2;
+    if (f.neck) f.neck.classList.add('on');
+    bud.style.transition = 'none';
+    bud.style.transform = `translate(${cx}px, ${(FRAMES[i - 1] ? FRAMES[i - 1].y + OY + FRAMES[i - 1].h : f.y + OY - 40)}px)`;
+    bud.classList.add('on');
+    ensureVisible(f.x, f.y, f.w, f.h);            /* 만들어지는 카드를 따라 내려간다 */
+    requestAnimationFrame(() => {
+      bud.style.transition = '';
+      bud.style.transform = `translate(${cx}px, ${f.y + OY}px)`;   /* 방울이 다음 자리로 내려온다 */
+    });
+    at(140, () => {
+      f.dom.classList.add('grow');                                  /* 사각형으로 자라고 */
+      at(120, () => {
+        f.dom.classList.remove('seed');
+        f.dom.classList.add('wrote');                               /* 그 안에 글이 적힌다 */
+        at(60, () => one(i + 1));
+      });
+    });
+  };
+  at(120, () => one(0));
+}
+
 /* ================= 8. 시간순 전개 ================= */
 let timer = null, step = 0, speed = 2, paused = false;
 function play() {
@@ -1864,6 +1952,18 @@ function highlightRange(a, b, fromFun) {
 
 /* ================= 10. 팬 · 줌 ================= */
 const vp = $('#vp'), cv = $('#cv');
+/* 감싸는 테두리 자리 — 주장 카드와 마지막 근거 카드를 덮는다 */
+function hugs() {
+  NODES.forEach(n => {
+    if (!n.hug) return;
+    const { dom, last } = n.hug, P = 10;
+    const x = Math.min(n.x, last.x), y = n.y;
+    const w = Math.max(n.dom.offsetWidth, last.dom.offsetWidth);
+    const h = last.y + last.dom.offsetHeight - n.y;
+    dom.style.cssText = `left:${x + OX - P}px;top:${y + OY - P}px;width:${w + P * 2}px;height:${h + P * 2}px`;
+  });
+}
+
 function apply() {
   cv.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
   $('#zlv').textContent = Math.round(view.z * 100) + '%';
@@ -2277,13 +2377,12 @@ function mount(map, segs, name, audioSrc) {
     else if (key()) makeMap();           /* 키가 있으면 바로 만든다 */
     return;
   }
-  /* 시간순으로 하나씩 등장하던 연출은 걷어냈다 — 논의 카드가 한꺼번에 보이고,
-     확대하면 그 안의 노드가 열린다 */
   step = REVEAL.length;
   NODES.forEach(n => n.dom.classList.add('in'));
-  FRAMES.forEach(f => f.dom.classList.add('in'));
   EDGES.forEach(e => { e.path.classList.add('on'); if (e.text) e.text.classList.add('on'); });
   fit(false);
+  sprout(() => { cv.style.transition = 'transform .7s cubic-bezier(.3,0,.2,1)';   /* 다 만들면 맨 위로 */
+    fit(false); setTimeout(() => { cv.style.transition = ''; }, 760); });
 }
 
 /* ================= 13.5 맵 만들기 화면 ================= */

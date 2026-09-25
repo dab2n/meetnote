@@ -2187,13 +2187,33 @@ meetings();
 
 const enc = u => u.split('/').map(encodeURIComponent).join('/');
 /* 전사문에 나온 실제 이름은 화면에 쓰지 않는다 (data/people.json) */
-let ALIAS = [];
-(async () => { try {
-  const a = (await (await fetch('data/people.json', NOCACHE)).json()).aliases || {};
-  ALIAS = Object.entries(a).sort((x, y) => y[0].length - x[0].length).map(([k, v]) => [new RegExp(reEsc(k), 'g'), v]);
-} catch {} })();
-const alias = o => { if (!ALIAS.length) return o;
-  let t = JSON.stringify(o); ALIAS.forEach(([re, to]) => { t = t.replace(re, to); }); return JSON.parse(t); };
+let ALIAS = null;
+/* 이름을 바꾸면 조사도 새 이름에 맞춰 고친다 (일여는 → 하린은) */
+const JOSA = [['으로', '로'], ['이랑', '랑'], ['이라', '라'], ['이에요', '예요'], ['이었', '였'], ['은', '는'], ['이', '가'], ['을', '를'], ['과', '와'], ['아', '야']];
+/* 받침이 있으면 은·이·을·으로. 영문으로 끝나면 읽을 때 모음으로 끝나는 쪽이 자연스럽다(Project → 프로젝트) */
+const hasJong = s => { const c = s.charCodeAt(s.length - 1);
+  return c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 !== 0 : false; };
+function aliasRules(cfg) {
+  const keep = (cfg.keep || []).slice().sort((a, b) => b.length - a.length);
+  const pairs = Object.entries(cfg.aliases || {}).sort((a, b) => b[0].length - a[0].length);
+  const tail = JOSA.flat().sort((a, b) => b.length - a.length).map(reEsc).join('|');
+  return { keep, subs: pairs.map(([from, to]) => [new RegExp(reEsc(from) + '(' + tail + ')?', 'g'), to]) };
+}
+function applyAlias(text, R) {
+  if (!R || !R.subs.length) return text;
+  const box = [];
+  R.keep.forEach(k => { text = text.split(k).join('\u0000' + (box.push(k) - 1) + '\u0000'); });
+  R.subs.forEach(([re, to]) => {
+    text = text.replace(re, (m, j) => {
+      if (!j) return to;
+      const pair = JOSA.find(p => p.includes(j));
+      return to + (pair ? pair[hasJong(to) ? 0 : 1] : j);
+    });
+  });
+  return text.replace(/\u0000(\d+)\u0000/g, (m, i) => box[+i]);
+}
+(async () => { try { ALIAS = aliasRules(await (await fetch('data/people.json', NOCACHE)).json()); } catch {} })();
+const alias = o => (ALIAS ? JSON.parse(applyAlias(JSON.stringify(o), ALIAS)) : o);
 async function load(url) {
   const r = await fetch(enc(url), NOCACHE);
   if (!r.ok) throw new Error(`${r.status} · ${url}`);

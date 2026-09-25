@@ -78,7 +78,8 @@ main{min-width:0;padding:34px 40px 140px}
 .todo{scroll-snap-align:start;height:224px;display:flex;flex-direction:column;justify-content:space-between;padding:20px;border-radius:24px;
   border:1.5px solid rgba(255,255,255,.2);text-align:left;transition:transform .25s var(--ease),box-shadow .25s}
 .todo:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(40,39,51,.1)}
-.todo .top{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:500;color:var(--ink2)}
+.todo .top{display:flex;justify-content:space-between;align-items:flex-start;min-height:28px;font-size:12px;font-weight:500;color:var(--ink2)}
+.todo .due{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:99px;background:rgba(255,255,255,.55);font-weight:600}
 .todo .top em{font-style:normal;color:rgba(5,10,10,.45)}
 .todo{cursor:pointer}
 .tool{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#fff;border:.6px solid #fff;box-shadow:0 1px 4px rgba(40,39,51,.12);transition:transform .2s var(--ease)}
@@ -99,7 +100,8 @@ main{min-width:0;padding:34px 40px 140px}
 .cs .c .by{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;margin-bottom:4px}
 img.av{object-fit:cover}
 .todo h3{margin-top:14px;font-size:20px;font-weight:600;line-height:1.4;letter-spacing:-.4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.todo .bt{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--ink2)}
+.todo .bt{display:flex;align-items:center;gap:6px;width:100%;padding:6px 8px;margin:0 -8px -4px;border-radius:10px;font-size:12px;font-weight:500;color:var(--ink2);text-align:left}
+.todo .bt:hover{background:rgba(255,255,255,.5)}
 .todo .bt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .todo .bt i{font-style:normal;white-space:nowrap}
 .todo .bt svg{margin-left:auto}
@@ -159,10 +161,12 @@ img.av{object-fit:cover}
 .brief .story{margin-top:12px;display:grid;gap:9px}
 .brief .story p{font-size:14.5px;line-height:1.75;color:var(--ink2)}
 .sheet h5 em{margin-left:6px;font-style:normal;font-size:12px;font-weight:500;color:var(--dim)}
-.groups{display:grid;gap:26px}
-.gp h6{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--ink2)}
-.gp h6 i{display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border-radius:8px;background:var(--c,#c7d3e4);color:var(--ink);font-style:normal;font-size:11.5px;font-weight:700}
-.gp h6 b{font-weight:500;font-size:12px;color:var(--dim2)}
+.groups{display:grid;gap:22px}
+.gp{padding-top:4px}
+.gp h6{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:21px;font-weight:700;letter-spacing:-.4px;color:var(--ink)}
+.gp h6 i{display:grid;place-items:center;min-width:32px;height:32px;padding:0 10px;border-radius:10px;background:var(--c,#c7d3e4);color:var(--ink);font-style:normal;font-size:13px;font-weight:700}
+.gp h6 b{margin-left:auto;font-weight:500;font-size:12.5px;color:var(--dim2)}
+.gp+.gp{border-top:1px solid #cfd8ea;padding-top:22px}
 .iss{padding:18px 20px;border-radius:18px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(40,39,51,.04)}
 .iss+.iss{margin-top:10px}
 /* 쟁점 문장 — 이 카드에서 가장 크고 진하게, 왼쪽에 색 막대 */
@@ -172,7 +176,11 @@ img.av{object-fit:cover}
 .qm{margin-top:5px;display:flex;gap:10px;font-size:11.5px;color:var(--dim2)}
 .qm time{font-variant-numeric:tabular-nums}
 .flow{margin-top:12px;display:grid;gap:8px;padding-left:17px}
-.flow p{font-size:14px;line-height:1.75;color:var(--ink2)}
+.flow p{display:flex;gap:10px;align-items:baseline;font-size:14px;line-height:1.75;color:var(--ink2);cursor:pointer;padding:4px 8px;margin:-4px -8px;border-radius:10px}
+.flow p:hover{background:rgba(255,255,255,.7)}
+.flow p span{flex:1}
+.flow p time{font-size:11px;color:var(--dim2);font-variant-numeric:tabular-nums;opacity:0;transition:opacity .15s}
+.flow p:hover time{opacity:1}
 .res{margin-top:14px;padding:12px 14px;border-radius:14px;background:#fff;display:grid;gap:3px;cursor:pointer;box-shadow:0 0 0 1px rgba(40,39,51,.04)}
 .res:hover{box-shadow:0 0 0 1px rgba(40,39,51,.1)}
 .res em{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.06em}
@@ -382,10 +390,34 @@ const I = {
 };
 
 /* ================= 1. 데이터 ================= */
-const D = { index: [], projects: [], maps: {}, trans: {}, alias: [] };
-/* 전사문에 나온 실제 이름은 화면에 쓰지 않는다 — 불러올 때 바꿔 둔다 (data/people.json) */
-const alias = o => { if (!D.alias.length) return o;
-  let t = JSON.stringify(o); D.alias.forEach(([re, to]) => { t = t.replace(re, to); }); return JSON.parse(t); };
+const D = { index: [], projects: [], maps: {}, trans: {}, alias: null };
+/* 이름을 바꾸면 조사도 새 이름에 맞춰 고친다 (일여는 → 하린은) */
+const reEsc = escRe;
+const JOSA = [['으로', '로'], ['이랑', '랑'], ['이라', '라'], ['이에요', '예요'], ['이었', '였'], ['은', '는'], ['이', '가'], ['을', '를'], ['과', '와'], ['아', '야']];
+/* 받침이 있으면 은·이·을·으로. 영문으로 끝나면 읽을 때 모음으로 끝나는 쪽이 자연스럽다(Project → 프로젝트) */
+const hasJong = s => { const c = s.charCodeAt(s.length - 1);
+  return c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 !== 0 : false; };
+function aliasRules(cfg) {
+  const keep = (cfg.keep || []).slice().sort((a, b) => b.length - a.length);
+  const pairs = Object.entries(cfg.aliases || {}).sort((a, b) => b[0].length - a[0].length);
+  const tail = JOSA.flat().sort((a, b) => b.length - a.length).map(reEsc).join('|');
+  return { keep, subs: pairs.map(([from, to]) => [new RegExp(reEsc(from) + '(' + tail + ')?', 'g'), to]) };
+}
+function applyAlias(text, R) {
+  if (!R || !R.subs.length) return text;
+  const box = [];
+  R.keep.forEach(k => { text = text.split(k).join('\u0000' + (box.push(k) - 1) + '\u0000'); });
+  R.subs.forEach(([re, to]) => {
+    text = text.replace(re, (m, j) => {
+      if (!j) return to;
+      const pair = JOSA.find(p => p.includes(j));
+      return to + (pair ? pair[hasJong(to) ? 0 : 1] : j);
+    });
+  });
+  return text.replace(/\u0000(\d+)\u0000/g, (m, i) => box[+i]);
+}
+/* 전사문에 나온 실제 이름·브랜드는 화면에 쓰지 않는다 — 불러올 때 바꿔 둔다 (data/people.json) */
+const alias = o => (D.alias ? JSON.parse(applyAlias(JSON.stringify(o), D.alias)) : o);
 async function getMap(m) {
   if (!D.maps[m.id]) D.maps[m.id] = fetch(enc(m.map), NOCACHE).then(r => r.json()).then(alias);
   return D.maps[m.id];
@@ -411,11 +443,7 @@ function putCmts(id, key, cs) {
 }
 
 async function boot() {
-  try {
-    const a = (await (await fetch('data/people.json', NOCACHE)).json()).aliases || {};
-    D.alias = Object.entries(a).sort((x, y) => y[0].length - x[0].length)
-      .map(([k, v]) => [new RegExp(escRe(k), 'g'), v]);
-  } catch {}
+  try { D.alias = aliasRules(await (await fetch('data/people.json', NOCACHE)).json()); } catch {}
   try { D.index = (await (await fetch('data/index.json', NOCACHE)).json()).meetings || []; } catch {}
   try { D.projects = (await (await fetch('data/projects.json', NOCACHE)).json()).projects || []; } catch {}
   D.projects = D.projects.map(p => ({ ...p, meetings: p.meetings.map(meetingOf).filter(Boolean).map(m => m.id) }));
@@ -548,16 +576,15 @@ async function home(p, page) {
   const myTeam = (p.teams || []).find(t => t.members.includes(p.me));
   let cur = store.get('mn.group.' + p.id + mode);
   if (!groups.some(g => g.key === cur)) cur = mode === 'team' && myTeam ? myTeam.name : groups[0].key;
-  const badge = d => mode === 'my' ? (d.owner === p.me ? '나' : d.owner === '전원' ? '전원' : (teamsOf(p, d.owner)[0] || {}).name || d.owner)
-    : ((p.teams || []).find(t => d.owner === t.part) || {}).name || d.owner || '담당 미정';
   const draw = () => {
     const g = groups.find(x => x.key === cur), list = g.list;
     $('#tn').textContent = list.length;
     $('#ow').innerHTML = groups.length > 1 ? groups.map(x => `<button class="${x.key === cur ? 'on' : ''}" data-w="${esc(x.key)}">${x.chip}</button>`).join('') : '';
-    $('#todos').innerHTML = list.map((d, k) => todoCard(d, k, badge(d))).join('') || '<div class="empty">정리된 할 일이 없어요</div>';
+    $('#todos').innerHTML = list.map((d, k) => todoCard(d, k)).join('') || '<div class="empty">정리된 할 일이 없어요</div>';
     $('#todos').onclick = e => {
       if (e.target.closest('.tool')) return;                 /* 로고는 도구를 연다 */
-      const c = e.target.closest('[data-k]'); if (!c) return; const d = list[+c.dataset.k]; openEvidence(d.m.id, d.ev, d.who, d.t);
+      const c = e.target.closest('[data-k]'); if (!c) return;
+      const d = list[+c.dataset.k]; openEvidence(d.m.id, d.ev, d.who, d.t);   /* 이 할 일이 나온 자리로 */
     };
   };
   $('#ow').onclick = e => { const b = e.target.closest('[data-w]'); if (!b) return; cur = b.dataset.w; store.set('mn.group.' + p.id + mode, cur); draw();
@@ -592,12 +619,13 @@ async function home(p, page) {
   }
   bindOpens();
 }
-const todoCard = (d, k, badge) => { const t = toolOf(d);
-  return `<div class="todo tap g${k % 6}" data-k="${k}" role="button" tabindex="0">
-  <div><div class="top"><span class="own ${d.owner ? '' : 'none'}">${esc(badge)}</span>
-    ${t ? `<a class="tool" href="${t.url}" target="_blank" rel="noopener" title="${esc(t.name)} 열기">${t.logo}</a>` : `<em>${esc(d.t)}</em>`}</div>
+/* 좌상단 마감 기한 · 우상단 업무 도구 · 좌하단은 이 할 일이 나온 자리(눌러서 원문으로) */
+const todoCard = (d, k) => { const t = toolOf(d);
+  return `<div class="todo tap g${k % 6}" data-k="${k}">
+  <div><div class="top"><span class="due">${esc(d.due || '다음 회의까지')}</span>
+    ${t ? `<a class="tool" href="${t.url}" target="_blank" rel="noopener" title="${esc(t.name)} 열기">${t.logo}</a>` : ''}</div>
   <h3>${esc(d.text)}</h3></div>
-  <div class="bt"><span>${esc(titleOf(d.m))}</span><i>· ${esc(d.t)}</i>${I.arrow}</div></div>`; };
+  <button class="bt" data-src="${k}" title="이 말이 나온 자리로"><span>${esc(titleOf(d.m))}</span><i>· ${esc(d.t)}</i>${I.arrow}</button></div>`; };
 const meetRow = (m, map, isNew) => `<a class="row tap" href="#/m/${esc(m.id)}"><div class="tx">
   <div class="meta">${esc(fdate(m.date))}<i>•</i>${esc(dur(m.duration))}${(map && map.brief && map.brief.kind || []).map(k => `<i>· ${esc(k)}</i>`).join('')}</div>
   <h3>${esc(titleOf(m))}</h3>${map && map.brief && map.brief.line ? `<p>${esc(map.brief.line)}</p>` : ''}</div>${isNew ? '<span class="nw">new</span>' : ''}</a>`;
@@ -687,7 +715,7 @@ function summaryHTML(map) {
     <hr>
     <h5>논의 쟁점<em>${groups.length}</em></h5>
     <div class="groups">${groups.map((g, gi) => `<section class="gp" style="--c:${TAGC[gi % TAGC.length]}">
-      <h6><i>${String(gi + 1).padStart(2, '0')}</i>${esc(g.key)}<b>${g.list.length}</b></h6>
+      <h6><i>${String(gi + 1).padStart(2, '0')}</i>${esc(g.key)}<b>논의 ${g.list.length}</b></h6>
       ${g.list.map(sec => issueHTML(sec)).join('')}</section>`).join('')}</div>
     ${todos.length ? `<hr><h5>다음 해야 할 일</h5><div class="tlist">${todos.map((d, k) => `<button data-td="${k}"><span>${esc(d.text)}</span>
       <em class="own ${d.owner ? '' : 'none'}">${esc(d.owner || '담당 미정')}</em><time>${esc(d.t)}</time></button>`).join('')}</div>` : ''}
@@ -697,20 +725,31 @@ function summaryHTML(map) {
 /* 논의 한 개 — 쟁점 문장을 앞세우고, 오간 이야기는 문장으로, 결론은 따로 */
 function issueHTML(s) {
   const iss = s.nodes.find(n => n.kind === 'issue'), r = s.resolution || {};
-  const nc = cmts(M.m.id, s.no + '-res').length;
+  const nc = cmts(M.m.id, s.no + '-res').length;   /* 의견 달기는 홈의 팀 피드에서 */
   return `<article class="iss" data-no="${s.no}">
     <div class="qq" data-sec="${s.no}"><h4>${esc(iss ? iss.title : s.title)}</h4>
       <div class="qm"><time>${esc(s.t)}~${esc(s.t1)}</time><span>${esc(s.part)}</span></div></div>
-    ${(s.flow || []).length ? `<div class="flow">${s.flow.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : ''}
-    <div class="res" data-sec="${s.no}"><em class="st ${r.kind}">${KO[r.kind] || ''}</em><b>${esc(r.title || '결론 없이 넘어갔어요')}</b></div>
-    <div class="fx"><button class="cmb" data-c="${s.no}">${I.cmt}${nc ? `의견 ${nc}` : '의견 남기기'}</button></div>
+    ${(s.flow || []).length ? `<div class="flow">${s.flow.map(x => typeof x === 'string'
+      ? `<p>${esc(x)}</p>`
+      : `<p data-at="${esc(x.t)}" data-no="${s.no}"><span>${esc(x.text)}</span><time>${esc(x.t)}</time></p>`).join('')}</div>` : ''}
+    <div class="res" data-ev="${s.no}"><em class="st ${r.kind}">${KO[r.kind] || ''}</em><b>${esc(r.title || '결론 없이 넘어갔어요')}</b></div>
+    ${nc ? `<div class="fx"><span class="cmb">${I.cmt}홈에 남긴 의견 ${nc}</span></div>` : ''}
   </article>`;
 }
 function bindSummary(map) {
   const body = $('#mbody');
   body.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => pickSection(map.sections.find(s => s.no === +b.dataset.sec), true));
+  body.querySelectorAll('[data-at]').forEach(b => b.onclick = () => {      /* 이 문장이 오간 자리 */
+    const sec = map.sections.find(s => s.no === +b.dataset.no);
+    pickSection(sec, true, secs(b.dataset.at));
+  });
+  body.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => {      /* 결론이 나온 말 */
+    const sec = map.sections.find(s => s.no === +b.dataset.ev), r = sec.resolution || {};
+    const from = (r.from || []).map(id => sec.nodes.find(n => n.id === id)).filter(Boolean);
+    const n = from[from.length - 1];
+    n && n.ev ? showEv(n.ev, n.who, n.t) : pickSection(sec, true, secs(r.t));
+  });
   body.querySelectorAll('[data-td]').forEach(b => b.onclick = () => { const d = map.todos[+b.dataset.td]; showEv(d.ev, d.who, d.t); });
-  body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => commentSheet(M.m, map.sections.find(s => s.no === +b.dataset.c), () => meetingTab('sum')));
 }
 
 /* ---------- 원문 ---------- */
@@ -753,15 +792,19 @@ function clearMarks() {
 }
 const narrow = () => matchMedia('(max-width:860px)').matches;
 /* 쟁점을 누르면 그 논의 구간이 원문에서 칠해진다 */
-function pickSection(s, scroll) {
+function pickSection(s, scroll, at) {
   if (!s) return;
-  if (narrow() && scroll && !$('.mgrid.solo')) { go(`#/m/${M.m.id}/src`); setTimeout(() => pickSection(s, true), 80); return; }
+  if (narrow() && scroll && !$('.mgrid.solo')) { go(`#/m/${M.m.id}/src`); setTimeout(() => pickSection(s, true, at), 80); return; }
   clearMarks();
   const a = secs(s.t), b = secs(s.t1), box = $('#segs');
-  let first = null;
-  M.segs.forEach((g, i) => { if (g.t >= a && g.t < b) { const el = box.children[i]; el.classList.add('src'); first = first || el; } });
+  let first = null, want = null;
+  M.segs.forEach((g, i) => {
+    if (g.t >= a && g.t < b) { const el = box.children[i]; el.classList.add('src'); first = first || el;
+      if (at != null && g.t <= at) want = el; }
+  });
   box.classList.add('dim');
-  if (first) first.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  const go_ = want || first;
+  if (go_) go_.scrollIntoView({ block: at != null ? 'center' : 'start', behavior: 'smooth' });
 }
 /* 노드·할 일을 누르면 그 사람이 한 말의 그 구절만 짚는다 */
 function showEv(ev, who, t) {

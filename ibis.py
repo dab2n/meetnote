@@ -108,11 +108,12 @@ SCHEMA = {
                 "type": "object",
                 "properties": {
                     "text": {"type": "string", "description": "할 일. '~하기'로 끝나는 명사형, 8~40자"},
+                    "due": {"type": "string", "description": "언제까지. 회의에서 말한 시점 그대로. 없으면 '다음 회의까지'"},
                     "owner": {"type": "string", "description": "담당자. 원문에서 분명할 때만. 아니면 빈 문자열."},
                     "who": {"type": "string"}, "t": {"type": "string"},
                     "ev": {"type": "string", "description": "who가 말한 원문 구절 그대로"},
                 },
-                "required": ["text", "owner", "who", "t", "ev"],
+                "required": ["text", "due", "owner", "who", "t", "ev"],
                 "additionalProperties": False,
             },
         },
@@ -179,7 +180,7 @@ JSON_ONLY = """
    "resolution":{"kind","title","who","t","at":[시작,끝],"from":[id]}}],
  "highlights":[{"title","quote","t","t1"}],
  "carry":[{"label","part","note"}],
- "todos":[{"text":"~하기","owner":"담당자(불분명하면 빈 문자열)","who","t","ev"}]}
+ "todos":[{"text":"~하기","due":"언제까지(없으면 다음 회의까지)","owner":"담당자(불분명하면 빈 문자열)","who","t","ev"}]}
 kind 는 issue·position·pro·con·concern·condition·open 중 하나,
 resolution.kind 는 decision·conditional·open 중 하나. 시각은 "mm:ss" 또는 "h:mm:ss"."""
 
@@ -379,12 +380,14 @@ ENRICH = """너는 이미 만들어진 회의 정리 맵을 읽고, 사람이 �
 같은 카테고리에 드는 논의에는 같은 이름을 쓴다.
 
 ## 3. flow — 논의마다 '오간 이야기'를 문장으로 (2~4문장)
+문장마다 그 이야기가 오간 시각(t)을 함께 단다. 그 논의 구간 안의 시각이어야 한다 ("mm:ss" 또는 "h:mm:ss").
+읽는 사람이 그 문장을 눌러 원문의 그 자리로 갈 수 있게 하는 값이다.
 누가 무엇을 주장했고, 무엇이 부딪혔고, 어떤 근거·조건이 붙어 결론으로 갔는지를 이야기로 쓴다.
 각 문장 40~140자. 목록·기호·표를 쓰지 않는다. 노드 종류 이름(주장·반론 같은 말)을 그대로 나열하지 않는다.
 수치나 구체적인 말이 맵에 있으면 살린다. 결론 문장은 다시 쓰지 않는다 — 결론에 이르기까지를 쓴다.
 
 출력은 JSON 하나뿐이다. 설명을 붙이지 마라.
-{"story": ["문장", ...], "sections": [{"no": 1, "group": "카테고리", "flow": ["문장", ...]}, ...]}
+{"story": ["문장", ...], "sections": [{"no": 1, "group": "카테고리", "flow": [{"text": "문장", "t": "mm:ss"}, ...]}, ...]}
 맵에 있는 모든 논의 번호(no)를 빠짐없이 담는다."""
 
 
@@ -401,7 +404,20 @@ def enrich(m: dict, segs: list[dict], model: str = "opus") -> dict:
     for sec in m["sections"]:
         got = by.get(sec["no"]) or {}
         sec["group"] = (got.get("group") or "").strip()
-        sec["flow"] = [x.strip() for x in (got.get("flow") or []) if isinstance(x, str) and x.strip()]
+        lo, hi = secs(sec["t"]), secs(sec["t1"])
+        flow = []
+        for x in got.get("flow") or []:
+            if isinstance(x, str):
+                x = {"text": x, "t": sec["t"]}
+            txt = (x.get("text") or "").strip()
+            if not txt:
+                continue
+            try:
+                t = secs(x.get("t") or sec["t"])
+            except Exception:
+                t = lo
+            flow.append({"text": txt, "t": mmss(min(max(t, lo), hi))})   # 구간 밖이면 끌어다 붙인다
+        sec["flow"] = flow
     return m
 
 
@@ -670,7 +686,8 @@ def verify(raw: dict, segs: list[dict], meta: dict) -> tuple[dict, list[str]]:
         i = locate(d.get("ev", ""), d.get("who", ""), segs)
         if i is None and d.get("ev"):
             warn.append(f"[할 일] {d['text'][:16]} 근거 구절을 {d.get('who')}의 발언에서 못 찾음")
-        todos.append({"text": d["text"].strip(), "owner": (d.get("owner") or "").strip(),
+        todos.append({"text": d["text"].strip(), "due": (d.get("due") or "").strip() or "다음 회의까지",
+                      "owner": (d.get("owner") or "").strip(),
                       "who": d.get("who", ""), "ev": d.get("ev", ""),
                       "t": mmss(segs[i]["t"] if i is not None else snap(d.get("t") or "0:00", starts))})
 
@@ -830,8 +847,11 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
             if f and not 2 <= len(f) <= 4:
                 v.append(f"논의 {s_.get('no')} 과정(flow)이 {len(f)}문장이다. 2~4문장이어야 한다")
             for x in f:
-                if not 30 <= len(x) <= 160:
-                    v.append(f"논의 {s_.get('no')} 과정 문장이 {len(x)}자다. 30~160자여야 한다")
+                txt = x.get("text", "") if isinstance(x, dict) else str(x)
+                if not 30 <= len(txt) <= 160:
+                    v.append(f"논의 {s_.get('no')} 과정 문장이 {len(txt)}자다. 30~160자여야 한다")
+                if isinstance(x, dict) and not (secs(s_["t"]) <= secs(x.get("t") or "0:00") <= secs(s_["t1"])):
+                    v.append(f"논의 {s_.get('no')} 과정 문장의 시각이 논의 구간 밖이다 — {x.get('t')}")
 
     todos = m.get("todos") or []                       # SPEC 8절 할 일
     if len(todos) > 10:
@@ -840,6 +860,8 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
         t = (d.get("text") or "").strip()
         if not 8 <= len(t) <= 40:
             v.append(f"[할 일 {i}] 문구가 {len(t)}자다. 8~40자여야 한다 — “{t[:20]}”")
+        if not (d.get("due") or "").strip():
+            v.append(f"[할 일 {i}] 언제까지(due)가 비었다. 날짜가 없으면 '다음 회의까지'")
         if not t.endswith("기"):
             v.append(f"[할 일 {i}] ‘~하기’로 끝나는 명사형이어야 한다 — “{t[:24]}”")
         if segs:

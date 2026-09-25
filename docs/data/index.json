@@ -9,6 +9,14 @@
       "map": "data/새로운 노트 (3).ibis.json"
     },
     {
+      "id": "새로운 노트 (6)",
+      "title": "35기 부서장 인수인계 — 하반기 SNS 운영과 신입 선발 준비",
+      "date": "2026.9.22",
+      "duration": "26:17",
+      "sections": 6,
+      "map": "data/새로운 노트 (6).ibis.json"
+    },
+    {
       "id": "2026-09-08-ai-interview",
       "title": "AI 회의록 인터뷰",
       "date": "2026.09.08",
@@ -20,7 +28,7 @@
       "id": "2026-06-15",
       "title": "NEWTON UX·ID·BX 통합 회의",
       "date": "2026.06.15",
-      "duration": "82:50",
+      "duration": "1:22:34",
       "sections": 14,
       "map": "data/2026-06-15.ibis.json"
     },

@@ -3,30 +3,30 @@
     {
       "id": "newton",
       "name": "NEWTON",
-      "me": "다빈",
+      "me": "시혁",
       "teams": [
         {
           "name": "Team UX",
           "part": "UX",
           "members": [
-            "다빈",
-            "일여"
+            "시혁",
+            "하린"
           ]
         },
         {
           "name": "무적 ID",
           "part": "ID",
           "members": [
-            "시헌",
-            "소진"
+            "예나",
+            "소현"
           ]
         }
       ],
       "avatars": {
-        "다빈": "assets/av-glasses.png",
-        "일여": "assets/av-red.png",
-        "시헌": "assets/av-cap.png",
-        "소진": "assets/av-dog.png"
+        "시혁": "assets/av-glasses.png",
+        "하린": "assets/av-red.png",
+        "예나": "assets/av-cap.png",
+        "소현": "assets/av-dog.png"
       },
       "meetings": [
         "새로운 노트 (3)",

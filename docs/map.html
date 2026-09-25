@@ -510,6 +510,9 @@ b,h2,h3,h4,h5{font-weight:600}
 
 /* 왼쪽 패널 */
 .rail{background:var(--bg);border-right:1px solid #eef0f4}
+/* 관계 맵에서는 왼쪽에 원문만 둔다 (확정·미결 목록은 홈의 팀 피드에서 본다) */
+.rail{grid-template-rows:minmax(0,1fr)}
+.digest,.rz-y{display:none}
 .rz{background:var(--bg)} .rz-y{background:var(--bg);border-color:#eef0f4} .rz:before{background:#d7dff1}
 .chip{height:30px;padding:0 13px;border:0;background:none;color:var(--dim2);font-weight:500;font-size:12.5px}
 .chip b{font-weight:600;color:var(--dim2)}
@@ -682,21 +685,23 @@ body.embed .brand,body.embed .file,body.embed .top .sp,body.embed .seg2,body.emb
 body.embed .tbtn{height:32px;background:transparent}
 body.embed .tbtn:hover{background:var(--chip)}
 body.embed .rail{border-right:1px solid #eef0f4}
+body.norail main{grid-template-columns:minmax(0,1fr)}
+body.norail .rail,body.norail .rz-x{display:none}
 @media (max-width:900px){body.embed .top{left:14px;bottom:62px}}
 </style>
 </head>
 <body class="idle noaudio">
-<script>if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');</script>
+<script>{const q=new URLSearchParams(location.search); if(q.has('embed'))document.body.classList.add('embed'); if(q.has('norail'))document.body.classList.add('norail');}</script>
 
 <header class="top">
   <span class="brand">meetnote <i>· 회의 전개</i></span>
   <span class="file" id="fname"></span>
   <span class="sp"></span>
   <span class="seg2"><button data-view="map" class="on">맵</button><button data-view="cards">카드</button></span>
-  <span class="prog"><span class="track"><span class="fillp" id="fillp"></span></span><span id="pn">0 / 0</span></span>
-  <button class="tbtn only-run" id="pause">❚❚ 일시정지</button>
-  <button class="tbtn only-run" id="speed">2×</button>
-  <button class="tbtn only-run" id="replay">↻ 다시</button>
+  <span class="prog" hidden><span class="track"><span class="fillp" id="fillp"></span></span><span id="pn">0 / 0</span></span>
+  <button class="tbtn only-run" id="pause" hidden>❚❚ 일시정지</button>
+  <button class="tbtn only-run" id="speed" hidden>2×</button>
+  <button class="tbtn only-run" id="replay" hidden>↻ 다시</button>
   <button class="tbtn" id="rehearse" hidden>▶︎ 리허설</button>
   <button class="tbtn" id="opencfg" title="API 키">⚙︎</button>
   <button class="tbtn pri" id="newfile">＋ 파일</button>
@@ -743,7 +748,7 @@ body.embed .rail{border-right:1px solid #eef0f4}
       <div class="blog" id="blog"></div>
       <p class="s" id="bs"></p>
     </div>
-    <div class="lodtip">논의 흐름 보기 · 확대하면 안쪽 노드가 열립니다</div>
+    <div class="lodtip">논의 카드 · 확대하면 안쪽 내용이 열립니다</div>
     <div class="livebar" id="livebar"></div>
     <div class="zoom">
       <button id="zout">−</button><span class="lv" id="zlv">100%</span><button id="zin">＋</button>
@@ -2181,12 +2186,20 @@ async function meetings() {
 meetings();
 
 const enc = u => u.split('/').map(encodeURIComponent).join('/');
+/* 전사문에 나온 실제 이름은 화면에 쓰지 않는다 (data/people.json) */
+let ALIAS = [];
+(async () => { try {
+  const a = (await (await fetch('data/people.json', NOCACHE)).json()).aliases || {};
+  ALIAS = Object.entries(a).sort((x, y) => y[0].length - x[0].length).map(([k, v]) => [new RegExp(reEsc(k), 'g'), v]);
+} catch {} })();
+const alias = o => { if (!ALIAS.length) return o;
+  let t = JSON.stringify(o); ALIAS.forEach(([re, to]) => { t = t.replace(re, to); }); return JSON.parse(t); };
 async function load(url) {
   const r = await fetch(enc(url), NOCACHE);
   if (!r.ok) throw new Error(`${r.status} · ${url}`);
-  const map = await r.json();
+  const map = alias(await r.json());
   const segs = map.segments
-    || (await (await fetch(enc(map.meeting.transcript), NOCACHE)).json()).segments;
+    || alias((await (await fetch(enc(map.meeting.transcript), NOCACHE)).json()).segments);
   start(segs, map, map.meeting.title + ' · ' + map.meeting.date, map.meeting.audio);
 }
 /* 클로바노트·일부 도구는 UTF-16으로 떨어뜨린다. BOM을 보고 골라 읽는다. */
@@ -2266,9 +2279,13 @@ function mount(map, segs, name, audioSrc) {
     else if (key()) makeMap();           /* 키가 있으면 바로 만든다 */
     return;
   }
-  fit(true);
-  toast(map.headline, 4200);
-  setTimeout(play, 900);
+  /* 시간순으로 하나씩 등장하던 연출은 걷어냈다 — 논의 카드가 한꺼번에 보이고,
+     확대하면 그 안의 노드가 열린다 */
+  step = REVEAL.length;
+  NODES.forEach(n => n.dom.classList.add('in'));
+  FRAMES.forEach(f => f.dom.classList.add('in'));
+  EDGES.forEach(e => { e.path.classList.add('on'); if (e.text) e.text.classList.add('on'); });
+  fit(false);
 }
 
 /* ================= 13.5 맵 만들기 화면 ================= */

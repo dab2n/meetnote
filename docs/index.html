@@ -929,6 +929,7 @@ addEventListener('message', e => {
     }, 360);
   }
   if (d.mn === 'follow') follow(d.on);
+  if (d.mn === 'view' && d.open) (d.frames || []).forEach(no => utAct('zoom' + no, `관계 맵에서 논의 ${no} 확대`));
   if (d.mn === 'rate') { FRATE = d.v; if (AU) AU.playbackRate = d.v; }
   if (d.mn === 'seek' && FOLLOW) { if (AU && AU.duration) AU.currentTime = d.t; else FSKIP = d.t; }
 });

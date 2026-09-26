@@ -421,9 +421,11 @@ body.nomap .legend,body.nomap .zoom,body.nomap .lodtip{display:none}
   box-shadow:0 4px 18px rgba(20,22,28,.24);max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body.making .livebar{display:block}
 body.making .legend{display:none}
-.lodtip{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;padding:6px 13px;
-  border-radius:99px;background:var(--panel);border:1px solid var(--line);font-size:11.5px;font-weight:650;
-  color:var(--dim);opacity:0;transition:opacity .3s;pointer-events:none}
+.lodtip{position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:8;
+  display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:99px;
+  background:var(--dark);border:0;font-size:13.5px;font-weight:600;color:#fff;
+  box-shadow:0 8px 24px rgba(40,39,51,.22);opacity:0;transition:opacity .3s;pointer-events:none}
+.lodtip b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.18);font-size:13px}
 #cv.lod~.lodtip{opacity:1}
 
 /* ---------- 드롭존 ---------- */
@@ -778,7 +780,7 @@ body.norail .rail,body.norail .rz-x{display:none}
       <div class="blog" id="blog"></div>
       <p class="s" id="bs"></p>
     </div>
-    <div class="lodtip">논의 카드 · 확대하면 안쪽 내용이 열립니다</div>
+    <div class="lodtip"><b>＋</b>카드를 확대하면 그 논의의 내용이 열립니다</div>
     <div class="livebar" id="livebar"></div>
     <button class="follow" id="follow">▶ 실시간 따라가기</button>
     <button class="follow rate" id="frate" hidden>2×</button>
@@ -2104,11 +2106,30 @@ function hugs() {
   });
 }
 
+let SEEN = 0;
+/* 지금 화면에 크게 들어온 논의를 부모에게 알린다 (사용성 테스트에서 '확대해 봤는가' 판정) */
+function tellView() {
+  clearTimeout(SEEN);
+  SEEN = setTimeout(() => {
+    if (!FRAMES.length) return;
+    const r = vp.getBoundingClientRect(), on = [];
+    FRAMES.forEach(f => {
+      const x0 = (f.x + OX) * view.z + view.x, y0 = (f.y + OY) * view.z + view.y;
+      const x1 = x0 + f.w * view.z, y1 = y0 + f.h * view.z;
+      const vx = Math.max(0, Math.min(x1, r.width) - Math.max(x0, 0));
+      const vy = Math.max(0, Math.min(y1, r.height) - Math.max(y0, 0));
+      if (vx > r.width * .35 && vy > r.height * .3) on.push(f.sec.no);
+    });
+    try { parent.postMessage({ mn: 'view', z: view.z, open: view.z >= LOD, frames: on }, '*'); } catch {}
+  }, 250);
+}
+
 function apply() {
   cv.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
   $('#zlv').textContent = Math.round(view.z * 100) + '%';
   cv.classList.toggle('far', view.z < .52 && view.z >= LOD);
   cv.classList.toggle('lod', view.z < LOD);
+  tellView();
 }
 function zoomAt(cx, cy, nz) {
   nz = Math.min(1.6, Math.max(.06, nz));
@@ -2520,9 +2541,8 @@ function mount(map, segs, name, audioSrc) {
   step = REVEAL.length;
   NODES.forEach(n => n.dom.classList.add('in'));
   EDGES.forEach(e => { e.path.classList.add('on'); if (e.text) e.text.classList.add('on'); });
+  FRAMES.forEach(f => { f.dom.classList.add('in', 'wrote'); if (f.neck) f.neck.classList.add('on'); });
   fit(false);
-  sprout(() => { cv.style.transition = 'transform .7s cubic-bezier(.3,0,.2,1)';   /* 다 만들면 맨 위로 */
-    fit(false); setTimeout(() => { cv.style.transition = ''; }, 760); });
 }
 
 /* ================= 13.5 맵 만들기 화면 ================= */

@@ -18,28 +18,28 @@
       rule: "'2주차 중간 회의' 요약 화면 도달 시 자동 성공",
     },
     {
-      id: 2, title: 'Team UX의 내일까지 할 일 찾기',
+      id: 2, title: "'무릎·발목 타깃 근거'의 두 주장과 결론 찾기",
+      scenario: "회의록에서 '제품이 무릎과 발목을\n타깃하는 근거'에 대해 나왔던\n두 가지 주장을 찾고,\n결론을 말해주세요.",
+      path: ['home_my', 'list_new', 'meeting_sum', 'meeting_map'],
+      reach: { meeting_map: '관계 맵 도달', zoom9: '논의 9 확대해 내용 확인' },
+      success: ['zoom9'],
+      rule: '관계 맵에서 논의 9(무릎·발목 타깃의 근거)를 확대해 내용을 열면 자동 성공 (두 주장·결론 설명은 진행자 확인)',
+    },
+    {
+      id: 3, title: 'Team UX의 내일까지 할 일 찾기',
       scenario: '홈에서 Team UX가 해야 할 업무를 찾아주세요.',
       path: ['home_my', 'home_team', 'list_new'],
-      reach: { home_team: '팀 홈 도달', 'team-ux': 'Team UX 할 일 확인', 'ask-answer': 'AI가 답변' },
+      reach: { home_team: '팀 홈 도달', 'team-ux': 'Team UX 할 일 확인' },
       success: ['home_team'],
       rule: '팀 홈(Team UX 할 일) 도달 시 자동 성공',
     },
     {
-      id: 3, title: '미결 안건에 새로운 의견 추가',
+      id: 4, title: '미결 안건에 새로운 의견 추가',
       scenario: '회의에서 결론을 내리지 못한 안건에 대해\n좋은 아이디어가 떠올랐습니다.\n해당 안건을 찾아, 팀원들이 볼 수 있도록\n의견을 남겨 주세요.',
       path: ['home_my', 'home_team', 'meeting_sum'],
       reach: { home_team: '팀 홈 도달', 'comment-open': '의견창 열기' },
       success: ['comment'],
       rule: '미해결 안건에 의견 등록 시 자동 성공',
-    },
-    {
-      id: 4, title: '이번 주 금요일까지의 내 할 일 확인',
-      scenario: '이번 주에 해야 할 업무를 확인하려고 합니다.\n이번 주 금요일까지 본인이 완료해야 할 일을\n모두 찾아 말씀해 주세요.',
-      path: [],                                  /* AI 에게 묻는 것이 의도 — 화면을 옮겨 다니면 이탈 */
-      reach: { 'ask-open': 'AI 호출(물어보기 · ⌘K)', ask: 'AI에게 질문', 'ask-answer': 'AI가 답변', home_my: '나의 할 일 화면' },
-      success: ['ask-answer'],
-      rule: 'AI가 답하면 자동 성공 (말로 설명은 진행자 확인)',
     },
   ];
 

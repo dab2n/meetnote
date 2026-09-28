@@ -237,63 +237,17 @@ body.view-cards .stage{display:none}
 #cv.lod path:not(.e-flow),#cv.lod text{opacity:0!important}
 #cv.lod .frame{background:#fff;border-color:#d3d4d9}
 
-.node{position:absolute;width:228px;padding:11px 13px;border-radius:14px;background:var(--panel);
-  border:1.5px solid var(--line);cursor:pointer;opacity:0;transform:scale(.94);
-  transition:opacity .3s,transform .3s,box-shadow .18s}
+.node{position:absolute;cursor:pointer;opacity:0;transform:scale(.94);
+  transition:opacity .3s,transform .3s,filter .18s}
 .node.in{opacity:1;transform:none}
-.node:hover{box-shadow:0 3px 14px rgba(20,22,28,.14)}
-.node .k{font-size:9.5px;font-weight:800;letter-spacing:.07em;margin-bottom:4px;color:var(--dim)}
-.node h4{font-size:13.5px;font-weight:750;line-height:1.45;letter-spacing:-.01em}
-.node p{margin-top:5px;font-size:11.5px;line-height:1.55;color:var(--ink2);
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.node .m{margin-top:8px;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)}
-.node .m .d{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;
-  font-size:9px;font-weight:750;color:#fff;background:var(--c,#9aa0a8)}
-
-.node.issue{width:252px;background:var(--ink);border-color:var(--ink);color:#fff}
-.node.issue .k{color:rgba(255,255,255,.55)}
-.node.issue h4{font-size:15px;font-weight:800}
-.node.issue p,.node.issue .m{color:rgba(255,255,255,.66)}
 /* 주장 + 그 근거·동의를 감싸는 테두리 — 포함관계 */
 .hug{position:absolute;border-radius:26px;background:rgba(75,135,233,.09);box-shadow:inset 0 0 0 2px rgba(75,135,233,.42);
   pointer-events:auto;cursor:pointer;transition:opacity .4s,height .28s cubic-bezier(.3,0,.2,1)}
 .hug:hover{background:rgba(75,135,233,.14)}
 #cv.lod .hug{opacity:0}
-.node.pro{width:196px;padding:10px 12px;background:#f7f9fe;box-shadow:inset 3px 0 0 var(--blue),0 0 0 1px rgba(40,39,51,.04)}
-.node.pro h4{font-size:12.5px;font-weight:500;color:var(--ink2)}
-.node.pro .k{color:var(--blue)}
-.node.pro p,.node.pro .m{display:none}
-/* 근거·동의는 주장 아래 '근거 n' 으로 접었다 폈다 한다 (기본은 펼침) */
-.node.pro{transition:opacity .28s,transform .28s cubic-bezier(.3,0,.2,1)}
 .node.pro.fold{opacity:0;transform:translateY(-10px) scale(.96);pointer-events:none}
-/* 주장은 한 단 위로 — 근거보다 크고 진하게 */
-.node.position{width:248px;padding:15px 17px;box-shadow:inset 3px 0 0 var(--blue),0 0 0 1px rgba(40,39,51,.06),0 6px 18px rgba(40,39,51,.07)}
-.node.position h4{font-size:15px;font-weight:700}
-.node.position{border-color:var(--blue);border-width:2px}
-.node.position .k{color:var(--blue)}
-.node.pro{border-color:var(--green)}
-.node.pro .k{color:var(--green)}
-.node.con{border-color:var(--red);border-style:dashed}
-.node.con .k{color:var(--red)}
-.node.concern{border-color:#b8564a;border-style:dotted}
-.node.concern .k{color:#b8564a}
-.node.condition{border-color:var(--amber);border-style:dashed}
-.node.condition .k{color:var(--amber)}
-.node.open{width:252px;border-color:#b6b9bf;border-style:dotted;background:#f4f4f6}
-.node.open .k{color:#7b7f87}
-.node.decision{width:252px;background:var(--gold);border-color:var(--gold);color:#fff;
-  box-shadow:0 4px 18px rgba(226,86,42,.24)}
-.node.decision .k{color:rgba(255,255,255,.72)}
-.node.decision h4{font-size:14.5px;font-weight:800}
-.node.decision p,.node.decision .m{color:rgba(255,255,255,.82)}
-.node.conditional{width:252px;border:2px dashed var(--gold);color:var(--gold)}
-.node.conditional h4{font-size:14.5px;font-weight:800;color:var(--gold)}
-.node.conditional .k{color:var(--gold)}
-.node.conditional p{color:#8a6042}
-.node.live{box-shadow:0 0 0 3px rgba(23,24,28,.12)}
-.node.sel{box-shadow:0 0 0 3px rgba(226,86,42,.34)}
-.node.playing{box-shadow:0 0 0 3px rgba(47,107,221,.28)}
-.far .node p,.far .node .m{display:none}
+.node.sel{outline:3px solid rgba(226,86,42,.34);outline-offset:2px;border-radius:20px}
+.node.playing{outline:3px solid rgba(47,107,221,.28);outline-offset:2px;border-radius:20px}
 
 /* ---------- 카드 뷰 ---------- */
 .cards{display:none;overflow:auto;padding:16px 16px 60px;background:var(--bg)}
@@ -610,36 +564,6 @@ b,h2,h3,h4,h5{font-weight:600}
 .fbig .dot{border-radius:50%}
 #cv.lod .frame{border-radius:64px;background:#fff;box-shadow:0 0 0 2px rgba(40,39,51,.04),0 24px 60px rgba(40,39,51,.08)}
 
-.node{width:232px;padding:14px 16px;border:0;border-radius:18px;background:#fff;box-shadow:var(--soft)}
-.node:hover{box-shadow:0 0 0 1px rgba(40,39,51,.06),0 10px 26px rgba(40,39,51,.12)}
-.node .k{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:0}
-.node .k:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
-.node h4{font-size:14px;font-weight:600;line-height:1.45;letter-spacing:-.2px}
-.node p{font-size:12px;color:var(--dim);-webkit-line-clamp:2}
-.node .m{font-size:11.5px;color:var(--dim2)}
-.node .m .d{width:18px;height:18px;font-size:9.5px;font-weight:600}
-.node.position,.node.pro,.node.con,.node.concern,.node.condition{border:0}
-.node.position .k{color:var(--blue)} .node.pro .k{color:var(--green)} .node.con .k{color:var(--red)}
-.node.concern .k{color:var(--violet)} .node.condition .k{color:var(--amber)}
-.node.con{box-shadow:inset 0 0 0 1.5px rgba(224,68,62,.22),var(--soft)}
-/* 쟁점 — 모바일의 짙은 버튼색 */
-.node.issue{width:256px;background:var(--dark);color:#fff;box-shadow:0 10px 26px rgba(34,42,42,.2)}
-.node.issue .k{color:rgba(255,255,255,.55)} .node.issue h4{font-size:15px;font-weight:600}
-.node.issue p,.node.issue .m{color:rgba(255,255,255,.6)}
-/* 결론 — 할 일 카드와 같은 방사형 그라데이션 */
-.node.decision{width:256px;border:0;color:var(--ink);background:radial-gradient(70% 90% at 50% 30%,#87d1ff 0%,#aedeff 50%,#d6ebff 100%);
-  box-shadow:0 10px 26px rgba(75,135,233,.22)}
-.node.decision .k{color:rgba(5,10,10,.55)} .node.decision h4{font-size:15px;font-weight:600}
-.node.decision p,.node.decision .m{color:rgba(5,10,10,.6)}
-.node.conditional{width:256px;border:0;color:var(--ink);background:radial-gradient(70% 90% at 50% 30%,#f1e1b8 0%,#f6ebcf 55%,#fbf5e6 100%);
-  box-shadow:inset 0 0 0 1.5px rgba(217,137,43,.35),0 8px 22px rgba(217,137,43,.14)}
-.node.conditional .k{color:var(--amber)} .node.conditional h4{font-size:15px;font-weight:600;color:var(--ink)}
-.node.conditional p{color:rgba(5,10,10,.6)}
-.node.open{width:256px;border:0;background:var(--card);box-shadow:inset 0 0 0 1.5px #d7dff1}
-.node.open .k{color:var(--gray)}
-.node.live{box-shadow:0 0 0 3px rgba(75,135,233,.18),var(--soft)}
-.node.sel{box-shadow:0 0 0 3px rgba(75,135,233,.45),0 10px 26px rgba(40,39,51,.12)}
-.node.playing{box-shadow:0 0 0 3px rgba(75,135,233,.3),var(--soft)}
 
 .legend,.zoom,.lodtip{border:0;border-radius:99px;background:rgba(250,250,250,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   box-shadow:0 0 12px rgba(0,0,0,.1)}
@@ -754,41 +678,39 @@ body.norail main{grid-template-columns:minmax(0,1fr)}
 body.norail .rail,body.norail .rz-x{display:none}
 
 /* =====================================================================
-   카드 · 보드 (피그마 3628:4302 쟁점 · 3633:4348 마무리 · 3633:4419 주장 · 3633:4336 섹션)
-   위계가 한눈에 보이게 : 쟁점은 검정, 주장은 아래에서 밝아지는 회청, 마무리는 하늘색
+   카드 · 보드 — 피그마 그대로 (3628:4302 쟁점 · 3633:4348 마무리 · 3633:4419 주장 · 3633:4336 섹션)
+   쟁점은 검정, 주장은 아래에서 밝아지는 회청, 마무리는 하늘색. 그 밖의 장식은 넣지 않는다.
    ===================================================================== */
-.node{width:279px;padding:18px 20px 20px;border:0;border-radius:20px;background:#fff;
-  box-shadow:none;filter:drop-shadow(0 2px 5px rgba(0,0,0,.12));
+.node{width:279px;padding:18px 20px 20px;border:0;border-radius:20px;box-shadow:none;
+  display:flex;align-items:center;gap:0;
+  background:radial-gradient(175.5px 71.1px at 145.2px 121.6px, #c5d1e8 3.37%, #dfe5f5 23.79%, #f5f8ff 100%);
+  background-size:100% 100%;
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.12));
   font-family:SFKR,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,sans-serif}
-.node:hover{box-shadow:none;filter:drop-shadow(0 6px 16px rgba(0,0,0,.18))}
-.node .k{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:16px;font-weight:600;letter-spacing:-.16px;line-height:1.6}
-.node .k:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.node h4{font-size:16px;font-weight:500;line-height:1.5;letter-spacing:-.16px;color:#2a2a2a}
-.node p{margin-top:4px;font-size:12px;font-weight:400;line-height:1.5;letter-spacing:-.12px;color:#525252;
+.node:hover{box-shadow:none;filter:drop-shadow(0 6px 16px rgba(0,0,0,.2))}
+.node .tx{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.node .who{width:20px;height:20px;border-radius:50%;object-fit:cover;margin-bottom:8px;flex:none}
+.node .content{display:flex;flex-direction:column;gap:8px}
+.node h4{font-size:16px;font-weight:600;line-height:1.4;letter-spacing:-.16px;color:#2a2a2a;word-break:break-word}
+.node p{font-size:12px;font-weight:400;line-height:1.5;letter-spacing:-.12px;color:#525252;word-break:break-word;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.node .who{display:grid;place-items:center;width:20px;height:20px;margin-bottom:8px;border-radius:50%;
-  background:var(--c,#9aa0a8);color:#fff;font-size:10px;font-weight:600}
-.node .kk{display:block;margin-top:8px;font-style:normal;font-size:11px;font-weight:500;color:#8b93a1}
-/* 주장·반론·우려·조건 */
-.node.position,.node.con,.node.concern,.node.condition{
-  background:radial-gradient(175px 71px at 52% 108%, #c5d1e8 3%, #dfe5f5 24%, #f5f8ff 100%)}
-.node.position h4,.node.con h4{font-weight:600;line-height:1.4}
-.node.con{box-shadow:inset 0 0 0 1.5px rgba(224,68,62,.32)}
-.node.con .kk{color:var(--red)}
-/* 쟁점 */
-.node.issue{width:300px;padding:18px 40px 20px 20px;background:#161919}
+/* 주장 카드는 프로필을 글 위에 올린다 (세로 스택) */
+.node.position,.node.con,.node.concern,.node.condition,.node.pro,.node.open{width:279px;flex-direction:column;align-items:stretch}
+/* 쟁점 · 마무리 — 라벨 + 문장 */
+.node.issue,.node.res{
+  flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:18px 40px 20px 20px}
+.node.issue{width:300px;background:#161919;filter:none}
 .node.issue .k,.node.issue h4{color:#fff}
-/* 마무리 */
-.node.decision,.node.conditional{width:290px;padding:18px 40px 20px 20px;
-  background:radial-gradient(150px 69px at 50% 40%, #87d1ff 0%, #aedeff 49%, #d6ebff 98%);
+.node.issue h4{font-weight:500;line-height:1.5}
+.node .k{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:600;line-height:1.6;letter-spacing:-.16px}
+.node .k:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.node.res{width:300px;
+  background:radial-gradient(149.6px 69.4px at 50% 40%, #87d1ff 0%, #aedeff 48.85%, #d6ebff 97.71%);
   box-shadow:inset 0 0 12px #eaf9ff}
-.node.decision .k,.node.conditional .k{color:#4cade7}
-.node.decision h4,.node.conditional h4{color:#1e6a98}
-.node.open{width:290px;padding:18px 40px 20px 20px;
-  background:radial-gradient(150px 69px at 50% 40%, #dfe3ea 0%, #eef1f6 49%, #f7f9fc 98%);box-shadow:inset 0 0 12px #f3f6fa}
-.node.open .k{color:#8b93a1} .node.open h4{color:#4a5260}
+.node.res .k{color:#4cade7}
+.node.res h4{color:#1e6a98;font-weight:500;line-height:1.5}
 .node.live{filter:drop-shadow(0 6px 18px rgba(75,135,233,.35))}
-.far .node p,.far .node .kk{display:none}
+.far .node p{display:none}
 /* 보드 바닥 — 섹션 fill 과 같은 그라데이션 위에 점 격자 (카드 폭 279 대비 24px 간격) */
 .frame{border:0;border-radius:20px;background:linear-gradient(180deg,#e4eaf2 70.8%,#fdf8f8 100%);box-shadow:none}
 .frame:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
@@ -796,7 +718,7 @@ body.norail .rail,body.norail .rz-x{display:none}
 #cv.lod .frame{border-radius:64px;background:#fff;box-shadow:0 0 0 2px rgba(40,39,51,.04),0 24px 60px rgba(40,39,51,.08)}
 #cv.lod .frame:after{display:none}
 .stage{background:#fcfcfe;background-image:none}
-/* 보드가 불투명해졌으니 선은 보드 위, 카드는 선 위로 */
+/* 보드가 불투명하니 선은 보드 위, 카드는 선 위로 */
 .frame{z-index:1} #edges{z-index:2} .neck,.hug{z-index:2} .node{z-index:3}
 </style>
 </head>
@@ -1410,7 +1332,7 @@ function build(map) {
     mine.forEach(n => { n.kids = (n.kids || []).filter(k => !k.merged); });
 
     const r = sec.resolution;
-    const res = r && push(Object.assign({}, r, { id: sec.no + '-res', t: secs(r.t), at: (r.at || []).map(secs) }));
+    const res = r && push(Object.assign({}, r, { id: sec.no + '-res', res: true, t: secs(r.t), at: (r.at || []).map(secs) }));
 
     /* 근거·동의는 선으로 잇지 않는다 — 주장 바로 아래 같은 열에 놓아 한 덩어리로 읽힌다.
        반론은 그 주장과 맞선다는 뜻이므로 양쪽 화살표로 잇는다. 대립 표시는 쓰지 않는다. */
@@ -1424,23 +1346,17 @@ function build(map) {
     if (res) (r.from || []).map(id => byId[id]).filter(Boolean)
       .forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
 
-    /* 가로는 논의 시간(왼→오), 세로는 같은 때에 나란히 선 같은 위계 (피그마 3633:4336) */
+    /* 세로는 논의 시간(위→아래), 가로는 위계 — 쟁점·마무리 0열, 주장 1열, 그 주장에 붙은 말 2열.
+       한 카드가 한 줄을 차지하니 겹칠 자리가 없고, 선은 늘 열 사이 빈 통로로만 지난다. */
     const issue = mine.find(n => n.kind === 'issue');
-    const line = mine.filter(n => n !== issue).sort((a, b) => a.t - b.t);
-    if (issue) { issue.col = 0; issue.ly = 0; }
-    let col = 0, lastT = -1e9, row = 0, maxRow = 0;
-    line.forEach(n => {
-      if (n.t - lastT > 5) { col++; row = 0; lastT = n.t; }   /* 시각이 벌어지면 다음 칸으로 */
-      else row++;
-      n.col = col; n.ly = row * ROWH;
-      maxRow = Math.max(maxRow, row);
-    });
-    if (issue) issue.ly = maxRow * ROWH / 2;                  /* 쟁점은 왼쪽 가운데 */
-    const maxCol = Math.max(...mine.map(n => n.col));
-    if (res) { res.col = maxCol + 1; res.ly = Math.max(...mine.map(n => n.ly)) / 2; }   /* 마무리는 맨 오른쪽 가운데 */
+    const all = mine.slice();          /* res 는 push() 가 이미 넣었다 */
+    all.forEach(n => { n.col = n === issue || n === res ? 0 : n.p && n.p !== issue ? 2 : 1; });
+    const ord = all.slice().sort((a, b) => a.t - b.t || a.col - b.col);
+    if (issue) { ord.splice(ord.indexOf(issue), 1); ord.unshift(issue); }
+    if (res) { ord.splice(ord.indexOf(res), 1); ord.push(res); }
+    ord.forEach((n, i) => { n.row = i; });
 
-    const all = res ? mine.concat(res) : mine;
-    const frame = { sec, nodes: all, res, cols: (res ? maxCol + 1 : maxCol) + 1 };
+    const frame = { sec, nodes: all, res, cols: Math.max(...all.map(n => n.col)) + 1 };
     frames.push(frame);
     sec.frame = frame; sec.byId = byId;
 
@@ -1460,29 +1376,22 @@ function build(map) {
 }
 
 /* ================= 4. 섹션 배치 ================= */
-const COL = 372, PAD = 34, HEAD = 34, GAPX = 104, GAPY = 128, ROWH = 196;   /* 카드 폭 279 + 사이 93 · 한 줄 높이 */   /* ROWH: 노드 한 줄 높이 — 카드가 커지면 같이 올린다 */
+/* 열 폭은 피그마 카드 폭 그대로 — 같은 열 카드는 폭이 같다 (0열 쟁점·마무리 300, 1·2열 279) */
+const CW = [300, 279, 279], PAD = 34, HEAD = 34, GAPX = 76, GAPY = 128, ROWH = 150;
+const colX = c => PAD + CW.slice(0, c).reduce((a, w) => a + w + GAPX, 0);
 function layout(g) {
-  g.frames.forEach(f => {
-    const ys = f.nodes.map(n => n.ly);
-    f.h = Math.max(...ys) - Math.min(...ys) + ROWH + PAD * 2 + HEAD;
-    f.w = (f.cols - 1) * COL + 300 + PAD * 2;
-  });
-  /* 논의 카드는 시간순으로 위에서 아래로 한 줄. 폭은 모두 같게 맞춘다 */
-  const W = Math.max(...g.frames.map(f => f.w));
-  g.frames.forEach(f => { f.w = W; });
+  /* 카드 높이는 글 줄 수마다 달라 render() 뒤에 다시 잰다. 여기선 어림으로 자리만 잡는다 */
   let y = 0;
   g.frames.forEach(f => {
-    const ys = f.nodes.map(n => n.ly), y0 = Math.min(...ys);
     f.x = 0; f.y = y;
-    f.nodes.forEach(n => { n.x = PAD + n.col * COL; n.y = y + PAD + HEAD + (n.ly - y0); });
+    f.nodes.forEach(n => { n.x = colX(n.col); n.y = y + PAD + HEAD + n.row * ROWH; });
+    f.w = colX(f.cols - 1) + CW[f.cols - 1] + GAPX;   /* 오른쪽에도 선이 지날 통로를 남긴다 */
+    f.h = PAD * 2 + HEAD + f.nodes.length * ROWH;
     y += f.h + GAPY;
   });
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  g.frames.forEach(f => {
-    x0 = Math.min(x0, f.x); y0 = Math.min(y0, f.y);
-    x1 = Math.max(x1, f.x + f.w); y1 = Math.max(y1, f.y + f.h);
-  });
-  bounds = { x0: x0 + OX - 80, y0: y0 + OY - 80, w: x1 - x0 + 160, h: y1 - y0 + 160 };
+  const W = Math.max(...g.frames.map(f => f.w));
+  g.frames.forEach(f => { f.w = W; });
+  bounds = { x0: OX - 80, y0: OY - 80, w: W + 160, h: y - GAPY + 160 };
 }
 
 /* ================= 5. 그리기 ================= */
@@ -1545,30 +1454,35 @@ function render(g) {
   });
 
   g.nodes.forEach(n => {
-    const d = el('div', 'node ' + n.kind);
+    const d = el('div', 'node ' + n.kind + (n.res ? ' res' : ''));
     d.style.left = (n.x + OX) + 'px'; d.style.top = (n.y + OY) + 'px';
     /* 쟁점·마무리는 라벨 + 문장, 주장류는 발화자 원 + 문장 + 근거 (피그마 카드 3종) */
-    const head = n.kind === 'issue' ? '쟁점' : /decision|conditional|open/.test(n.kind) ? '마무리' : '';
+    const head = n.kind === 'issue' ? '쟁점' : n.res ? '마무리' : '';   /* 피그마 라벨은 쟁점·마무리 둘뿐 */
     const why = n.why || n.note || '';
     d.innerHTML = head
       ? `<div class="k">${head}</div><h4>${esc(n.title)}</h4>`
-      : `<span class="who" style="--c:${avatar[n.who] || '#9aa0a8'}" title="${esc(n.who || '')}">${esc((n.who || '').slice(0, 1))}</span>`
-        + `<h4>${esc(n.title)}</h4>`
-        + (why ? `<p>${esc(why)}</p>` : '')
-        + `<em class="kk">${KIND_KO[n.kind] || ''} · ${esc(n.who || '')} · ${mmss(n.t)}</em>`;
+      : `<img class="who" src="${AV[n.who] || 'assets/av-glasses.png'}" alt="" title="${esc(n.who || '')}">`
+        + `<div class="tx"><h4>${esc(n.title)}</h4>${why ? `<p>${esc(why)}</p>` : ''}</div>`;
     d.onclick = () => selectNode(n);
     n.dom = d; cv.append(d);
   });
 
-  /* 카드 높이는 글 줄 수마다 다르다. 다 그린 뒤 실제 높이를 재서 보드 바닥의 빈 자리를 걷어낸다 */
+  /* 카드 높이는 글 줄 수마다 다르다. 다 그린 뒤 실제 높이로 줄을 쌓아 겹침과 빈 바닥을 없앤다 */
+  const ROWGAP = 26;
   let ny = 0;
   g.frames.forEach(f => {
-    const dy = ny - f.y;
-    if (dy) { f.y += dy; f.nodes.forEach(n => { n.y += dy; }); }
-    const bottom = Math.max(...f.nodes.map(n => n.y + n.dom.offsetHeight));
-    f.h = bottom - f.y + PAD;
-    f.dom.style.top = (f.y + OY) + 'px'; f.dom.style.height = f.h + 'px';
-    f.nodes.forEach(n => { n.dom.style.top = (n.y + OY) + 'px'; });
+    f.y = ny;
+    const top = f.y + PAD + HEAD, bot = [top, top, top];
+    let prev = top;
+    f.nodes.slice().sort((p, q) => p.row - q.row).forEach(n => {
+      /* 시간 순서(위→아래)는 지키되, 열이 다르면 나란히 놓아 보드가 길어지지 않게 한다 */
+      const y = n === f.res ? Math.max(...bot) : Math.max(bot[n.col], prev);
+      n.x = colX(n.col); n.y = y;
+      n.dom.style.left = (n.x + OX) + 'px'; n.dom.style.top = (n.y + OY) + 'px';
+      bot[n.col] = y + n.dom.offsetHeight + ROWGAP; prev = y;
+    });
+    f.h = Math.max(...bot) - ROWGAP - f.y + PAD;
+    f.dom.style.top = (f.y + OY) + 'px'; f.dom.style.height = f.h + 'px'; f.dom.style.width = f.w + 'px';
     ny = f.y + f.h + GAPY;
   });
   bounds = { x0: OX - 80, y0: OY - 80, w: g.frames[0].w + 160, h: ny - GAPY + 160 };
@@ -1582,59 +1496,36 @@ function render(g) {
     f.neck = nk; cv.append(nk);
   });
 
+  /* 선은 카드 옆구리에서 나와 열 사이 빈 통로(gutter)를 타고 내려간다.
+     한 카드에서 갈라지는 선은 같은 통로를 써서 한 줄기가 두 갈래로 보이게 한다. */
+  const gutR = c => OX + colX(c) + CW[c] + GAPX / 2;      /* 그 열 오른쪽 빈 통로 */
+  const gutL = c => OX + colX(c) - GAPX / 2;               /* 그 열 왼쪽 빈 통로 */
   g.edges.forEach(e => {
-    const A = e.a, B = e.b, aw = A.dom.offsetWidth, ah = A.dom.offsetHeight, bh = B.dom.offsetHeight;
-    /* 화살촉이 카드에 가리지 않게 양쪽에서 조금 띄운다 */
-    const gap = e.both ? 7 : 2;
-    const R = 14;
-    let d, lx, ly, vert = A.col === B.col;
-    if (vert) {                         /* 같은 칸(같은 시각)에 위아래로 선 카드 — 세로로 바로 잇는다 */
-      const dn = B.y > A.y, bw = B.dom.offsetWidth;
-      const ax = A.x + OX + aw / 2, bx = B.x + OX + bw / 2;
-      const ay = A.y + OY + (dn ? ah + gap : -gap), by = B.y + OY + (dn ? -gap : bh + gap);
-      if (Math.abs(bx - ax) < 3) d = `M ${ax} ${ay} V ${by}`;
-      else {
-        const m = Math.round((ay + by) / 2), s_ = bx > ax ? 1 : -1, sy = dn ? 1 : -1;
-        const r = Math.min(R, Math.abs(bx - ax) / 2, Math.abs(m - ay), Math.abs(by - m));
-        d = `M ${ax} ${ay} V ${m - sy * r} Q ${ax} ${m} ${ax + s_ * r} ${m} H ${bx - s_ * r} Q ${bx} ${m} ${bx} ${m + sy * r} V ${by}`;
-      }
-      lx = (ax + bx) / 2; ly = (ay + by) / 2;
-      e.path = svgEl('path', { d, class: 'e-' + e.kind, 'marker-end': `url(#ar-${e.kind}-e)` });
-      sv.append(e.path);
-      if (e.both) {
-        const c = ARROW[e.kind], tip = (x, y, dir) =>
-          svgEl('path', { d: `M ${x - 6} ${y} L ${x} ${y + dir * 11} L ${x + 6} ${y} Z`, class: 'tip', style: `fill:${c}` });
-        e.tips = [tip(ax, ay - (dn ? 11 : -11), dn ? -1 : 1), tip(bx, by + (dn ? 11 : -11), dn ? 1 : -1)];
-        e.tips.forEach(t => sv.append(t));
-      }
-      if (e.label) labelAt(e, lx + e.label.length * 6 + 22, ly);   /* 세로 선 옆으로 비켜 쓴다 */
-      return;
-    }
-    const ax = A.x + OX + aw + gap, ay = A.y + OY + ah / 2, bx = B.x + OX - gap, by = B.y + OY + bh / 2;
-    lx = (ax + bx) / 2; ly = (ay + by) / 2 - 8;
-    if (bx >= ax) {                       /* 오른쪽으로 — 나갔다가 한 번 꺾어 들어간다 */
-      const m = Math.round((ax + bx) / 2);
-      if (Math.abs(by - ay) < 3) d = `M ${ax} ${ay} H ${bx}`;
-      else {
-        const s_ = by > ay ? 1 : -1, r = Math.min(R, Math.abs(by - ay) / 2, Math.abs(m - ax), Math.abs(bx - m));
-        d = `M ${ax} ${ay} H ${m - r} Q ${m} ${ay} ${m} ${ay + s_ * r} V ${by - s_ * r} Q ${m} ${by} ${m + r} ${by} H ${bx}`;
-      }
-      lx = m;
-    } else {                              /* 되돌아가는 선 — 위로 돌아 나간다 */
-      const m = Math.min(A.y + OY, B.y + OY) - 70, out = ax + 70, s1 = m < ay ? -1 : 1;
-      d = `M ${ax} ${ay} H ${out - R} Q ${out} ${ay} ${out} ${ay + s1 * R} V ${m + (s1 > 0 ? -R : R)} `
-        + `Q ${out} ${m} ${out - R} ${m} H ${bx + R} Q ${bx} ${m} ${bx} ${m + (by > m ? R : -R)} V ${by}`;
-      lx = (out + bx) / 2; ly = m - 9;
-    }
+    const A = e.a, B = e.b, R = 12, gap = e.both ? 7 : 2;
+    const aw = A.dom.offsetWidth, ah = A.dom.offsetHeight, bw = B.dom.offsetWidth, bh = B.dom.offsetHeight;
+    /* 오른쪽 아래 열로 내려가면 A 오른쪽→B 왼쪽, 왼쪽 열로 돌아가면 A 왼쪽→B 오른쪽,
+       같은 열끼리는 둘 다 오른쪽 옆구리를 써서 카드를 밟고 지나가지 않는다 */
+    const out = B.col > A.col ? 1 : B.col < A.col ? -1 : 1;
+    const into = B.col > A.col ? -1 : 1;
+    const lane = (B.col > A.col ? gutR(A.col) : B.col < A.col ? gutL(A.col) : gutR(A.col))
+      + (A.row % 3 - 1) * 9;
+    const ax = A.x + OX + (out > 0 ? aw + gap : -gap), ay = A.y + OY + ah / 2;
+    const bx = B.x + OX + (into > 0 ? bw + gap : -gap), by = B.y + OY + bh / 2;
+    const sy = by > ay ? 1 : -1, s2 = bx > lane ? 1 : -1, s1 = lane > ax ? 1 : -1;
+    const r = Math.min(R, Math.max(2, Math.abs(by - ay) / 2), Math.max(2, Math.abs(lane - ax)), Math.max(2, Math.abs(bx - lane)));
+    const d = Math.abs(by - ay) < 3 && s1 === s2
+      ? `M ${ax} ${ay} H ${bx}`
+      : `M ${ax} ${ay} H ${lane - s1 * r} Q ${lane} ${ay} ${lane} ${ay + sy * r} `
+        + `V ${by - sy * r} Q ${lane} ${by} ${lane + s2 * r} ${by} H ${bx}`;
     e.path = svgEl('path', { d, class: 'e-' + e.kind, 'marker-end': `url(#ar-${e.kind}-e)` });
     sv.append(e.path);
     if (e.both) {                       /* 반론은 양쪽 화살촉을 직접 그린다 (마커가 작아 묻힌다) */
-      const c = ARROW[e.kind], tip = (x, y, dir) =>
-        svgEl('path', { d: `M ${x} ${y - 6} L ${x + dir * 11} ${y} L ${x} ${y + 6} Z`, class: 'tip', style: `fill:${c}` });
-      e.tips = [tip(ax - 11, ay, 1), tip(bx + 11, by, -1)];
+      const c = ARROW[e.kind], tip = (x, y, dr) =>
+        svgEl('path', { d: `M ${x} ${y - 6} L ${x + dr * 11} ${y} L ${x} ${y + 6} Z`, class: 'tip', style: `fill:${c}` });
+      e.tips = [tip(ax - out * 11, ay, out), tip(bx - into * 11, by, into)];
       e.tips.forEach(t => sv.append(t));
     }
-    if (e.label) labelAt(e, lx, ly);
+    if (e.label) labelAt(e, lane, (ay + by) / 2);
   });
   sv.style.width = (bounds.x0 + bounds.w + 300) + 'px';
   sv.style.height = (bounds.y0 + bounds.h + 300) + 'px';
@@ -1778,8 +1669,9 @@ function applyEdits() {
   });
 }
 function paintNode(n) {
-  n.dom.className = 'node ' + n.kind + (n.dom.classList.contains('in') ? ' in' : '');
-  const k = n.dom.querySelector('.k'); if (k) k.textContent = KIND_KO[n.kind] || '';
+  n.dom.className = 'node ' + n.kind + (n.res ? ' res' : '') + (n.dom.classList.contains('in') ? ' in' : '');
+  const k = n.dom.querySelector('.k');
+  if (k) k.textContent = n.kind === 'issue' ? '쟁점' : '마무리';
   n.dom.querySelector('h4').textContent = n.title;
 }
 const note = k => (LOCAL.notes[k] = LOCAL.notes[k] || { rx: {}, cs: [] });
@@ -2285,15 +2177,32 @@ function tellView() {
   }, 250);
 }
 
+/* 보드 밖은 무한히 열려 있지 않다 — 줌은 썸네일 폭맞춤 ~ 1.1배, 화면은 보드를 벗어나지 않는다 */
+function zLimit() {
+  const r = vp.getBoundingClientRect();
+  return [Math.max(.05, Math.min((r.width - 52) / bounds.w, LOD - .02)), 1.1];
+}
+function clampView() {
+  const r = vp.getBoundingClientRect();
+  const w = bounds.w * view.z, h = bounds.h * view.z, bx = bounds.x0 * view.z, by = bounds.y0 * view.z;
+  view.x = w <= r.width ? (r.width - w) / 2 - bx
+    : Math.min(-bx, Math.max(r.width - w - bx, view.x));
+  view.y = h <= r.height ? (r.height - h) / 2 - by
+    : Math.min(-by, Math.max(r.height - h - by, view.y));
+}
 function apply() {
+  const [lo, hi] = zLimit();
+  view.z = Math.min(hi, Math.max(lo, view.z));
+  clampView();
   cv.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
   $('#zlv').textContent = Math.round(view.z * 100) + '%';
-  cv.classList.toggle('far', view.z < .52 && view.z >= LOD);
+  cv.classList.toggle('far', view.z < .42 && view.z >= LOD);
   cv.classList.toggle('lod', view.z < LOD);
   tellView();
 }
 function zoomAt(cx, cy, nz) {
-  nz = Math.min(1.6, Math.max(.06, nz));
+  const [lo, hi] = zLimit();
+  nz = Math.min(hi, Math.max(lo, nz));
   view.x = cx - (cx - view.x) * (nz / view.z);
   view.y = cy - (cy - view.y) * (nz / view.z);
   view.z = nz; apply();
@@ -2613,6 +2522,13 @@ function applyAlias(text, R) {
   return text.replace(/\u0000(\d+)\u0000/g, (m, i) => box[+i]);
 }
 (async () => { try { ALIAS = aliasRules(await (await fetch('data/people.json', NOCACHE)).json()); } catch {} })();
+/* 발화자 프로필 이미지 — 홈과 같은 그림을 쓴다 (data/projects.json) */
+let AV = {};
+(async () => { try {
+  const ps = (await (await fetch('data/projects.json', NOCACHE)).json()).projects || [];
+  ps.forEach(p => Object.assign(AV, p.avatars || {}));
+  if (MAP) NODES.forEach(n => { const im = n.dom && n.dom.querySelector('.who'); if (im && AV[n.who]) im.src = AV[n.who]; });
+} catch {} })();
 const alias = o => (ALIAS ? JSON.parse(applyAlias(JSON.stringify(o), ALIAS)) : o);
 async function load(url) {
   const r = await fetch(enc(url), NOCACHE);

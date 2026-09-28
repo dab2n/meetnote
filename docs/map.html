@@ -1350,16 +1350,16 @@ function build(map) {
       .forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
 
     /* 세로는 논의 시간(위→아래) — 한 카드가 한 줄을 온전히 차지해 위에서 아래로 읽힌다.
-       가로는 위계 — 쟁점·마무리 0열, 주장 1열, 그 주장에 맞선 반론 2열. 같은 위계는 같은 줄에 선다. */
+       가로는 위계 — 0열 쟁점, 1열 주장, 2열 반론, 3열 마무리. 같은 위계는 같은 열에 줄을 맞춘다. */
     const issue = mine.find(n => n.kind === 'issue');
     const all = mine.slice();          /* res 는 push() 가 이미 넣었다 */
-    all.forEach(n => { n.col = n === issue || n === res ? 0 : n.p && n.p !== issue ? 2 : 1; });
+    all.forEach(n => { n.col = n === issue ? 0 : n === res ? 3 : n.p && n.p !== issue ? 2 : 1; });
     const ord = all.slice().sort((a, b) => a.t - b.t || a.col - b.col);
     if (issue) { ord.splice(ord.indexOf(issue), 1); ord.unshift(issue); }
     if (res) { ord.splice(ord.indexOf(res), 1); ord.push(res); }
     ord.forEach((n, i) => { n.row = i; });
 
-    const frame = { sec, nodes: all, res, cols: Math.max(...all.map(n => n.col)) + 1 };
+    const frame = { sec, nodes: all, res, cols: 4 };   /* 쟁점 · 주장 · 반론 · 마무리 */
     frames.push(frame);
     sec.frame = frame; sec.byId = byId;
 
@@ -1380,7 +1380,7 @@ function build(map) {
 
 /* ================= 4. 섹션 배치 ================= */
 /* 열 폭은 피그마 카드 폭 그대로 — 같은 열 카드는 폭이 같다 (0열 쟁점·마무리 300, 1·2열 279) */
-const CW = [300, 279, 279], PAD = 34, HEAD = 34, GAPX = 76, GAPY = 128, ROWH = 150;
+const CW = [300, 279, 279, 300], PAD = 34, HEAD = 34, GAPX = 76, GAPY = 128, ROWH = 150;
 const colX = c => PAD + CW.slice(0, c).reduce((a, w) => a + w + GAPX, 0);
 function layout(g) {
   /* 카드 높이는 글 줄 수마다 달라 render() 뒤에 다시 잰다. 여기선 어림으로 자리만 잡는다 */
@@ -1416,16 +1416,6 @@ function defs() {
     d.append(m);
   }));
   return d;
-}
-/* 선 사이에 관계 이름 — 가로·세로 선이 같이 쓴다 */
-function labelAt(e, lx, ly) {
-  const g = svgEl('g', { class: 'elab e-lab-' + e.kind });
-  const w = e.label.length * 11 + 16, h = 20;
-  g.append(svgEl('rect', { x: lx - w / 2, y: ly - h / 2, width: w, height: h, rx: 10, class: 'lbg' }));
-  const t = svgEl('text', { x: lx, y: ly + 4, class: 'l-' + e.kind, 'text-anchor': 'middle' });
-  t.textContent = e.label;
-  g.append(t);
-  e.text = g; $('#edges').append(g);
 }
 function render(g) {
   const cv = $('#cv'), sv = $('#edges');
@@ -1525,7 +1515,6 @@ function render(g) {
       e.tips = [tip(ax - out * 11, ay, out), tip(bx - into * 11, by, into)];
       e.tips.forEach(t => sv.append(t));
     }
-    if (e.label) labelAt(e, lane, (ay + by) / 2);
   });
   sv.style.width = (bounds.x0 + bounds.w + 300) + 'px';
   sv.style.height = (bounds.y0 + bounds.h + 300) + 'px';

@@ -8,38 +8,38 @@
   /* 태스크 2~4 는 start 가 없다 — 앞 태스크에서 마지막으로 머문 화면에서 이어서 시작 */
   const TASKS = UT.TASKS = [
     {
-      id: 1, title: "참여하지 못한 '2주차 중간 회의'의 쟁점 1 결론 찾기",
-      scenario: "당신은 '2주차 중간 회의'에\n참여하지 못했습니다.\n이 회의의 쟁점 1 결론을 찾아\n그 내용을 확인해주세요.",
+      id: 1, title: "'프로젝트의 중심 가치' 결론 확인하기",
+      scenario: "당신은 '2주차 중간 회의'에\n참여하지 못했습니다.\n이 회의에서 '프로젝트의 중심 가치'는\n무엇으로 결정됐는지 확인해주세요.",
       start: { hash: '#/p/newton', reset: true },
       target: '새로운 노트 (3)',                 /* 표시 이름 '2주차 중간 회의' */
       path: ['home_my', 'list_new', 'list_agenda', 'meeting_sum'],
-      reach: { meeting_sum: '회의 요약(쟁점 1 결론) 도달', 'talk-open': '쟁점 1 오간 이야기 펼침' },
+      reach: { meeting_sum: '회의 요약(중심 가치 결론) 도달', 'talk-open': '오간 이야기 펼침' },
       success: ['meeting_sum'],
       rule: "'2주차 중간 회의' 요약 화면 도달 시 자동 성공",
     },
     {
-      id: 2, title: "'무릎·발목 타깃 근거'의 두 주장과 결론 찾기",
-      scenario: "회의록에서 '제품이 무릎과 발목을\n타깃하는 근거'에 대해 나왔던\n두 가지 주장을 찾고,\n결론을 말해주세요.",
+      id: 2, title: '타깃 부위를 정한 주장 살펴보기',
+      scenario: '당신은 어쩌다 제품의 타깃 부위가\n무릎과 발목이 되었는지 알아보고자 합니다.\n관계 맵을 통해\n어떤 주장들이 있었는지 확인해주세요.',
       path: ['home_my', 'list_new', 'meeting_sum', 'meeting_map'],
       reach: { meeting_map: '관계 맵 도달', zoom9: '논의 9 확대해 내용 확인' },
       success: ['zoom9'],
-      rule: '관계 맵에서 논의 9(무릎·발목 타깃의 근거)를 확대해 내용을 열면 자동 성공 (두 주장·결론 설명은 진행자 확인)',
+      rule: '관계 맵에서 논의 9(무릎·발목 타깃의 근거)를 확대해 내용을 열면 자동 성공 (주장 설명은 진행자 확인)',
     },
     {
       id: 3, title: 'Team UX의 내일까지 할 일 찾기',
-      scenario: '홈에서 Team UX가 해야 할 업무를 찾아주세요.',
+      scenario: '홈에서 Team UX가\n내일까지 해야 할 일을 찾아주세요.',
       path: ['home_my', 'home_team', 'list_new'],
       reach: { home_team: '팀 홈 도달', 'team-ux': 'Team UX 할 일 확인' },
       success: ['home_team'],
       rule: '팀 홈(Team UX 할 일) 도달 시 자동 성공',
     },
     {
-      id: 4, title: '미결 안건에 새로운 의견 추가',
-      scenario: '회의에서 결론을 내리지 못한 안건에 대해\n좋은 아이디어가 떠올랐습니다.\n해당 안건을 찾아, 팀원들이 볼 수 있도록\n의견을 남겨 주세요.',
+      id: 4, title: '미결 안건에 댓글 남기기',
+      scenario: '당신은 결론이 나지 않은 채 넘어간 안건이\n계속 마음에 걸립니다.\n팀 피드에서 미결된 안건을 찾아,\n댓글을 남겨주세요.',
       path: ['home_my', 'home_team', 'meeting_sum'],
       reach: { home_team: '팀 홈 도달', 'comment-open': '의견창 열기' },
       success: ['comment'],
-      rule: '미해결 안건에 의견 등록 시 자동 성공',
+      rule: '팀 피드의 미결 안건에 댓글 등록 시 자동 성공',
     },
   ];
 

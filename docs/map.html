@@ -196,6 +196,15 @@ body.view-cards .stage{display:none}
 #edges path.on{opacity:1}
 #edges path.tip{opacity:1;stroke:none}
 #edges path.hide{opacity:0!important}
+#edges .elab{opacity:0;transition:opacity .35s}
+#edges .elab.on{opacity:1}
+#edges .elab.hide{opacity:0!important}
+#edges .lbg{fill:#fff;stroke:rgba(40,39,51,.07)}
+#edges .elab text{opacity:1;fill:#5b6270}
+#edges .elab.e-lab-con text{fill:var(--red)}
+#edges .elab.e-lab-resolve text{fill:var(--blue)}
+#edges text{font:600 11.5px var(--font)}
+#cv.lod #edges .elab{opacity:0!important}
 #edges text{font:650 10.5px var(--font);opacity:0;transition:opacity .35s}
 #edges text.on{opacity:1}
 .e-raise{stroke:#c3cede}                            .l-raise{fill:#8b8e96}
@@ -246,20 +255,17 @@ body.view-cards .stage{display:none}
 .node.issue h4{font-size:15px;font-weight:800}
 .node.issue p,.node.issue .m{color:rgba(255,255,255,.66)}
 /* 주장 + 그 근거·동의를 감싸는 테두리 — 포함관계 */
-.hug{position:absolute;border-radius:26px;background:rgba(75,135,233,.05);box-shadow:inset 0 0 0 1.5px rgba(75,135,233,.16);pointer-events:none;transition:opacity .4s}
+.hug{position:absolute;border-radius:26px;background:rgba(75,135,233,.09);box-shadow:inset 0 0 0 2px rgba(75,135,233,.42);
+  pointer-events:auto;cursor:pointer;transition:opacity .4s,height .28s cubic-bezier(.3,0,.2,1)}
+.hug:hover{background:rgba(75,135,233,.14)}
 #cv.lod .hug{opacity:0}
-.node.pro{width:196px;padding:10px 12px;background:#f7faf8;box-shadow:inset 3px 0 0 var(--green),0 0 0 1px rgba(40,39,51,.04)}
+.node.pro{width:196px;padding:10px 12px;background:#f7f9fe;box-shadow:inset 3px 0 0 var(--blue),0 0 0 1px rgba(40,39,51,.04)}
 .node.pro h4{font-size:12.5px;font-weight:500;color:var(--ink2)}
+.node.pro .k{color:var(--blue)}
 .node.pro p,.node.pro .m{display:none}
 /* 근거·동의는 주장 아래 '근거 n' 으로 접었다 폈다 한다 (기본은 펼침) */
 .node.pro{transition:opacity .28s,transform .28s cubic-bezier(.3,0,.2,1)}
 .node.pro.fold{opacity:0;transform:translateY(-10px) scale(.96);pointer-events:none}
-.prot{position:absolute;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 11px;border-radius:99px;background:#fff;
-  box-shadow:0 0 0 1px rgba(47,158,91,.25);color:var(--green);font-size:11.5px;font-weight:700;cursor:pointer;z-index:3}
-.prot:hover{box-shadow:0 0 0 1px rgba(47,158,91,.5)}
-.prot i{font-style:normal;transition:transform .2s}
-.prot.on i{transform:rotate(90deg)}
-#cv.lod .prot{display:none}
 /* 주장은 한 단 위로 — 근거보다 크고 진하게 */
 .node.position{width:248px;padding:15px 17px;box-shadow:inset 3px 0 0 var(--blue),0 0 0 1px rgba(40,39,51,.06),0 6px 18px rgba(40,39,51,.07)}
 .node.position h4{font-size:15px;font-weight:700}
@@ -1523,7 +1529,15 @@ function render(g) {
       e.tips = [tip(ax - 11, ay, 1), tip(bx + 11, by, -1)];
       e.tips.forEach(t => sv.append(t));
     }
-    void lx; void ly;
+    if (e.label) {                                     /* 선 사이에 관계 이름 */
+      const g = svgEl('g', { class: 'elab e-lab-' + e.kind });
+      const w = e.label.length * 11 + 16, h = 20;
+      g.append(svgEl('rect', { x: lx - w / 2, y: ly - h / 2, width: w, height: h, rx: 10, class: 'lbg' }));
+      const t = svgEl('text', { x: lx, y: ly + 4, class: 'l-' + e.kind, 'text-anchor': 'middle' });
+      t.textContent = e.label;
+      g.append(t);
+      e.text = g; sv.append(g);
+    }
   });
   sv.style.width = (bounds.x0 + bounds.w + 300) + 'px';
   sv.style.height = (bounds.y0 + bounds.h + 300) + 'px';
@@ -2136,14 +2150,12 @@ function hugs() {
   });
 }
 
-/* 주장 아래 '근거 n' 토글 — 눌러서 근거·동의를 펼치고 접는다 */
+/* 포함 박스를 누르면 그 안의 근거·동의를 접었다 편다 (따로 다는 캡션 없이) */
 function proToggles() {
-  document.querySelectorAll('.prot').forEach(t => t.remove());
   NODES.filter(n => n.hug).forEach(n => {
     const kids = (n.kids || []).filter(k => k.kind === 'pro');
     n.open = n.open !== false;
-    const t = el('button', 'prot' + (n.open ? ' on' : ''), `<i>▶</i>근거 ${kids.length}`);
-    t.style.cssText = `left:${n.x + OX + 14}px;top:${n.y + OY + n.dom.offsetHeight - 13}px`;
+    const t = n.hug.dom;
     const draw = () => {
       kids.forEach(k => k.dom.classList.toggle('fold', !n.open));
       EDGES.forEach(e => {                                /* 접힌 카드와 이어진 선은 함께 감춘다 */
@@ -2151,11 +2163,10 @@ function proToggles() {
         e.path.classList.toggle('hide', !n.open);
         (e.tips || []).forEach(t => t.classList.toggle('hide', !n.open));
       });
-      t.classList.toggle('on', n.open);
       hugs();
     };
     t.onclick = ev => { ev.stopPropagation(); n.open = !n.open; draw(); };
-    cv.append(t); draw();
+    draw();
   });
 }
 

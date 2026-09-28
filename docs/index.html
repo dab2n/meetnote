@@ -154,7 +154,6 @@ img.av{object-fit:cover}
 .player .bar{flex:1;height:3px;border-radius:2px;background:#d4dbe6;position:relative;cursor:pointer}
 .player .bar i{position:absolute;inset:0 auto 0 0;border-radius:2px;background:var(--dark)}
 .tabs{margin-top:22px;display:flex;align-items:center;gap:10px}
-.tabs .srctog{margin-left:auto}
 .mgrid{margin-top:18px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:24px;align-items:start}
 .mgrid.wide{grid-template-columns:0 minmax(0,1fr);gap:0;transition:grid-template-columns .35s var(--ease),gap .35s;
   --h:calc(100vh - var(--top,240px));align-items:stretch}   /* 원문과 맵이 같은 높이로 화면에 꼭 맞는다 */
@@ -164,8 +163,11 @@ body.mapview{overflow:hidden}
 .mgrid.wide.open{grid-template-columns:360px minmax(0,1fr);gap:16px}
 .mgrid.wide:not(.open) .tr{width:0;min-width:0;padding:0;overflow:hidden;opacity:0;pointer-events:none;box-shadow:none}
 .mgrid.wide .tr{transition:opacity .3s}
-.srctog{height:32px;padding:0 14px;border-radius:99px;background:var(--card);color:var(--navy);font-size:12.5px;font-weight:500}
-.srctog:hover{background:var(--chip)}
+.srctog{position:absolute;z-index:6;left:16px;top:16px;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 18px;border-radius:99px;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--navy);font-size:13px;font-weight:600;
+  box-shadow:0 0 0 1px rgba(40,39,51,.06),0 8px 22px rgba(40,39,51,.12)}
+.srctog:hover{background:#fff}
+.mapwrap{position:relative}
 .only-narrow{display:none}
 .mgrid.solo{grid-template-columns:minmax(0,1fr)}
 /* 요약 시트 — 모바일 요약 모달의 그라데이션 */
@@ -749,7 +751,7 @@ async function meetingPage(p, page) {
       <div class="player" id="player" hidden><button id="pp" aria-label="재생">${I.play}</button><time id="pt">0:00</time><div class="bar" id="pb"><i></i></div><time>${esc(map.meeting.duration)}</time></div></div>
     <div class="tabs"><div class="pills" id="mtabs">
       <button data-t="sum">요약</button><button data-t="map">관계 맵</button><button data-t="src" class="only-narrow">원문</button></div>
-      <button class="srctog" id="srctog" hidden>원문 펼치기</button></div>
+</div>
     <div id="mbody"></div>`;
   $('#mtabs').onclick = e => { const b = e.target.closest('[data-t]'); if (b) go(`#/m/${m.id}/${b.dataset.t}`); };
   audio(map);
@@ -767,7 +769,8 @@ function meetingTab(tab) {
     if (f) f.addEventListener('load', () => setTimeout(() => f.contentWindow.postMessage({ mn: 'peek', no: PEEK }, '*'), 400), { once: true });
   }, 0);
   const inner = tab === 'map'
-    ? `<div class="map"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map&embed=1&norail=1" title="관계 맵"></iframe></div>`
+    ? `<div class="map mapwrap"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map&embed=1&norail=1" title="관계 맵"></iframe>
+        <button class="srctog" id="srctog">${SRCOPEN ? '원문 접기' : '원문 펼치기'}</button></div>`
     : summaryHTML(map);
   body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : tab === 'map' ? 'wide' : ''} ${tab === 'map' && SRCOPEN ? 'open' : ''}">${transHTML(segs)}${tab === 'src' ? '' : inner}</div>`;
   document.body.classList.toggle('mapview', tab === 'map');
@@ -776,9 +779,7 @@ function meetingTab(tab) {
     g.style.setProperty('--top', Math.round(g.getBoundingClientRect().top + 24) + 'px');
   });
   const tg = $('#srctog');
-  tg.hidden = tab !== 'map';
-  tg.textContent = SRCOPEN ? '원문 접기' : '원문 펼치기';
-  tg.onclick = () => showSrc(!SRCOPEN);
+  if (tg) tg.onclick = () => showSrc(!SRCOPEN);
   if (tab === 'sum') bindSummary(map);
   bindTrans();
   if (focusNo) { const el = body.querySelector(`[data-no="${focusNo}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); pickSection(map.sections.find(s => s.no === focusNo), false); } }

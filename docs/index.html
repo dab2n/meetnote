@@ -156,7 +156,11 @@ img.av{object-fit:cover}
 .tabs{margin-top:22px;display:flex;align-items:center;gap:10px}
 .tabs .srctog{margin-left:auto}
 .mgrid{margin-top:18px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:24px;align-items:start}
-.mgrid.wide{grid-template-columns:0 minmax(0,1fr);gap:0;transition:grid-template-columns .35s var(--ease),gap .35s}
+.mgrid.wide{grid-template-columns:0 minmax(0,1fr);gap:0;transition:grid-template-columns .35s var(--ease),gap .35s;
+  --h:calc(100vh - var(--top,240px));align-items:stretch}   /* 원문과 맵이 같은 높이로 화면에 꼭 맞는다 */
+.mgrid.wide .tr{position:static;height:var(--h)}
+body.mapview main{padding-bottom:24px;overflow:hidden}
+body.mapview{overflow:hidden}
 .mgrid.wide.open{grid-template-columns:360px minmax(0,1fr);gap:16px}
 .mgrid.wide:not(.open) .tr{width:0;min-width:0;padding:0;overflow:hidden;opacity:0;pointer-events:none;box-shadow:none}
 .mgrid.wide .tr{transition:opacity .3s}
@@ -220,7 +224,7 @@ img.av{object-fit:cover}
 .carry div{display:flex;gap:10px;font-size:14px} .carry i{font-style:normal;font-size:11.5px;color:var(--dim2);white-space:nowrap;margin-top:2px}
 
 /* 원문 */
-.tr{position:sticky;top:20px;height:calc(100vh - 40px);display:flex;flex-direction:column;border-radius:24px;background:#fff;box-shadow:0 0 0 1px #eef0f4}
+.tr{position:sticky;top:20px;height:var(--h,calc(100vh - 40px));display:flex;flex-direction:column;border-radius:24px;background:#fff;box-shadow:0 0 0 1px #eef0f4}
 .mgrid.solo .tr{position:static;height:auto;box-shadow:none;background:transparent}
 .trh{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;border-bottom:1px solid #f0f2f6}
 .trh h5{font-size:14px;font-weight:600;flex:1}
@@ -244,7 +248,7 @@ img.av{object-fit:cover}
 mark{background:#fffbc9;color:inherit;border-radius:2px}
 mark.on{background:#ffe27a;box-shadow:0 0 0 1.5px #ffe27a}
 mark.ev{background:linear-gradient(transparent 55%,#ffe27a 55%);box-shadow:none}
-.map{height:calc(100vh - 210px);min-height:520px;border-radius:24px;overflow:hidden;box-shadow:0 0 0 1px #eef0f4;background:#fff}
+.map{height:var(--h,calc(100vh - 210px));min-height:360px;border-radius:24px;overflow:hidden;box-shadow:0 0 0 1px #eef0f4;background:#fff}
 .map iframe{width:100%;height:100%;border:0}
 
 /* 댓글 시트 — 웹에서는 오른쪽에서 */
@@ -766,6 +770,11 @@ function meetingTab(tab) {
     ? `<div class="map"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map&embed=1&norail=1" title="관계 맵"></iframe></div>`
     : summaryHTML(map);
   body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : tab === 'map' ? 'wide' : ''} ${tab === 'map' && SRCOPEN ? 'open' : ''}">${transHTML(segs)}${tab === 'src' ? '' : inner}</div>`;
+  document.body.classList.toggle('mapview', tab === 'map');
+  if (tab === 'map') requestAnimationFrame(() => {
+    const g = $('.mgrid'); if (!g) return;
+    g.style.setProperty('--top', Math.round(g.getBoundingClientRect().top + 24) + 'px');
+  });
   const tg = $('#srctog');
   tg.hidden = tab !== 'map';
   tg.textContent = SRCOPEN ? '원문 접기' : '원문 펼치기';

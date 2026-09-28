@@ -195,13 +195,14 @@ body.view-cards .stage{display:none}
 #edges path{fill:none;stroke-width:1.7px;opacity:0;transition:opacity .35s}
 #edges path.on{opacity:1}
 #edges path.tip{opacity:1;stroke:none}
+#edges path.hide{opacity:0!important}
 #edges text{font:650 10.5px var(--font);opacity:0;transition:opacity .35s}
 #edges text.on{opacity:1}
-.e-raise{stroke:#b4b7bd}                            .l-raise{fill:#8b8e96}
-.e-pro{stroke:var(--green)}                         .l-pro{fill:var(--green)}
+.e-raise{stroke:#c3cede}                            .l-raise{fill:#8b8e96}
+.e-pro{stroke:#c3cede}                              .l-pro{fill:var(--green)}
 #edges path.e-con{stroke:var(--red);stroke-width:2.4px}   .l-con{fill:var(--red)}
-.e-concern{stroke:#b8564a;stroke-dasharray:2 4}     .l-concern{fill:#b8564a}
-.e-condition{stroke:var(--amber);stroke-dasharray:3 4} .l-condition{fill:var(--amber)}
+.e-concern{stroke:#c3cede}                          .l-concern{fill:#b8564a}
+.e-condition{stroke:#c3cede}                        .l-condition{fill:var(--amber)}
 .e-resolve{stroke:var(--gold);stroke-width:2px}     .l-resolve{fill:var(--gold)}
 .e-conflict{stroke:var(--red);stroke-width:2px;stroke-dasharray:7 5} .l-conflict{fill:var(--red)}
 .e-flow{stroke:#c2c4c9;stroke-width:2.4px}
@@ -435,9 +436,10 @@ body.making .livebar{display:block}
 body.making .legend{display:none}
 .lodtip{position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:8;
   display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:99px;
-  background:var(--dark);border:0;font-size:13.5px;font-weight:600;color:#fff;
-  box-shadow:0 8px 24px rgba(40,39,51,.22);opacity:0;transition:opacity .3s;pointer-events:none}
-.lodtip b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.18);font-size:13px}
+  background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:0;
+  font-size:13.5px;font-weight:600;color:#3b3b3b;letter-spacing:-.2px;
+  box-shadow:0 0 0 1px rgba(40,39,51,.06),0 8px 22px rgba(40,39,51,.12);opacity:0;transition:opacity .3s;pointer-events:none}
+.lodtip b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#eef1f6;color:#5b6270;font-size:13px}
 #cv.lod~.lodtip{opacity:1}
 
 /* ---------- 드롭존 ---------- */
@@ -1354,7 +1356,8 @@ function build(map) {
     mine.forEach(n => {
       if (!n.p || n.kind === 'pro') return;
       const kind = EDGE_OF[n.kind] || 'raise';
-      edges.push({ a: n.p, b: n, kind, label: EDGE_KO[kind], both: n.kind === 'con' });
+      const back = n.t < n.p.t && n.kind !== 'con';      /* 시간이 앞선 쪽에서 나가게 */
+      edges.push({ a: back ? n : n.p, b: back ? n.p : n, kind, label: EDGE_KO[kind], both: n.kind === 'con' });
     });
     sec.conflictPairs = [];
     if (res) (r.from || []).map(id => byId[id]).filter(Boolean)
@@ -1422,8 +1425,9 @@ function layout(g) {
 }
 
 /* ================= 5. 그리기 ================= */
-const ARROW = { raise: '#b7c3d6', pro: '#2f9e5b', con: '#e0443e', concern: '#8a6fd1',
-  condition: '#d9892b', resolve: '#4b87e9', conflict: '#e0443e', flow: '#d7dff1' };
+/* 선은 두 가지 뜻만 갖는다 — 시간순으로 이어지는 흐름, 그리고 맞선 의견(반론) */
+const ARROW = { raise: '#b7c3d6', pro: '#b7c3d6', con: '#e0443e', concern: '#b7c3d6',
+  condition: '#b7c3d6', resolve: '#9fb4d6', conflict: '#e0443e', flow: '#d7dff1' };
 const RESDOT = { decision: '#4b87e9', conditional: '#d9892b', open: '#8d9299' };
 const TAGC = ['#c7d3e4', '#d5e3d0', '#f1e1b8', '#b8d4f1', '#e7d3e6', '#dcd6ef'];   /* 새 홈의 쟁점 칩과 같은 색 */
 function defs() {
@@ -2142,6 +2146,11 @@ function proToggles() {
     t.style.cssText = `left:${n.x + OX + 14}px;top:${n.y + OY + n.dom.offsetHeight - 13}px`;
     const draw = () => {
       kids.forEach(k => k.dom.classList.toggle('fold', !n.open));
+      EDGES.forEach(e => {                                /* 접힌 카드와 이어진 선은 함께 감춘다 */
+        if (!kids.includes(e.a) && !kids.includes(e.b)) return;
+        e.path.classList.toggle('hide', !n.open);
+        (e.tips || []).forEach(t => t.classList.toggle('hide', !n.open));
+      });
       t.classList.toggle('on', n.open);
       hugs();
     };

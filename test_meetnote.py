@@ -108,7 +108,7 @@ if REF.exists():
     bad["highlights"][0]["title"] = "웃긴 말이 나왔다"                          # ~순간 아님
     bad["sections"][1]["conflicts"] = [[n["id"] for n in bad["sections"][1]["nodes"][:2]]]
     got = ibis.audit(bad, rsegs)
-    assert any("‘~한다 / ~하자’" in x for x in got), got
+    assert any("제안형" in x for x in got), got
     assert any("순간" in x for x in got), got
     assert any("대립" in x for x in got), got
     print("표준 검사기 OK · 표본 통과, 심어둔 위반", len(got), "건 검출")

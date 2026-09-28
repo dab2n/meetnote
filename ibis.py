@@ -217,7 +217,8 @@ def as_map_text(m: dict) -> str:
         for n in sec.get("nodes", []):
             lock = " (lock)" if n.get("lock") else ""
             par = f" ←{n['parent']}" if n.get("parent") else ""
-            out.append(f'  {n["id"]}{par} [{n["kind"]}]{lock} {n["title"]} — {n.get("who","")} {n["t"]}')
+            note = f' · {n["note"]}' if n.get("note") else ''
+            out.append(f'  {n["id"]}{par} [{n["kind"]}]{lock} {n["title"]}{note} — {n.get("who","")} {n["t"]}')
         r = sec.get("resolution") or {}
         if r:
             out.append(f'  결론 [{r.get("kind")}] {r.get("title")}')
@@ -392,8 +393,18 @@ ENRICH = """너는 이미 만들어진 회의 정리 맵을 읽고, 사람이 �
 각 문장 40~140자. 목록·기호·표를 쓰지 않는다. 노드 종류 이름(주장·반론 같은 말)을 그대로 나열하지 않는다.
 수치나 구체적인 말이 맵에 있으면 살린다. 결론 문장은 다시 쓰지 않는다 — 결론에 이르기까지를 쓴다.
 
+## 5. nodes — 카드 문구를 기준에 맞게 다시 쓴다 (맵에 있는 노드만, 새로 만들지 않는다)
+- `position`(주장)은 **제안형**으로 닫는다: `~하자` · `~해야 한다` · `~가는 게 맞다`.
+  `~한다`로 단정해 이미 정해진 일처럼 읽히게 하지 않는다. 확정된 것은 결론이 따로 말한다.
+- `con`(반론)은 `~면 ~할 수 없다`, `concern`은 `~가 걸린다`, `condition`은 `~해야 ~할 수 있다` 로 닫는다.
+- `note`는 **제목만으로 빠지는 맥락**을 한 문장(25~70자)으로 채운다 — 무엇을 두고 한 말인지,
+  왜 그렇게 봤는지, 무엇과 견줬는지, 어떤 수치·사례를 들었는지. 제목을 바꿔 말하기만 한 문장은 쓰지 않는다.
+- 전사문에 없는 내용은 만들지 않는다. (lock) 이 붙은 노드는 그대로 둔다. 뜻을 바꾸지 않는다.
+
 출력은 JSON 하나뿐이다. 설명을 붙이지 마라.
-{"story": ["문장", ...], "sections": [{"no": 1, "group": "카테고리", "issue": "쟁점 문장", "flow": [{"text": "문장", "t": "mm:ss"}, ...]}, ...]}
+{"story": ["문장", ...], "sections": [{"no": 1, "group": "카테고리", "issue": "쟁점 문장",
+  "flow": [{"text": "문장", "t": "mm:ss"}, ...],
+  "nodes": [{"id": "1-2", "title": "카드 문장", "note": "맥락 한 문장"}, ...]}, ...]}
 맵에 있는 모든 논의 번호(no)를 빠짐없이 담는다."""
 
 
@@ -414,6 +425,17 @@ def enrich(m: dict, segs: list[dict], model: str = "opus") -> dict:
             for n in sec["nodes"]:
                 if n["kind"] == "issue":
                     n["title"] = iss
+        fix = {str(x.get("id")): x for x in (got.get("nodes") or []) if isinstance(x, dict) and x.get("id")}
+        for n in sec["nodes"]:
+            g = fix.get(str(n.get("id")))
+            if not g or n.get("lock"):
+                continue
+            t = (g.get("title") or "").strip()
+            nt = (g.get("note") or "").strip()
+            if 8 <= len(t) <= 80:
+                n["title"] = t
+            if 12 <= len(nt) <= 90:
+                n["note"] = nt
         sec["group"] = (got.get("group") or "").strip()
         lo, hi = secs(sec["t"]), secs(sec["t1"])
         flow = []
@@ -730,7 +752,9 @@ END = {                                   # 종류별 종결 형태 (SPEC 2절)
     # 고르는 논의는 물음, 정하는 논의는 명사형 이름 (SPEC 2절)
     "issue": (r"((인가|것인가|는가|은가|운가|을까|ㄹ까|까)[?]?$)|(\A(?!.*(다|요|죠|\?|？)\s*\Z).+\Z)",
               "물음(~인가) 이나 명사형 안건 이름으로"),
-    "position": (r"(다|자)$", "‘~한다 / ~하자’로"),
+    # 주장은 회의에서 나온 제안이다 — 단정형 '~한다' 로 닫지 않는다 (SPEC 2절)
+    "position": (r"(자|야 한다|야 맞다|게 맞다|이 맞다|가 맞다|게 낫다|자는 것|면 된다)$",
+                 "제안형(‘~하자 / ~해야 한다 / ~가는 게 맞다’)으로"),
     "pro": (r"다$", "‘~다’로 끝나는 서술형으로"),
     "con": (r"다$", "‘~면 ~할 수 없다’처럼 서술형으로"),
     "concern": (r"다$", "‘~가 걸린다 / ~가 우려된다’로"),
@@ -809,6 +833,9 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
                 v.append(f"{where} 제목이 발언 그대로다. 정리한 문장으로 바꿔야 한다 — “{t[:30]}”")
             if n.get("parent") and n["parent"] not in ids:
                 v.append(f"{where} parent가 이 섹션에 없다")
+            note = (n.get("note") or "").strip()      # 카드만 읽고도 맥락이 잡히게 (SPEC 2절)
+            if k in ("position", "con") and note and not 20 <= len(note) <= 90:
+                v.append(f"{where} note가 {len(note)}자다. 25~70자로 맥락을 채워야 한다 — “{note[:24]}”")
             if segs and not n["id"].endswith("-res"):  # 결론은 from 노드들이 근거다
                 ev = (n.get("ev") or "").strip()
                 if not ev:

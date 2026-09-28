@@ -710,7 +710,12 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node.res .k{color:#4cade7}
 .node.res h4{color:#1e6a98;font-weight:500;line-height:1.5}
 .node.live{filter:drop-shadow(0 6px 18px rgba(75,135,233,.35))}
+/* 보드가 좁아져 멀리서 볼 때 — 설명은 접고 한 줄 요지를 키운다 (정보 위계는 그대로) */
+.node{overflow:hidden}
 .far .node p{display:none}
+.far .node h4{font-size:22px;line-height:1.32;letter-spacing:-.3px}
+.far .node .k{font-size:22px} .far .node .k:before{width:9px;height:9px}
+.far .node .who{width:30px;height:30px;margin-bottom:10px}
 /* 보드 바닥 — 섹션 fill 과 같은 그라데이션 위에 점 격자 (카드 폭 279 대비 24px 간격) */
 .frame{border:0;border-radius:20px;background:linear-gradient(180deg,#e4eaf2 70.8%,#fdf8f8 100%);box-shadow:none}
 .frame:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
@@ -1462,6 +1467,14 @@ function render(g) {
 
   /* 카드 높이는 글 줄 수마다 다르다. 다 그린 뒤 실제 높이로 줄을 쌓아 겹침과 빈 바닥을 없앤다 */
   const ROWGAP = 26;
+  /* 카드 높이는 가까이 볼 때와 멀리서 볼 때(글 접고 제목 키움) 중 큰 쪽으로 못박는다.
+     그래야 줌을 바꿔도 자리가 흔들리거나 글이 잘리지 않는다 */
+  const wasFar = cv.classList.contains('far');
+  cv.classList.add('far');
+  g.nodes.forEach(n => { n.hFar = n.dom.offsetHeight; });
+  cv.classList.remove('far');
+  g.nodes.forEach(n => { n.h = Math.max(n.dom.offsetHeight, n.hFar); });
+  if (wasFar) cv.classList.add('far');
   let ny = 0;
   g.frames.forEach(f => {
     f.y = ny;
@@ -1469,7 +1482,8 @@ function render(g) {
     f.nodes.slice().sort((p, q) => p.row - q.row).forEach(n => {   /* 시간 순서대로 한 줄씩 내려간다 */
       n.x = colX(n.col); n.y = y;
       n.dom.style.left = (n.x + OX) + 'px'; n.dom.style.top = (n.y + OY) + 'px';
-      y += n.dom.offsetHeight + ROWGAP;
+      n.dom.style.height = n.h + 'px';
+      y += n.h + ROWGAP;
     });
     f.h = y - ROWGAP - f.y + PAD;
     f.dom.style.top = (f.y + OY) + 'px'; f.dom.style.height = f.h + 'px'; f.dom.style.width = f.w + 'px';
@@ -2185,7 +2199,7 @@ function apply() {
   clampView();
   cv.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
   $('#zlv').textContent = Math.round(view.z * 100) + '%';
-  cv.classList.toggle('far', view.z < .42 && view.z >= LOD);
+  cv.classList.toggle('far', view.z < .66 && view.z >= LOD);
   cv.classList.toggle('lod', view.z < LOD);
   tellView();
 }

@@ -1321,15 +1321,18 @@ function build(map) {
     const push = o => { o.sec = sec; nodes.push(o); mine.push(o); byId[o.id] = o; return o; };
     sec.nodes.forEach(n => push(Object.assign({}, n, { t: secs(n.t), at: (n.at || []).map(secs) })));
     mine.forEach(n => { if (n.parent) { n.p = byId[n.parent]; if (n.p) (n.p.kids = n.p.kids || []).push(n); } });
-    /* 근거·동의는 따로 세우지 않고 그 주장 카드 안의 설명으로 들어간다 (피그마 주장카드) */
-    mine.filter(n => n.kind === 'pro' && n.p).forEach(n => {
-      n.p.why = (n.p.why ? n.p.why + ' · ' : '') + n.title;
+    /* 근거·동의·조건·우려는 카드를 따로 세우지 않고 그 주장 카드 안의 설명으로 들어간다.
+       따로 서는 것은 맞선 의견(반론)뿐이다 (피그마 주장카드) */
+    const MERGE = { pro: '', condition: '조건 · ', concern: '우려 · ' };
+    mine.filter(n => n.p && n.kind in MERGE).forEach(n => {
+      n.p.why = (n.p.why ? n.p.why + ' · ' : '') + MERGE[n.kind] + n.title;
       n.merged = true;
     });
     for (let i = mine.length - 1; i >= 0; i--) if (mine[i].merged) {
       nodes.splice(nodes.indexOf(mine[i]), 1); delete byId[mine[i].id]; mine.splice(i, 1);
     }
     mine.forEach(n => { n.kids = (n.kids || []).filter(k => !k.merged); });
+    mine.forEach(n => { while (n.p && n.p.merged) n.p = n.p.p; });   /* 합쳐진 카드에 걸린 자식은 그 위로 붙인다 */
 
     const r = sec.resolution;
     const res = r && push(Object.assign({}, r, { id: sec.no + '-res', res: true, t: secs(r.t), at: (r.at || []).map(secs) }));
@@ -1346,8 +1349,8 @@ function build(map) {
     if (res) (r.from || []).map(id => byId[id]).filter(Boolean)
       .forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
 
-    /* 세로는 논의 시간(위→아래), 가로는 위계 — 쟁점·마무리 0열, 주장 1열, 그 주장에 붙은 말 2열.
-       한 카드가 한 줄을 차지하니 겹칠 자리가 없고, 선은 늘 열 사이 빈 통로로만 지난다. */
+    /* 세로는 논의 시간(위→아래) — 한 카드가 한 줄을 온전히 차지해 위에서 아래로 읽힌다.
+       가로는 위계 — 쟁점·마무리 0열, 주장 1열, 그 주장에 맞선 반론 2열. 같은 위계는 같은 줄에 선다. */
     const issue = mine.find(n => n.kind === 'issue');
     const all = mine.slice();          /* res 는 push() 가 이미 넣었다 */
     all.forEach(n => { n.col = n === issue || n === res ? 0 : n.p && n.p !== issue ? 2 : 1; });
@@ -1472,16 +1475,13 @@ function render(g) {
   let ny = 0;
   g.frames.forEach(f => {
     f.y = ny;
-    const top = f.y + PAD + HEAD, bot = [top, top, top];
-    let prev = top;
-    f.nodes.slice().sort((p, q) => p.row - q.row).forEach(n => {
-      /* 시간 순서(위→아래)는 지키되, 열이 다르면 나란히 놓아 보드가 길어지지 않게 한다 */
-      const y = n === f.res ? Math.max(...bot) : Math.max(bot[n.col], prev);
+    let y = f.y + PAD + HEAD;
+    f.nodes.slice().sort((p, q) => p.row - q.row).forEach(n => {   /* 시간 순서대로 한 줄씩 내려간다 */
       n.x = colX(n.col); n.y = y;
       n.dom.style.left = (n.x + OX) + 'px'; n.dom.style.top = (n.y + OY) + 'px';
-      bot[n.col] = y + n.dom.offsetHeight + ROWGAP; prev = y;
+      y += n.dom.offsetHeight + ROWGAP;
     });
-    f.h = Math.max(...bot) - ROWGAP - f.y + PAD;
+    f.h = y - ROWGAP - f.y + PAD;
     f.dom.style.top = (f.y + OY) + 'px'; f.dom.style.height = f.h + 'px'; f.dom.style.width = f.w + 'px';
     ny = f.y + f.h + GAPY;
   });

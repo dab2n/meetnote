@@ -246,8 +246,6 @@ body.view-cards .stage{display:none}
 .hug:hover{background:rgba(75,135,233,.14)}
 #cv.lod .hug{opacity:0}
 .node.pro.fold{opacity:0;transform:translateY(-10px) scale(.96);pointer-events:none}
-.node.sel{outline:3px solid rgba(226,86,42,.34);outline-offset:2px;border-radius:20px}
-.node.playing{outline:3px solid rgba(47,107,221,.28);outline-offset:2px;border-radius:20px}
 
 /* ---------- 카드 뷰 ---------- */
 .cards{display:none;overflow:auto;padding:16px 16px 60px;background:var(--bg)}
@@ -547,10 +545,12 @@ b,h2,h3,h4,h5{font-weight:600}
 .seg-h b{font-size:14px;font-weight:600}
 .seg-h time{color:var(--dim2)} .seg.cur .seg-h time{color:var(--blue);font-weight:600}
 .seg p{font-size:14px;line-height:1.6}
-.seg mark{background:#fffbc9}
-.w.ev{background:#ffe27a;box-shadow:0 0 0 2px #ffe27a}
+/* 원문 하이라이트 — 노란 형광펜 대신 연한 하늘. 읽던 글자색을 그대로 둔다 */
+.seg mark{background:#dcecff;border-radius:3px}
+.w.ev{background:#cfe4ff;box-shadow:0 0 0 2px #cfe4ff}
 .w:hover{background:var(--chip)}
-.w.lit{background-image:linear-gradient(90deg,#fa0004,#e5db69,#9de3ff,#fa0004)}
+/* 지금 읽는 말 — 무지개 대신 파랑~청록~남보라 한 계열로 천천히 흐른다 */
+.w.lit{background-image:linear-gradient(100deg,#2f6bd8,#3f9bc4,#6f7fdc,#2f6bd8)}
 
 /* ---------- 관계 맵 ---------- */
 .stage{background:var(--bg);background-image:radial-gradient(circle,#e4e8f0 1px,transparent 1.2px);background-size:22px 22px}
@@ -725,6 +725,10 @@ body.norail .rail,body.norail .rz-x{display:none}
 .stage{background:#fcfcfe;background-image:none}
 /* 보드가 불투명하니 선은 보드 위, 카드는 선 위로 */
 .frame{z-index:1} #edges{z-index:2} .neck,.hug{z-index:2} .node{z-index:3}
+/* 고른 카드 — 테두리 대신 카드가 눌린 것처럼 살짝 어두워진다 */
+.node.sel{filter:drop-shadow(0 1px 3px rgba(0,0,0,.14)) brightness(.93) saturate(1.06);transform:translateY(1px)}
+.node.playing{filter:drop-shadow(0 2px 5px rgba(0,0,0,.12)) brightness(.97)}
+.node.sel:hover{filter:drop-shadow(0 2px 6px rgba(0,0,0,.18)) brightness(.9) saturate(1.06)}
 </style>
 </head>
 <body class="idle noaudio">
@@ -1333,7 +1337,9 @@ function build(map) {
       n.p.why = (n.p.why ? n.p.why + ' · ' : '') + MERGE[n.kind] + n.title;
       n.merged = true;
     });
+    const gone = {};
     for (let i = mine.length - 1; i >= 0; i--) if (mine[i].merged) {
+      gone[mine[i].id] = mine[i];
       nodes.splice(nodes.indexOf(mine[i]), 1); delete byId[mine[i].id]; mine.splice(i, 1);
     }
     mine.forEach(n => { n.kids = (n.kids || []).filter(k => !k.merged); });
@@ -1351,8 +1357,17 @@ function build(map) {
       edges.push({ a: back ? n : n.p, b: back ? n.p : n, kind, label: EDGE_KO[kind], both: n.kind === 'con' });
     });
     sec.conflictPairs = [];
-    if (res) (r.from || []).map(id => byId[id]).filter(Boolean)
-      .forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
+    if (res) {
+      /* 결론의 근거가 주장 안으로 합쳐졌으면 그 주장에서 잇는다. 하나도 안 남으면 그 논의의 주장 전부에서 잇는다 */
+      let from = [...new Set((r.from || []).map(id => {
+        let n = byId[id] || gone[id];
+        while (n && n.merged) n = n.p;
+        return n && !n.merged ? n : null;
+      }).filter(n => n && n !== res))];
+      if (!from.length) from = mine.filter(n => n !== res && n.kind !== 'issue');
+      if (!from.length) from = mine.filter(n => n.kind === 'issue');
+      from.forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
+    }
 
     /* 세로는 논의 시간(위→아래) — 한 카드가 한 줄을 온전히 차지해 위에서 아래로 읽힌다.
        가로는 위계 — 0열 쟁점, 1열 주장, 2열 반론, 3열 마무리. 같은 위계는 같은 열에 줄을 맞춘다. */

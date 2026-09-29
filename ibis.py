@@ -408,6 +408,51 @@ ENRICH = """너는 이미 만들어진 회의 정리 맵을 읽고, 사람이 �
 맵에 있는 모든 논의 번호(no)를 빠짐없이 담는다."""
 
 
+POLISH = """너는 이미 만들어진 회의 정리 맵을 원문과 대조해 **문장이 원문과 어긋난 카드만** 골라 고친다.
+고칠 것이 없으면 아무것도 돌려주지 않는다. 멀쩡한 문장을 취향으로 바꾸지 마라.
+
+무엇을 보나
+1. **종결어미가 그 발언의 성격과 맞는가**
+   - `position`(주장)은 그 사람이 회의에서 **밀고 있는 제안**일 때만 제안형(`~하자` · `~해야 한다` · `~가는 게 맞다`)이다.
+     원문에서 이미 정해져 공유된 사실이거나 남이 정한 것을 전달한 말이라면, 그 사실을 제안처럼 쓰지 말고
+     **누가 무엇을 하기로 했는지 드러나게** 다시 쓴다 (그래도 어미는 제안형을 지킨다 — 확정은 결론이 말한다).
+   - `con`(반론)은 **그 주장을 그대로는 받을 수 없다**는 말일 때만 `~면 ~할 수 없다`.
+     걸리는 점 정도면 `~가 걸린다`, 조건이면 `~해야 ~할 수 있다` 가 맞다. 어미와 실제 뜻이 어긋난 것을 찾아라.
+     종류 자체가 어긋났으면 `kind` 도 함께 돌려준다. 단 `con` · `concern` · `condition` 셋 사이에서만 바꾼다.
+   - 원문에서 그 사람이 하지 않은 말로 바뀐 카드(뜻이 뒤집히거나 세기가 과장된 것)를 찾아라.
+2. **note 가 제목과 겹치기만 하는가** — 제목에 없는 맥락(무엇을 두고 한 말인지, 무슨 근거·수치·사례를 들었는지)을
+   25~70자로 채운다. 원문에 없는 내용은 만들지 않는다.
+
+출력은 JSON 하나뿐이다. 설명을 붙이지 마라. 고칠 카드만 담는다.
+{"fix": [{"id": "1-2", "kind": "concern", "title": "고친 문장", "note": "고친 맥락 문장", "why": "무엇이 원문과 어긋났는지 한 마디"}]}
+title 이나 note 중 고칠 것만 넣는다. 둘 다 그대로면 그 카드는 넣지 않는다."""
+
+
+def polish(m: dict, segs: list[dict], model: str = "opus") -> tuple[dict, list[str]]:
+    """카드 문장을 원문과 대조해 어긋난 것만 고친다. (고친 맵, 고침 기록)"""
+    user = (f"<transcript>\n{as_prompt(segs)}\n</transcript>\n"
+            f"<map>\n{as_map_text(m)}\n</map>")
+    out = _cli(POLISH, user, model=model)
+    m = json.loads(json.dumps(m))
+    by = {n["id"]: n for sec in m["sections"] for n in sec["nodes"]}
+    log = []
+    for f in out.get("fix") or []:
+        n = by.get(str(f.get("id") or ""))
+        if not n or n.get("lock"):
+            continue
+        k = (f.get("kind") or "").strip()
+        if k in ("con", "concern", "condition") and n["kind"] in ("con", "concern", "condition") and k != n["kind"]:
+            log.append(f'{n["id"]} {n["kind"]} → {k}')
+            n["kind"] = k
+        t, nt = (f.get("title") or "").strip(), (f.get("note") or "").strip()
+        if t and 8 <= len(t) <= 80 and t != n["title"]:
+            log.append(f'{n["id"]} “{n["title"]}” → “{t}” · {(f.get("why") or "").strip()[:40]}')
+            n["title"] = t
+        if nt and 12 <= len(nt) <= 90 and nt != n.get("note"):
+            n["note"] = nt
+    return m, log
+
+
 def enrich(m: dict, segs: list[dict], model: str = "opus") -> dict:
     """맵에 story · group · flow 를 채워 돌려준다."""
     user = (f"<transcript>\n{as_prompt(segs)}\n</transcript>\n"
@@ -1012,6 +1057,7 @@ def main():
                     help="'이름 00:00' 형식의 전사 txt (--audit 이면 검사할 맵)")
     ap.add_argument("--audit", action="store_true", help="이미 있는 맵을 표준(SPEC.md)으로 검사만 한다")
     ap.add_argument("--enrich", action="store_true", help="이미 있는 맵에 이야기·카테고리·과정 문장을 채운다")
+    ap.add_argument("--polish", action="store_true", help="카드 문장을 원문과 대조해 어긋난 것만 고친다")
     ap.add_argument("--read", action="store_true", help="전사문을 구간별로 찍는다 (손으로 정리할 때)")
     ap.add_argument("--range", nargs="*", default=None, metavar="시각", help="--read 구간 (예: --range 10:00 25:00)")
     ap.add_argument("--width", type=int, default=150, help="--read 한 줄 길이")
@@ -1044,6 +1090,21 @@ def main():
         f.write_text(json.dumps(m2, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"  이야기 {len(m2['brief'].get('story', []))}문장 · 카테고리 "
               f"{len({s['group'] for s in m2['sections']})}개 · 위반 {len(bad)}건")
+        for x in bad:
+            print("   -", x)
+        sys.exit(0)
+    if a.polish:
+        f = a.transcript
+        m = json.loads(f.read_text(encoding="utf-8"))
+        tp = f.parent / m["meeting"]["transcript"].split("/")[-1]
+        segs = json.loads(tp.read_text(encoding="utf-8"))["segments"]
+        print(f"{f.name} · 카드 문장을 원문과 대조하는 중…", flush=True)
+        m2, log = polish(m, segs, model="opus")
+        bad = audit(m2, segs)
+        f.write_text(json.dumps(m2, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"  고친 카드 {len(log)}개 · 위반 {len(bad)}건")
+        for x in log:
+            print("   ·", x)
         for x in bad:
             print("   -", x)
         sys.exit(0)

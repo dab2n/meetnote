@@ -682,7 +682,7 @@ body.norail .rail,body.norail .rz-x{display:none}
    카드 · 보드 — 피그마 그대로 (3628:4302 쟁점 · 3633:4348 마무리 · 3633:4419 주장 · 3633:4336 섹션)
    쟁점은 검정, 주장은 아래에서 밝아지는 회청, 마무리는 하늘색. 그 밖의 장식은 넣지 않는다.
    ===================================================================== */
-.node{width:279px;padding:18px 20px 20px;border:0;border-radius:20px;box-shadow:none;
+.node{width:320px;padding:18px 20px 20px;border:0;border-radius:20px;box-shadow:none;
   display:flex;align-items:center;gap:0;
   background:radial-gradient(175.5px 71.1px at 145.2px 121.6px, #c5d1e8 3.37%, #dfe5f5 23.79%, #f5f8ff 100%);
   background-size:100% 100%;
@@ -696,16 +696,16 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node p{font-size:12px;font-weight:400;line-height:1.5;letter-spacing:-.12px;color:#525252;word-break:break-word;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 /* 주장 카드는 프로필을 글 위에 올린다 (세로 스택) */
-.node.position,.node.con,.node.concern,.node.condition,.node.pro,.node.open{width:279px;flex-direction:column;align-items:stretch}
+.node.position,.node.con,.node.concern,.node.condition,.node.pro,.node.open{width:320px;flex-direction:column;align-items:stretch}
 /* 쟁점 · 마무리 — 라벨 + 문장 */
 .node.issue,.node.res{
   flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:18px 40px 20px 20px}
-.node.issue{width:300px;background:#161919;filter:none}
+.node.issue{width:326px;background:#161919;filter:none}
 .node.issue .k,.node.issue h4{color:#fff}
 .node.issue h4{font-weight:500;line-height:1.5}
 .node .k{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:600;line-height:1.6;letter-spacing:-.16px}
 .node .k:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
-.node.res{width:279px;
+.node.res{width:300px;
   background:radial-gradient(149.6px 69.4px at 50% 40%, #87d1ff 0%, #aedeff 48.85%, #d6ebff 97.71%);
   box-shadow:inset 0 0 12px #eaf9ff}
 .node.res .k{color:#4cade7}
@@ -1371,16 +1371,16 @@ function build(map) {
     }
 
     /* 세로는 논의 시간(위→아래) — 한 카드가 한 줄을 온전히 차지해 위에서 아래로 읽힌다.
-       가로는 위계 — 0열 쟁점, 1열 주장, 2열 그 주장에 맞선 반론과 맨 아래 마무리. 같은 열은 폭이 같다. */
+       가로는 위계 — 오른쪽으로 갈수록 더 깊어진다. 0열 쟁점, 1열 주장, 2열 그 주장에서 깊어진 말(반론·근거),
+       3열 마무리. 같은 위계는 같은 열에 아래로 묶인다. */
     const issue = mine.find(n => n.kind === 'issue');
     const all = mine.slice();          /* res 는 push() 가 이미 넣었다 */
-    all.forEach(n => { n.col = n === issue ? 0 : n === res ? 2 : n.p && n.p !== issue ? 2 : 1; });
-    const ord = all.slice().sort((a, b) => a.t - b.t || a.col - b.col);
+    all.forEach(n => { n.col = n === issue ? 0 : n.res ? 3 : n.p && n.p !== issue ? 2 : 1; });
+    const ord = all.slice().sort((a, b) => a.t - b.t || (a.res ? 1 : 0) - (b.res ? 1 : 0) || a.col - b.col);
     if (issue) { ord.splice(ord.indexOf(issue), 1); ord.unshift(issue); }
-    if (res) { ord.splice(ord.indexOf(res), 1); ord.push(res); }
     ord.forEach((n, i) => { n.row = i; });
 
-    const frame = { sec, nodes: all, res, cols: 3 };   /* 0열 쟁점 · 1열 주장 · 2열 반론과 마무리 */
+    const frame = { sec, nodes: all, res, cols: 4 };   /* 0 쟁점 · 1 주장 · 2 그 주장에서 깊어진 말 · 3 마무리 */
     frames.push(frame);
     sec.frame = frame; sec.byId = byId;
 
@@ -1401,7 +1401,7 @@ function build(map) {
 
 /* ================= 4. 섹션 배치 ================= */
 /* 열 폭은 피그마 카드 폭 그대로 — 같은 열 카드는 폭이 같다 (0열 쟁점·마무리 300, 1·2열 279) */
-const CW = [300, 279, 279], PAD = 28, HEAD = 34, GAPX = 56, GAPY = 128, ROWH = 150;
+const CW = [326, 320, 320, 300], PAD = 20, HEAD = 34, GAPX = 40, GAPY = 120, ROWH = 150;
 const colX = c => PAD + CW.slice(0, c).reduce((a, w) => a + w + GAPX, 0);
 function layout(g) {
   /* 카드 높이는 글 줄 수마다 달라 render() 뒤에 다시 잰다. 여기선 어림으로 자리만 잡는다 */
@@ -1415,7 +1415,7 @@ function layout(g) {
   });
   const W = Math.max(...g.frames.map(f => f.w));
   g.frames.forEach(f => { f.w = W; });
-  bounds = { x0: OX - 80, y0: OY - 80, w: W + 160, h: y - GAPY + 160 };
+  bounds = { x0: OX - 26, y0: OY - 26, w: W + 52, h: y - GAPY + 52 };
 }
 
 /* ================= 5. 그리기 ================= */
@@ -1507,7 +1507,7 @@ function render(g) {
     f.dom.style.top = (f.y + OY) + 'px'; f.dom.style.height = f.h + 'px'; f.dom.style.width = f.w + 'px';
     ny = f.y + f.h + GAPY;
   });
-  bounds = { x0: OX - 80, y0: OY - 80, w: g.frames[0].w + 160, h: ny - GAPY + 160 };
+  bounds = { x0: OX - 26, y0: OY - 26, w: g.frames[0].w + 52, h: ny - GAPY + 52 };
 
   g.frames.forEach((f, i) => {                 /* 카드와 카드를 잇는 목 */
     if (i === 0) return;

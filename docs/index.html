@@ -209,10 +209,6 @@ body.mapview{overflow:hidden}
 .mgrid.wide.open{grid-template-columns:clamp(260px,24vw,320px) minmax(0,1fr);gap:14px}   /* 맵이 좁아지지 않게 원문은 얇게 */
 .mgrid.wide:not(.open) .tr{width:0;min-width:0;padding:0;overflow:hidden;opacity:0;pointer-events:none;box-shadow:none}
 .mgrid.wide .tr{transition:opacity .3s}
-.srctog{position:absolute;z-index:6;left:16px;top:16px;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 18px;border-radius:99px;
-  background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--navy);font-size:13px;font-weight:600;
-  box-shadow:0 0 0 1px rgba(40,39,51,.06),0 8px 22px rgba(40,39,51,.12)}
-.srctog:hover{background:#fff}
 .mapwrap{position:relative}
 .only-narrow{display:none}
 .mgrid.solo{grid-template-columns:minmax(0,1fr)}
@@ -894,7 +890,6 @@ let PEEK = 0;                         /* 요약에서 '들여다 보기'로 가�
 function showSrc(on) {
   SRCOPEN = on;
   const g = $('.mgrid.wide'); if (g) g.classList.toggle('open', on);
-  const t = $('#srctog'); if (t) t.textContent = on ? '원문 접기' : '원문 펼치기';
 }
 async function meetingPage(p, page) {
   const m = meetingOf(page.id);
@@ -929,8 +924,7 @@ function meetingTab(tab) {
     if (f) f.addEventListener('load', () => setTimeout(() => f.contentWindow.postMessage({ mn: 'peek', no: PEEK }, '*'), 400), { once: true });
   }, 0);
   const inner = tab === 'map'
-    ? `<div class="map mapwrap"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map&embed=1&norail=1" title="관계 맵"></iframe>
-        <button class="srctog" id="srctog">${SRCOPEN ? '원문 접기' : '원문 펼치기'}</button></div>`
+    ? `<div class="map mapwrap"><iframe src="map.html?m=${encodeURIComponent(m.id)}&view=map&embed=1&norail=1" title="관계 맵"></iframe></div>`
     : summaryHTML(map);
   body.innerHTML = `<div class="mgrid ${tab === 'src' ? 'solo' : tab === 'map' ? 'wide' : ''} ${tab === 'map' && SRCOPEN ? 'open' : ''}">${transHTML(segs)}${tab === 'src' ? '' : inner}</div>`;
   document.body.classList.toggle('mapview', tab === 'map');
@@ -938,8 +932,6 @@ function meetingTab(tab) {
     const g = $('.mgrid'); if (!g) return;
     g.style.setProperty('--top', Math.round(g.getBoundingClientRect().top + 24) + 'px');
   });
-  const tg = $('#srctog');
-  if (tg) tg.onclick = () => showSrc(!SRCOPEN);
   if (tab === 'sum') bindSummary(map);
   bindTrans();
   if (focusNo) { const el = body.querySelector(`[data-no="${focusNo}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); pickSection(map.sections.find(s => s.no === focusNo), false); } }

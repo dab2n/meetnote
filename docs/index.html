@@ -166,7 +166,7 @@ img.av{object-fit:cover}
 .mgrid.wide .tr{position:static;height:var(--h)}
 body.mapview main{padding-bottom:24px;overflow:hidden}
 body.mapview{overflow:hidden}
-.mgrid.wide.open{grid-template-columns:360px minmax(0,1fr);gap:16px}
+.mgrid.wide.open{grid-template-columns:clamp(260px,24vw,320px) minmax(0,1fr);gap:14px}   /* 맵이 좁아지지 않게 원문은 얇게 */
 .mgrid.wide:not(.open) .tr{width:0;min-width:0;padding:0;overflow:hidden;opacity:0;pointer-events:none;box-shadow:none}
 .mgrid.wide .tr{transition:opacity .3s}
 .srctog{position:absolute;z-index:6;left:16px;top:16px;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 18px;border-radius:99px;

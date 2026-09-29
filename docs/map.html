@@ -704,7 +704,7 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node.issue h4{font-weight:500;line-height:1.5}
 .node .k{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:600;line-height:1.6;letter-spacing:-.16px}
 .node .k:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
-.node.res{width:300px;
+.node.res{width:279px;
   background:radial-gradient(149.6px 69.4px at 50% 40%, #87d1ff 0%, #aedeff 48.85%, #d6ebff 97.71%);
   box-shadow:inset 0 0 12px #eaf9ff}
 .node.res .k{color:#4cade7}
@@ -713,7 +713,7 @@ body.norail .rail,body.norail .rz-x{display:none}
 /* 보드가 좁아져 멀리서 볼 때 — 설명은 접고 한 줄 요지를 키운다 (정보 위계는 그대로) */
 .node{overflow:hidden}
 .far .node p{display:none}
-.far .node h4{font-size:22px;line-height:1.32;letter-spacing:-.3px}
+.far .node h4{font-size:var(--fz,22px);line-height:1.32;letter-spacing:-.3px}
 .far .node .k{font-size:22px} .far .node .k:before{width:9px;height:9px}
 .far .node .who{width:30px;height:30px;margin-bottom:10px}
 /* 보드 바닥 — 섹션 fill 과 같은 그라데이션 위에 점 격자 (카드 폭 279 대비 24px 간격) */
@@ -1370,16 +1370,16 @@ function build(map) {
     }
 
     /* 세로는 논의 시간(위→아래) — 한 카드가 한 줄을 온전히 차지해 위에서 아래로 읽힌다.
-       가로는 위계 — 0열 쟁점, 1열 주장, 2열 반론, 3열 마무리. 같은 위계는 같은 열에 줄을 맞춘다. */
+       가로는 위계 — 0열 쟁점, 1열 주장, 2열 그 주장에 맞선 반론과 맨 아래 마무리. 같은 열은 폭이 같다. */
     const issue = mine.find(n => n.kind === 'issue');
     const all = mine.slice();          /* res 는 push() 가 이미 넣었다 */
-    all.forEach(n => { n.col = n === issue ? 0 : n === res ? 3 : n.p && n.p !== issue ? 2 : 1; });
+    all.forEach(n => { n.col = n === issue ? 0 : n === res ? 2 : n.p && n.p !== issue ? 2 : 1; });
     const ord = all.slice().sort((a, b) => a.t - b.t || a.col - b.col);
     if (issue) { ord.splice(ord.indexOf(issue), 1); ord.unshift(issue); }
     if (res) { ord.splice(ord.indexOf(res), 1); ord.push(res); }
     ord.forEach((n, i) => { n.row = i; });
 
-    const frame = { sec, nodes: all, res, cols: 4 };   /* 쟁점 · 주장 · 반론 · 마무리 */
+    const frame = { sec, nodes: all, res, cols: 3 };   /* 0열 쟁점 · 1열 주장 · 2열 반론과 마무리 */
     frames.push(frame);
     sec.frame = frame; sec.byId = byId;
 
@@ -1400,7 +1400,7 @@ function build(map) {
 
 /* ================= 4. 섹션 배치 ================= */
 /* 열 폭은 피그마 카드 폭 그대로 — 같은 열 카드는 폭이 같다 (0열 쟁점·마무리 300, 1·2열 279) */
-const CW = [300, 279, 279, 300], PAD = 34, HEAD = 34, GAPX = 76, GAPY = 128, ROWH = 150;
+const CW = [300, 279, 279], PAD = 28, HEAD = 34, GAPX = 56, GAPY = 128, ROWH = 150;
 const colX = c => PAD + CW.slice(0, c).reduce((a, w) => a + w + GAPX, 0);
 function layout(g) {
   /* 카드 높이는 글 줄 수마다 달라 render() 뒤에 다시 잰다. 여기선 어림으로 자리만 잡는다 */
@@ -1485,10 +1485,12 @@ function render(g) {
   /* 카드 높이는 가까이 볼 때와 멀리서 볼 때(글 접고 제목 키움) 중 큰 쪽으로 못박는다.
      그래야 줌을 바꿔도 자리가 흔들리거나 글이 잘리지 않는다 */
   const wasFar = cv.classList.contains('far');
+  cv.style.setProperty('--fz', '26px');        /* 가장 크게 키웠을 때로 재 둔다 */
   cv.classList.add('far');
   g.nodes.forEach(n => { n.hFar = n.dom.offsetHeight; });
   cv.classList.remove('far');
   g.nodes.forEach(n => { n.h = Math.max(n.dom.offsetHeight, n.hFar); });
+  cv.style.removeProperty('--fz');
   if (wasFar) cv.classList.add('far');
   let ny = 0;
   g.frames.forEach(f => {
@@ -2214,7 +2216,9 @@ function apply() {
   clampView();
   cv.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
   $('#zlv').textContent = Math.round(view.z * 100) + '%';
-  cv.classList.toggle('far', view.z < .66 && view.z >= LOD);
+  cv.classList.toggle('far', view.z < .6 && view.z >= LOD);
+  /* 멀어질수록 글자를 키워, 화면에 찍히는 크기가 13px 언저리로 남게 한다 */
+  cv.style.setProperty('--fz', Math.max(16, Math.min(26, 13 / view.z)).toFixed(1) + 'px');
   cv.classList.toggle('lod', view.z < LOD);
   tellView();
 }
@@ -3084,7 +3088,15 @@ function offsets() {
   document.documentElement.style.setProperty('--player',
     document.body.classList.contains('noaudio') ? '0px' : '56px');
 }
-addEventListener('resize', () => apply());
+/* 원문을 펴서 보드가 좁아지면 보드 폭에 맞을 만큼만 줄인다 (넓어질 때는 보던 크기를 지킨다).
+   열고 접는 애니메이션이 끝난 뒤 재 본다 */
+let rzT;
+function refit() {
+  const r = vp.getBoundingClientRect(), bw = (FRAMES[0] ? FRAMES[0].w : bounds.w) + 36;
+  if (bw * view.z > r.width) view.z = Math.max(zLimit()[0], Math.min(view.z, r.width / bw));
+  apply();
+}
+addEventListener('resize', () => { apply(); clearTimeout(rzT); rzT = setTimeout(refit, 380); });
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'Space') { e.preventDefault(); audioOK ? (au.paused ? au.play() : au.pause()) : $('#pause').click(); }

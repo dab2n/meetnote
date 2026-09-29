@@ -345,7 +345,7 @@ body.view-cards .cards{display:block}
 .legend b{font-weight:650}
 .legend i{display:inline-block;width:16px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
 .legend .sw{display:inline-block;width:9px;height:9px;border-radius:3px;vertical-align:middle;margin-right:5px}
-.zoom{position:absolute;right:14px;bottom:14px;z-index:6;display:flex;align-items:center;gap:2px;padding:4px;
+.zoom{position:absolute;right:16px;bottom:16px;z-index:6;display:flex;align-items:center;gap:2px;padding:4px;
   border-radius:11px;background:var(--panel);border:1px solid var(--line)}
 .zoom button{width:28px;height:28px;border-radius:7px;font-size:14px;color:var(--dim)}
 .zoom button:hover{background:#f2f2f4;color:var(--ink)}
@@ -444,7 +444,8 @@ body.noaudio .player{display:none}
 /* ---------- 모바일 ---------- */
 .tabs{display:none!important}
 @media (max-width:900px){
-  main{grid-template-columns:1fr;bottom:calc(var(--player) + 48px)}
+  main{grid-template-columns:1fr}
+  body:not(.embed) main{bottom:calc(var(--player) + 48px)}   /* 하단 탭바 자리 — 박아 넣은 맵에는 탭바가 없다 */
   .rail,.rz-x{display:none}
   body.tab-src .rail{display:grid}
   body.tab-src .stage,body.tab-src .cards{display:none}
@@ -648,7 +649,7 @@ b,h2,h3,h4,h5{font-weight:600}
 #cv:not(.lod) .neck,#cv:not(.lod) .bud{opacity:0}
 
 /* ---------- 실시간 따라가기 ---------- */
-.follow{position:absolute;left:14px;bottom:14px;z-index:6;height:40px;padding:0 18px;border-radius:99px;
+.follow{position:absolute;left:16px;bottom:16px;z-index:6;height:40px;padding:0 18px;border-radius:99px;
   background:rgba(250,250,250,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   box-shadow:0 0 12px rgba(0,0,0,.1);font-size:13px;font-weight:600;color:var(--navy)}
 .follow:hover{background:#fff}

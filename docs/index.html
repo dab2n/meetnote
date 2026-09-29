@@ -201,8 +201,9 @@ img.av{object-fit:cover}
 .tabs{margin-top:22px;display:flex;align-items:center;gap:10px}
 .mgrid{margin-top:18px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:24px;align-items:start}
 .mgrid.wide{grid-template-columns:0 minmax(0,1fr);gap:0;transition:grid-template-columns .35s var(--ease),gap .35s;
-  --h:calc(100vh - var(--top,240px));align-items:stretch}   /* 원문과 맵이 같은 높이로 화면에 꼭 맞는다 */
+  --h:calc(100vh - var(--top,240px));grid-auto-rows:var(--h);align-items:stretch}   /* 원문과 맵이 같은 높이로 화면에 꼭 맞는다 */
 .mgrid.wide .tr{position:static;height:var(--h)}
+.mgrid.wide .map{height:var(--h)}      /* 카드와 그 안의 맵을 딱 같은 높이로 — 아래가 희게 남지 않게 */
 body.mapview main{padding-bottom:24px;overflow:hidden}
 body.mapview{overflow:hidden}
 .mgrid.wide.open{grid-template-columns:clamp(260px,24vw,320px) minmax(0,1fr);gap:14px}   /* 맵이 좁아지지 않게 원문은 얇게 */
@@ -888,7 +889,7 @@ async function list(p) {
 
 /* ================= 5. 회의 페이지 — 요약 · 원문 · 관계 맵 ================= */
 let M = null;   /* 지금 열린 회의 {m, map, segs} */
-let SRCOPEN = false;                  /* 관계 맵에서 왼쪽 원문을 펼쳐 두었는가 */
+let SRCOPEN = true;                   /* 관계 맵에서 왼쪽 원문을 펼쳐 두었는가 — 요약 탭처럼 펴 둔 채로 시작한다 */
 let PEEK = 0;                         /* 요약에서 '들여다 보기'로 가리킨 논의 */
 function showSrc(on) {
   SRCOPEN = on;

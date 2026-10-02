@@ -730,6 +730,14 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node.sel{filter:drop-shadow(0 1px 3px rgba(0,0,0,.14)) brightness(.93) saturate(1.06);transform:translateY(1px)}
 .node.playing{filter:drop-shadow(0 2px 5px rgba(0,0,0,.12)) brightness(.97)}
 .node.sel:hover{filter:drop-shadow(0 2px 6px rgba(0,0,0,.18)) brightness(.9) saturate(1.06)}
+/* 고른 카드는 접힌 설명을 끝까지 펼친다 — 자리를 밀지 않고 그 자리에서 아래로 자란다 */
+.node.sel{height:auto!important;z-index:9;overflow:visible}
+.node.sel p{-webkit-line-clamp:unset;overflow:visible}
+.far .node.sel p{display:block;font-size:calc(var(--fz,22px) * .62);line-height:1.5}
+.node .more{display:none;margin-top:6px;font-size:11px;font-weight:600;color:#6b7a90;letter-spacing:-.1px}
+.node.cut .more{display:block}
+.far .node.cut .more{display:none}
+.node.sel .more{display:none}
 </style>
 </head>
 <body class="idle noaudio">
@@ -1476,7 +1484,7 @@ function render(g) {
     d.innerHTML = head
       ? `<div class="k">${head}</div><h4>${esc(n.title)}</h4>`
       : `<img class="who" src="${AV[n.who] || 'assets/av-glasses.png'}" alt="" title="${esc(n.who || '')}">`
-        + `<div class="tx"><h4>${esc(n.title)}</h4>${why ? `<p>${esc(why)}</p>` : ''}</div>`;
+        + `<div class="tx"><h4>${esc(n.title)}</h4>${why ? `<p>${esc(why)}</p><span class="more">눌러서 전부 보기</span>` : ''}</div>`;
     d.onclick = () => selectNode(n);
     n.dom = d; cv.append(d);
   });
@@ -1490,7 +1498,17 @@ function render(g) {
   cv.classList.add('far');
   g.nodes.forEach(n => { n.hFar = n.dom.offsetHeight; });
   cv.classList.remove('far');
-  g.nodes.forEach(n => { n.h = Math.max(n.dom.offsetHeight, n.hFar); });
+  g.nodes.forEach(n => {
+    const p = n.dom.querySelector('p');                 /* 설명이 세 줄에서 잘렸는가 — '눌러서 전부 보기' 줄까지 재려면 먼저 */
+    if (p) {                                            /* 줄 수 제한을 잠깐 풀어 재 본다 (-webkit-box 는 scrollHeight 가 안 늘어난다) */
+      const shown = p.clientHeight;
+      p.style.webkitLineClamp = 'unset';
+      const full = p.clientHeight;
+      p.style.webkitLineClamp = '';
+      n.dom.classList.toggle('cut', full > shown + 1);
+    }
+    n.h = Math.max(n.dom.offsetHeight, n.hFar);
+  });
   cv.style.removeProperty('--fz');
   if (wasFar) cv.classList.add('far');
   let ny = 0;
@@ -1690,7 +1708,8 @@ function applyEdits() {
   });
 }
 function paintNode(n) {
-  n.dom.className = 'node ' + n.kind + (n.res ? ' res' : '') + (n.dom.classList.contains('in') ? ' in' : '');
+  n.dom.className = 'node ' + n.kind + (n.res ? ' res' : '')
+    + (n.dom.classList.contains('in') ? ' in' : '') + (n.dom.classList.contains('cut') ? ' cut' : '');
   const k = n.dom.querySelector('.k');
   if (k) k.textContent = n.kind === 'issue' ? '쟁점' : '마무리';
   n.dom.querySelector('h4').textContent = n.title;

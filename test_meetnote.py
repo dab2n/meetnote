@@ -104,7 +104,8 @@ if REF.exists():
     assert ibis.audit(ref, rsegs) == [], "표본(NEWTON)이 표준을 통과해야 한다"
 
     bad = json.loads(json.dumps(ref))
-    bad["sections"][0]["nodes"][1]["title"] = "타인 감지에 따른 센서 증가"     # 명사 나열
+    pos = next(n for n in bad["sections"][0]["nodes"] if n["kind"] == "position")
+    pos["title"] = "타인 감지에 따른 센서 증가"                                  # 명사 나열 · 제안형 아님
     bad["highlights"][0]["title"] = "웃긴 말이 나왔다"                          # ~순간 아님
     bad["sections"][1]["conflicts"] = [[n["id"] for n in bad["sections"][1]["nodes"][:2]]]
     got = ibis.audit(bad, rsegs)

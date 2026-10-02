@@ -429,7 +429,14 @@ POLISH = """너는 이미 만들어진 회의 정리 맵을 원문과 대조해 
    - 주어와 서술어가 안 맞거나, 무엇을 가리키는지 알 수 없는 지시어
    - 회의에서 쓰지 않은 말로 바꿔 끼운 어려운 한자어
    짧고 분명한 우리말 한 문장으로 바꾼다. 없는 내용을 더하지 않는다.
-4. **쟁점(`issue`) 문장이 그 자리의 성격과 맞는가** — 이게 틀리면 토론이 아닌 자리가 토론처럼 읽힌다.
+4. **한 사람이 자기 주장에 스스로 반론한 모양이 되었는가** — 맵에서 가장 잘못 읽히는 구조다.
+   같은 사람이 `position` 과 그에 붙은 `con` 을 모두 말한 것으로 되어 있으면, 원문을 보고 셋 중 하나로 고친다.
+   - 그 `position` 이 **팀이 전에 세워 둔 설정·전제**를 전한 것이라면 그것은 그 사람의 주장이 아니다.
+     `drop: true` 로 그 카드를 빼고, 거기 붙어 있던 `con` 들은 **그 사람이 실제로 민 주장의 근거(`pro`)** 로
+     `kind` 와 `parent` 를 바꾼다. (전제는 쟁점 문장과 note 가 이미 말해 준다)
+   - 그 사람이 **스스로 접은 자기 제안**이라면 그대로 둔다. 다만 note 에 접었다는 사실이 드러나야 한다.
+   - `con` 이 사실은 그 주장을 **받치는 말**이었다면 `pro` 로 바꾼다.
+5. **쟁점(`issue`) 문장이 그 자리의 성격과 맞는가** — 이게 틀리면 토론이 아닌 자리가 토론처럼 읽힌다.
    - 그 논의에서 **여러 사람이 서로 다른 안을 놓고 갈렸을 때만** 고르는 물음(`~할 것인가`)으로 쓴다.
    - **한 사람이 정리해 와서 설명·공유한 자리**(발언자가 사실상 한 명이고 반대가 없는 자리)라면 물음으로 쓰지 않는다.
      무엇을 공유·점검한 자리인지 드러나는 **명사형 안건 이름**(8~30자)으로 바꾼다.
@@ -437,8 +444,12 @@ POLISH = """너는 이미 만들어진 회의 정리 맵을 원문과 대조해 
    - 값·대상·범위를 좁혀 정한 자리도 명사형이다.
    쟁점을 고칠 때는 `id` 에 그 issue 노드의 id 를 넣어 `title` 만 돌려준다.
 
+고칠 수 있는 것: `title` · `note` · `kind` · `parent` · `drop`.
+`kind` 는 `position` · `pro` · `con` · `concern` · `condition` 사이에서만 바꾼다 (쟁점과 결론은 그대로).
+`drop` 은 그 카드가 **그 사람의 말이 아니라 전제·배경**일 때만 쓴다. 한 논의에 주장(`position`)은 하나 이상 남아야 한다.
+
 출력은 JSON 하나뿐이다. 설명을 붙이지 마라. 고칠 카드만 담는다.
-{"fix": [{"id": "1-2", "kind": "concern", "title": "고친 문장", "note": "고친 맥락 문장", "why": "무엇이 어긋났는지 한 마디"}]}
+{"fix": [{"id": "1-2", "kind": "pro", "parent": "1-5", "drop": false, "title": "고친 문장", "note": "고친 맥락 문장", "why": "무엇이 어긋났는지 한 마디"}]}
 title 이나 note 중 고칠 것만 넣는다. 둘 다 그대로면 그 카드는 넣지 않는다."""
 
 
@@ -452,21 +463,42 @@ def polish(m: dict, segs: list[dict], model: str = "opus") -> tuple[dict, list[s
     for sec in m["sections"]:                      # 결론도 고칠 수 있게
         if sec.get("resolution"):
             by[f'{sec["no"]}-res'] = sec["resolution"]
-    log = []
+    log, drop = [], set()
     for f in out.get("fix") or []:
         n = by.get(str(f.get("id") or ""))
         if not n or n.get("lock"):
             continue
+        KOK = ("position", "pro", "con", "concern", "condition")
+        if f.get("drop") and n["kind"] in KOK:
+            drop.add(n["id"]); log.append(f'{n["id"]} 빼기 — {(f.get("why") or "").strip()[:48]}')
+            continue
         k = (f.get("kind") or "").strip()
-        if k in ("con", "concern", "condition") and n["kind"] in ("con", "concern", "condition") and k != n["kind"]:
+        if k in KOK and n["kind"] in KOK and k != n["kind"]:
             log.append(f'{n["id"]} {n["kind"]} → {k}')
             n["kind"] = k
+        pa = (f.get("parent") or "").strip()
+        if pa and pa in by and pa != n.get("parent") and n["kind"] != "issue":
+            log.append(f'{n["id"]} 부모 {n.get("parent")} → {pa}')
+            n["parent"] = pa
         t, nt = (f.get("title") or "").strip(), (f.get("note") or "").strip()
         if t and 8 <= len(t) <= 80 and t != n["title"]:
             log.append(f'{n["id"]} “{n["title"]}” → “{t}” · {(f.get("why") or "").strip()[:40]}')
             n["title"] = t
         if nt and 12 <= len(nt) <= 90 and nt != n.get("note"):
             n["note"] = nt
+    for sec in m["sections"]:                       # 뺀 카드 정리 — 주장이 하나도 안 남으면 빼지 않는다
+        keep = [n for n in sec["nodes"] if n["id"] not in drop]
+        if not any(n["kind"] == "position" for n in keep) or not any(n["kind"] == "issue" for n in keep):
+            continue
+        root = next(n["id"] for n in keep if n["kind"] == "issue")
+        ids = {n["id"] for n in keep}
+        for n in keep:
+            if n.get("parent") and n["parent"] not in ids:
+                n["parent"] = root
+        sec["nodes"] = keep
+        r = sec.get("resolution") or {}
+        if r.get("from"):
+            r["from"] = [x for x in r["from"] if x in ids] or [n["id"] for n in keep if n["kind"] == "position"]
     return m, log
 
 
@@ -876,6 +908,17 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
         if iss_n and len(spk) <= 1 and re.search(r"(인가|것인가|는가|은가|운가|을까|ㄹ까|까)[?]?$", (iss_n.get("title") or "").strip()):
             v.append(f"{tag} 한 사람이 정리해 공유한 자리인데 쟁점을 고르는 물음으로 썼다. "
                      f"명사형 안건 이름으로 — “{iss_n['title'][:28]}”")
+        res_from = set((sec.get("resolution") or {}).get("from") or [])
+        for n in nodes:                              # 전제를 그 사람의 주장으로 세우지 않는다 (SPEC 2절)
+            if n.get("kind") != "position":
+                continue
+            selfcon = [c for c in nodes if c.get("parent") == n["id"]
+                       and c.get("kind") == "con" and c.get("who") == n.get("who")]
+            # 스스로 접은 제안은 맵에 남겨도 된다 (SPEC 2절) — note 에 접었다고 적혀 있으면 넘어간다
+            withdrew = re.search(r"접|철회|거뒀|물렀|스스로", (n.get("note") or "") + " ".join(c.get("note") or "" for c in selfcon))
+            if selfcon and n["id"] not in res_from and not withdrew:
+                v.append(f"{tag} {n['id']} 은 그 사람이 민 주장이 아니라 전제로 보인다 — "
+                         f"같은 사람이 스스로 반론(con)을 달았고 결론도 가리키지 않는다. 빼거나 근거로 돌려야 한다")
         if kinds.count("issue") != 1:
             v.append(f"{tag} 쟁점(issue)이 {kinds.count('issue')}개다. 정확히 하나여야 한다")
         if "position" not in kinds:

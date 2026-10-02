@@ -213,7 +213,9 @@ def as_map_text(m: dict) -> str:
     """현재 맵을 프롬프트에 넣을 형태로. 사람이 고친 노드는 lock 을 달아 보호한다."""
     out = []
     for sec in m.get("sections", []):
-        out.append(f'논의 {sec["no"]} [{sec["t"]}–{sec["t1"]}] {sec["part"]} · {sec["title"]}')
+        spk = sorted({n.get("who", "") for n in sec.get("nodes", []) if n.get("kind") != "issue" and n.get("who")})
+        out.append(f'논의 {sec["no"]} [{sec["t"]}–{sec["t1"]}] {sec["part"]} · {sec["title"]}'
+                   f'  (말한 사람 {len(spk)}명: {" · ".join(spk)})')
         for n in sec.get("nodes", []):
             lock = " (lock)" if n.get("lock") else ""
             par = f" ←{n['parent']}" if n.get("parent") else ""
@@ -221,7 +223,7 @@ def as_map_text(m: dict) -> str:
             out.append(f'  {n["id"]}{par} [{n["kind"]}]{lock} {n["title"]}{note} — {n.get("who","")} {n["t"]}')
         r = sec.get("resolution") or {}
         if r:
-            out.append(f'  결론 [{r.get("kind")}] {r.get("title")}')
+            out.append(f'  {sec["no"]}-res [{r.get("kind")}] 결론 {r.get("title")}')
         for c in sec.get("conflicts", []):
             out.append(f'  대립 {c[0]} ↔ {c[1]}')
     return "\n".join(out) or "(아직 없음)"
@@ -422,9 +424,21 @@ POLISH = """너는 이미 만들어진 회의 정리 맵을 원문과 대조해 
    - 원문에서 그 사람이 하지 않은 말로 바뀐 카드(뜻이 뒤집히거나 세기가 과장된 것)를 찾아라.
 2. **note 가 제목과 겹치기만 하는가** — 제목에 없는 맥락(무엇을 두고 한 말인지, 무슨 근거·수치·사례를 들었는지)을
    25~70자로 채운다. 원문에 없는 내용은 만들지 않는다.
+3. **한국인이 소리 내어 읽었을 때 걸리는 문장** — 뜻이 맞아도 말이 안 되면 고친다.
+   - 뜻 없는 명사 덩어리·번역투·조사 오용: `강화 장면을 남길 값이 있다`, `~에 대한 ~의 ~` 같은 문장
+   - 주어와 서술어가 안 맞거나, 무엇을 가리키는지 알 수 없는 지시어
+   - 회의에서 쓰지 않은 말로 바꿔 끼운 어려운 한자어
+   짧고 분명한 우리말 한 문장으로 바꾼다. 없는 내용을 더하지 않는다.
+4. **쟁점(`issue`) 문장이 그 자리의 성격과 맞는가** — 이게 틀리면 토론이 아닌 자리가 토론처럼 읽힌다.
+   - 그 논의에서 **여러 사람이 서로 다른 안을 놓고 갈렸을 때만** 고르는 물음(`~할 것인가`)으로 쓴다.
+   - **한 사람이 정리해 와서 설명·공유한 자리**(발언자가 사실상 한 명이고 반대가 없는 자리)라면 물음으로 쓰지 않는다.
+     무엇을 공유·점검한 자리인지 드러나는 **명사형 안건 이름**(8~30자)으로 바꾼다.
+     예: `중심 가치를 ~에 둘 것인가, ~에 둘 것인가` → `인터뷰로 다시 잡은 제품의 중심 가치`
+   - 값·대상·범위를 좁혀 정한 자리도 명사형이다.
+   쟁점을 고칠 때는 `id` 에 그 issue 노드의 id 를 넣어 `title` 만 돌려준다.
 
 출력은 JSON 하나뿐이다. 설명을 붙이지 마라. 고칠 카드만 담는다.
-{"fix": [{"id": "1-2", "kind": "concern", "title": "고친 문장", "note": "고친 맥락 문장", "why": "무엇이 원문과 어긋났는지 한 마디"}]}
+{"fix": [{"id": "1-2", "kind": "concern", "title": "고친 문장", "note": "고친 맥락 문장", "why": "무엇이 어긋났는지 한 마디"}]}
 title 이나 note 중 고칠 것만 넣는다. 둘 다 그대로면 그 카드는 넣지 않는다."""
 
 
@@ -435,6 +449,9 @@ def polish(m: dict, segs: list[dict], model: str = "opus") -> tuple[dict, list[s
     out = _cli(POLISH, user, model=model)
     m = json.loads(json.dumps(m))
     by = {n["id"]: n for sec in m["sections"] for n in sec["nodes"]}
+    for sec in m["sections"]:                      # 결론도 고칠 수 있게
+        if sec.get("resolution"):
+            by[f'{sec["no"]}-res'] = sec["resolution"]
     log = []
     for f in out.get("fix") or []:
         n = by.get(str(f.get("id") or ""))
@@ -854,6 +871,11 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
         nodes = sec.get("nodes", [])
         ids = {n["id"] for n in nodes}
         kinds = [n["kind"] for n in nodes]
+        spk = {n.get("who") for n in nodes if n.get("kind") != "issue" and n.get("who")}
+        iss_n = next((n for n in nodes if n.get("kind") == "issue"), None)
+        if iss_n and len(spk) <= 1 and re.search(r"(인가|것인가|는가|은가|운가|을까|ㄹ까|까)[?]?$", (iss_n.get("title") or "").strip()):
+            v.append(f"{tag} 한 사람이 정리해 공유한 자리인데 쟁점을 고르는 물음으로 썼다. "
+                     f"명사형 안건 이름으로 — “{iss_n['title'][:28]}”")
         if kinds.count("issue") != 1:
             v.append(f"{tag} 쟁점(issue)이 {kinds.count('issue')}개다. 정확히 하나여야 한다")
         if "position" not in kinds:

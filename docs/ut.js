@@ -172,6 +172,14 @@
     else if (q !== null) localStorage.setItem('mn-ut-on', '1');
   } catch {}
   try { const v = new URLSearchParams(location.search).get('ver'); if (v) UT.setVer(v); } catch {}
+  /* 화상통화로 진행할 때는 시선을 끈다(?gaze=off) — 얼굴 추적이 통화의 화면공유·소리를 밀어낸다.
+     한 번 끄면 그 브라우저에서 계속 꺼진 채로, ?gaze=on 으로 되살린다 */
+  try {
+    const g = new URLSearchParams(location.search).get('gaze');
+    if (g === 'off') localStorage.setItem('mn-ut-gaze', 'off');
+    else if (g) localStorage.removeItem('mn-ut-gaze');
+  } catch {}
+  UT.gaze = (() => { try { return localStorage.getItem('mn-ut-gaze') !== 'off'; } catch { return true; } })();
   UT.on = q !== null ? q !== 'off' : (() => { try { return localStorage.getItem('mn-ut-on') === '1'; } catch { return false; } })();
   let run = null, free = null, task = null, app = null, PTR = [0, 0];
   /* 태스크 밖에서도 계속 남긴다 — 고른 태스크가 없으면 '자유 기록'(task 0)으로 간다 */
@@ -274,7 +282,7 @@
     endRun('다음 태스크 선택');
     task = t;
     if (from) from.remove();                     /* 고르기 → 시나리오, 막은 그대로 덮은 채로 */
-    if (t.gaze && window.GAZE && GAZE.can) {     /* 시선을 기록하는 태스크는 눈맞춤부터 */
+    if (t.gaze && UT.gaze && window.GAZE && GAZE.can) {   /* 시선을 기록하는 태스크는 눈맞춤부터 */
       try { await GAZE.ready(); } catch (e) { console.warn('[ut] 시선 기록을 켜지 못했습니다', e); }
     }
     const d = layer('scenario', `<span>TASK ${num(t.id)}</span><p>${esc(t.scenario)}</p>

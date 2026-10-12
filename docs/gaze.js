@@ -81,11 +81,21 @@
     });
   }
 
-  /* 태스크 시작 전에 부른다 — 카메라를 켜고 보정까지 마친다 */
+  /* 태스크 시작 전에 부른다 — 카메라를 켜고 보정까지 마친다.
+     화상통화(미트·줌)로 진행하면 같은 웹캠을 둘이 함께 쓰게 된다. 크게 열수록 통화 쪽
+     영상이 다시 협상되며 화면공유·소리까지 끊기므로, 작게·느리게 열어 다투지 않게 한다.
+     그래도 카메라를 못 잡으면 기다리지 말고 시선 없이 태스크를 진행한다. */
   G.ready = async function () {
     await load();
-    await webgazer.setRegression('ridge').setTracker('TFFacemesh')
+    webgazer.setCameraConstraints({
+      video: { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 }, facingMode: 'user' },
+    });
+    const begun = webgazer.setRegression('ridge').setTracker('TFFacemesh')
       .showVideoPreview(true).showPredictionPoints(false).begin();
+    try {
+      await Promise.race([begun, new Promise((_, rej) =>
+        setTimeout(() => rej(new Error('카메라를 열지 못했습니다 — 다른 앱이 쓰는 중일 수 있습니다')), 15000))]);
+    } catch (e) { G.off(); throw e; }
     webgazer.showFaceOverlay(true);
     const how = await calibrate();
     webgazer.showFaceOverlay(false);

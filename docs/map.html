@@ -2580,18 +2580,40 @@ function apply() {
   const was = cv.classList.contains('lod');
   view.z = Math.min(hi, Math.max(lo, view.z));
   const now = view.z < LOD;
-  /* 썸네일 자리와 펼친 자리가 다르다 — 넘어가는 순간 '보고 있던 보드'를 다시 화면 가운데로 */
+  /* 썸네일 자리와 펼친 자리가 다르다 — 넘어가는 순간 '보고 있던 것'을 같은 자리에 되놓는다.
+     안건 카드를 가운데 두고 확대했으면, 펼쳐진 뒤에도 그 논의의 쟁점 카드가 가운데에 있어야
+     이어서 읽힌다. 보드 한가운데를 잡으면 카드가 옆으로 달아나 어디를 보던 중인지 놓친다 */
   if (was !== now && FRAMES.length) {
-    const r = vp.getBoundingClientRect(), cx = r.width / 2;
-    let best = FRAMES[0], bd = Infinity;
-    FRAMES.forEach(f => {
-      const w = was ? LODW : f.w, x = was ? f.lx : f.x;
-      const d = Math.abs((x + OX + w / 2) * view.z + view.x - cx);
-      if (d < bd) { bd = d; best = f; }
-    });
-    const bw = now ? LODW : best.w, bh = now ? cardH(LODW) : best.h;
-    view.x = cx - ((now ? best.lx : best.x) + OX + bw / 2) * view.z;
-    view.y = r.height / 2 - (OY + bh / 2) * view.z;        /* 세로도 가운데 — 들여다본 보드가 통째로 보이게 */
+    const r = vp.getBoundingClientRect(), cx = r.width / 2, cy = r.height / 2;
+    /* 지금 화면에 가장 많이 들어와 있는 논의가 '보고 있던 것'이다.
+       복판과의 거리로 고르면 판 끝에 붙어 있을 때 옆 논의를 집어 엉뚱한 데로 날아간다 */
+    const box = (f, lod) => {
+      if (lod) return [f.lx + OX, OY, LODW, cardH(LODW)];
+      const xs = f.nodes.map(n => n.x), ys = f.nodes.map(n => n.y);
+      const x0 = Math.min(...xs), y0 = Math.min(...ys);
+      return [x0 + OX, y0 + OY, Math.max(...xs) + CWv - x0,
+        Math.max(...f.nodes.map(n => n.y + (n.h || ROWH))) - y0];
+    };
+    const seen = ([x, y, w, h]) => {
+      const L = x * view.z + view.x, T = y * view.z + view.y;
+      return Math.max(0, Math.min(L + w * view.z, r.width) - Math.max(L, 0))
+           * Math.max(0, Math.min(T + h * view.z, r.height) - Math.max(T, 0));
+    };
+    let best = FRAMES[0], bs = -1;
+    FRAMES.forEach(f => { const v = seen(box(f, was)); if (v > bs) { bs = v; best = f; } });
+    /* 펼치는 쪽으로 넘어갈 때는 그 논의가 화면을 채우게 배율까지 잡아 준다 —
+       누른 안건 카드가 그 자리에서 커져 하위 카드가 한눈에 들어오는 꼴 */
+    const [bx, by, bw, bh] = box(best, now);
+    if (!now) {                                   /* 펼치는 쪽 — 그 논의가 화면을 채우게 배율까지 잡는다 */
+      const fitZ = Math.min((r.width - 56) / bw, (r.height - 56) / bh);
+      view.z = Math.min(hi, Math.max(view.z, Math.min(fitZ, LOD * 1.6)));   /* 글이 읽히는 선까지만 */
+    }
+    /* 화면에 다 들어오면 가운데, 넘치면 첫 카드(쟁점)부터 보이게 왼쪽·위 맞춤 —
+       가운데를 맞추면 정작 읽기 시작할 카드가 화면 밖으로 밀려난다 */
+    const tx = bw * view.z <= r.width - 56 ? bx + bw / 2 : bx + (cx - 28) / view.z;
+    const ty = bh * view.z <= r.height - 56 ? by + bh / 2 : by + (cy - 28) / view.z;
+    view.x = cx - tx * view.z;
+    view.y = cy - ty * view.z;
   }
   cv.classList.toggle('lod', now);
   clampView();

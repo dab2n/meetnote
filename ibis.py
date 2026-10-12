@@ -20,6 +20,10 @@ NODE = {
         "parent": {"type": "string", "description": "이 노드가 반응한 대상 노드의 id. 쟁점(issue)은 빈 문자열."},
         "title": {"type": "string", "description": "명사형으로 정리한 한 줄. 발언 인용이 아니다."},
         "who": {"type": "string", "description": "이 주장을 한 사람 이름"},
+        "with": {
+            "type": "array", "description": "같은 말을 함께 민 사람들. who 말고 더 있을 때만. 없으면 []",
+            "items": {"type": "string"},
+        },
         "t": {"type": "string", "description": "이 주장이 나온 시각 mm:ss 또는 h:mm:ss"},
         "at": {
             "type": "array", "description": "원문에서 이 주장이 오간 구간 [시작, 끝]",
@@ -28,7 +32,7 @@ NODE = {
         "note": {"type": "string", "description": "왜 그렇게 말했는지 한 문장. 원문 재인용 금지."},
         "ev": {"type": "string", "description": "who가 실제로 말한 원문 구절 그대로(8~80자). 카드를 누르면 여기가 하이라이트된다."},
     },
-    "required": ["id", "kind", "parent", "title", "who", "t", "at", "note", "ev"],
+    "required": ["id", "kind", "parent", "title", "who", "with", "t", "at", "note", "ev"],
     "additionalProperties": False,
 }
 
@@ -398,6 +402,8 @@ ENRICH = """너는 이미 만들어진 회의 정리 맵을 읽고, 사람이 �
 ## 5. nodes — 카드 문구를 기준에 맞게 다시 쓴다 (맵에 있는 노드만, 새로 만들지 않는다)
 - `position`(주장)은 **제안형**으로 닫는다: `~하자` · `~해야 한다` · `~가는 게 맞다`.
   `~한다`로 단정해 이미 정해진 일처럼 읽히게 하지 않는다. 확정된 것은 결론이 따로 말한다.
+  **다만 말한 사람이 꺼냈다가 스스로 접은 안**(자기 주장에 자기가 `con`을 단 경우)은 제안이 아니라
+  저울질한 안이므로 **물음**(`~할 것인가`)으로 쓴다. 접은 이유는 그 `con`이 말한다.
 - `con`(반론)은 `~면 ~할 수 없다`, `concern`은 `~가 걸린다`, `condition`은 `~해야 ~할 수 있다` 로 닫는다.
 - `note`는 **제목만으로 빠지는 맥락**을 한 문장(25~70자)으로 채운다 — 무엇을 두고 한 말인지,
   왜 그렇게 봤는지, 무엇과 견줬는지, 어떤 수치·사례를 들었는지. 제목을 바꿔 말하기만 한 문장은 쓰지 않는다.
@@ -937,6 +943,12 @@ def audit(m: dict, segs: list[dict] | None = None, partial: bool = False) -> lis
             if not lo <= len(t) <= hi:
                 v.append(f"{where} 제목이 {len(t)}자다. {lo}~{hi}자여야 한다 — “{t[:26]}”")
             pat, how = END.get(k, (None, None))
+            # 말한 사람이 스스로 접은 안은 제안이 아니라 '저울질한 안' 이다 — 물음으로 쓴다 (SPEC 2절)
+            selfdrop = (k == "position" and any(
+                x.get("kind") == "con" and x.get("parent") == n.get("id") and x.get("who") == n.get("who")
+                for x in nodes))
+            if selfdrop and re.search(r"(인가|것인가|는가|은가|운가|을까|ㄹ까)[?]?$", t):
+                pat = None
             if pat and not re.search(pat, t):
                 v.append(f"{where} {k} 제목을 {how} 써야 한다 — “{t[:30]}”")
             if body and len(t) > 14 and t.rstrip(".") in body:

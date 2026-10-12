@@ -1,8 +1,15 @@
 {
   "projects": [
     {
+      "id": "research",
+      "name": "회의록 리서치",
+      "meetings": [
+        "2026-09-08-ai-interview"
+      ]
+    },
+    {
       "id": "newton",
-      "name": "Summer Project",
+      "name": "여름 프로젝트",
       "me": "시혁",
       "teams": [
         {
@@ -44,13 +51,6 @@
         "예나": "클레이 프로토타이핑",
         "소현": "CMF 샘플 정리 중"
       }
-    },
-    {
-      "id": "research",
-      "name": "회의록 리서치",
-      "meetings": [
-        "2026-09-08-ai-interview"
-      ]
     }
   ]
 }

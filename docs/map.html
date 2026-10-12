@@ -190,7 +190,7 @@ main{position:fixed;top:var(--top);left:0;right:0;bottom:var(--player);
 .stage{position:relative;overflow:hidden;background:var(--bg);touch-action:none}
 body.view-cards .stage{display:none}
 .stage.grab{cursor:grabbing}
-#cv{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+#cv{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform;--eio:cubic-bezier(.32,.72,0,1)}
 #edges{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
 #edges path{fill:none;stroke-width:1.7px;opacity:0;transition:opacity .35s}
 #edges path.on{opacity:1}
@@ -214,7 +214,7 @@ body.view-cards .stage{display:none}
 .e-condition{stroke:#c3cede}                        .l-condition{fill:var(--amber)}
 .e-resolve{stroke:var(--gold);stroke-width:2px}     .l-resolve{fill:var(--gold)}
 .e-conflict{stroke:var(--red);stroke-width:2px;stroke-dasharray:7 5} .l-conflict{fill:var(--red)}
-.e-flow{stroke:#c2c4c9;stroke-width:2.4px}
+.e-flow{stroke:#c3cede;stroke-width:1.7px}   /* 시간이 흐르는 쪽(가로) — 실선 */
 
 .frame{position:absolute;border:1.5px solid #dcdde1;border-radius:20px;background:rgba(255,255,255,.5);
   opacity:0;transition:opacity .4s}
@@ -226,16 +226,46 @@ body.view-cards .stage{display:none}
 .fhead .pt{font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;background:#f0f0f2;color:#6d727a}
 .fhead time{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 
-/* 멀리서 보면 섹션 흐름만 */
-.fbig{display:none;position:absolute;inset:0;padding:72px 80px;flex-direction:column;justify-content:center;gap:18px}
-.fbig .n{font-size:38px;font-weight:500;color:#a3a3a3;letter-spacing:0}
-.fbig .t{font-size:76px;font-weight:700;line-height:1.25;letter-spacing:-.03em}
-.fbig .s{display:flex;align-items:center;gap:16px;font-size:34px;font-weight:500;color:#757575}
-.fbig .dot{width:26px;height:26px;border-radius:50%}
-#cv.lod .fbig{display:flex}
-#cv.lod .fhead,#cv.lod .node{opacity:0!important;pointer-events:none}
-#cv.lod path:not(.e-flow),#cv.lod text{opacity:0!important}
-#cv.lod .frame{background:#fff;border-color:#d3d4d9}
+/* 멀리서 보면 안건 카드 한 장 — 피그마 379:8314.
+   피그마 수치는 49% 로 본 화면 px 이라, 보드 폭 ÷ 207.407 (--bz) 을 곱해 캔버스 px 로 옮긴다 */
+.fbig{--z:var(--bz,7);display:flex;opacity:0;transform:scale(.96);pointer-events:none;position:absolute;inset:0;flex-direction:column;justify-content:space-between;
+  align-items:flex-end;padding:calc(18.519px*var(--z));overflow:hidden}
+.fbig .g{display:flex;flex-direction:column;gap:calc(11.111px*var(--z));width:100%}
+.fbig .hg{display:flex;flex-direction:column;gap:calc(3.704px*var(--z));width:100%}
+.fbig .hd{display:flex;align-items:center;justify-content:space-between;gap:calc(8px*var(--z));width:100%}
+.fbig .n{display:flex;align-items:center;gap:calc(3px*var(--z));
+  font-size:calc(8px*var(--z));font-weight:600;letter-spacing:calc(-.0628px*var(--z));color:#222a2a}
+.fbig .n i{flex:none;width:calc(2.357px*var(--z));height:calc(2.357px*var(--z));border-radius:50%}
+.fbig .pts{display:flex;align-items:center;gap:calc(3.704px*var(--z))}
+/* 우측 상단 파트 꼬리표 — 그 안건에서 중점적으로 말한 파트 (모두·ID·UX·VD) */
+.fbig .pt{padding:calc(2.778px*var(--z)) calc(7.407px*var(--z));border-radius:99px;
+  font-size:calc(7.407px*var(--z));font-weight:600;line-height:1.4;letter-spacing:calc(-.1481px*var(--z))}
+.fbig .pt.all{background:radial-gradient(67.5% 67.6% at 50% 50%,#0e0d22 68.7%,#18243d 74.7%,#233c58 80.6%,#2d5473 86.6%,#386b8d 92.6%);color:#e2f0ff}
+.fbig .pt.id{padding-left:calc(9.259px*var(--z));background:radial-gradient(90.4% 128.1% at 50% 0%,#70c2f9 68.7%,#addeff 92.6%);color:#e2f0ff}
+.fbig .pt.ux{background:radial-gradient(70.5% 67.6% at 50% 47%,#b8a0eb 68.7%,#e1adff 92.6%);color:#fdf8d1}
+.fbig .pt.vd{background:radial-gradient(70.5% 67.6% at 50% 47%,#5fc9b4 68.7%,#a9ecdd 92.6%);color:#f1fffb}
+.fbig .t{width:73.2%;font-size:calc(14.815px*var(--z));font-weight:700;line-height:1.4;
+  letter-spacing:calc(-.4444px*var(--z));color:#2a2a2a}
+.fbig .s{width:100%;font-size:calc(9.259px*var(--z));font-weight:400;line-height:1.5;
+  letter-spacing:calc(-.1852px*var(--z));color:#525252}
+.fbig .t,.fbig .s{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.fbig time{font-size:calc(7.407px*var(--z));line-height:1.5;letter-spacing:calc(-.0436px*var(--z));color:#838383;
+  font-variant-numeric:tabular-nums}
+#cv.lod .fbig{opacity:1;transform:none}
+#cv.lod .node{opacity:0!important;transform:scale(.97);pointer-events:none}
+.fhead{transition:opacity .3s}
+#cv.lod path,#cv.lod text{opacity:0!important}   /* 썸네일에서는 보드 안쪽 선을 모두 감춘다 */
+#cv.lod .frame{left:var(--lx)!important;width:calc(207.407px*var(--bz,7))!important;
+  height:calc(159.519px*var(--bz,7))!important;background:#fff;border:0;
+  border-radius:calc(18.519px*var(--bz,7));
+  box-shadow:0 calc(.727px*var(--bz,7)) calc(1.819px*var(--bz,7)) rgba(0,0,0,.12)}
+/* 썸네일 ↔ 펼친 보드 — 자리·크기를 끌고 다니면 글자까지 기어가 보인다.
+   판은 색과 모서리만 녹이고, 속은 살짝 커지며 겹쳐 바뀐다 (첫 그림에는 걸지 않는다) */
+#cv.anim .frame{transition:background .34s var(--eio),box-shadow .34s var(--eio),
+  border-radius .34s var(--eio),opacity .34s}
+#cv.anim .node{transition:opacity .26s cubic-bezier(.4,0,.2,1),transform .36s var(--eio),filter .18s}
+#cv.anim .fbig{transition:opacity .26s cubic-bezier(.4,0,.2,1),transform .36s var(--eio)}
+#cv.anim .neck{transition:opacity .26s}
 
 .node{position:absolute;cursor:pointer;opacity:0;transform:scale(.94);
   transition:opacity .3s,transform .3s,filter .18s}
@@ -492,7 +522,7 @@ b,h2,h3,h4,h5{font-weight:600}
 
 /* 왼쪽 패널 */
 .rail{background:var(--bg);border-right:1px solid #eef0f4}
-/* 관계 맵에서는 왼쪽에 원문만 둔다 (확정·미결 목록은 홈의 팀 피드에서 본다) */
+/* 플로우 맵에서는 왼쪽에 원문만 둔다 (확정·미결 목록은 홈의 팀 피드에서 본다) */
 .rail{grid-template-rows:minmax(0,1fr)}
 .digest,.rz-y{display:none}
 .rz{background:var(--bg)} .rz-y{background:var(--bg);border-color:#eef0f4} .rz:before{background:#d7dff1}
@@ -553,17 +583,13 @@ b,h2,h3,h4,h5{font-weight:600}
 /* 지금 읽는 말 — 무지개 대신 파랑~청록~남보라 한 계열로 천천히 흐른다 */
 .w.lit{background-image:linear-gradient(100deg,#2f6bd8,#3f9bc4,#6f7fdc,#2f6bd8)}
 
-/* ---------- 관계 맵 ---------- */
+/* ---------- 플로우 맵 ---------- */
 .stage{background:var(--bg);background-image:radial-gradient(circle,#e4e8f0 1px,transparent 1.2px);background-size:22px 22px}
-.frame{border:0;border-radius:28px;background:rgba(242,245,250,.72);box-shadow:inset 0 0 0 1px rgba(40,39,51,.04)}
-.fhead{left:22px;top:-15px;gap:8px;padding:5px 12px 5px 5px;border:0;background:#fff;box-shadow:var(--soft)}
-.fhead .no{padding:3px 9px;border-radius:99px;background:var(--c,#c7d3e4);color:var(--ink);font-size:12px;font-weight:600;letter-spacing:-.2px}
-.fhead b{font-size:14px;font-weight:600;letter-spacing:-.2px}
-.fhead .pt{padding:0;background:none;color:var(--dim2);font-weight:500;font-size:11px}
-.fhead time{color:var(--dim2)}
-.fbig .n{font-weight:600;color:var(--dim2)} .fbig .t{font-weight:700;letter-spacing:-.03em} .fbig .s{font-weight:500;color:var(--dim)}
-.fbig .dot{border-radius:50%}
-#cv.lod .frame{border-radius:64px;background:#fff;box-shadow:0 0 0 2px rgba(40,39,51,.04),0 24px 60px rgba(40,39,51,.08)}
+.fhead{left:45px;top:-31px;gap:16px;padding:10px 24px 10px 10px;border:0;background:#fff;box-shadow:var(--soft);border-radius:99px}
+.fhead .no{padding:6px 18px;border-radius:99px;background:var(--c,#c7d3e4);color:var(--ink);font-size:24.5px;font-weight:600;letter-spacing:-.41px}
+.fhead b{font-size:28.6px;font-weight:600;letter-spacing:-.41px}
+.fhead .pt{padding:0;background:none;color:var(--dim2);font-weight:500;font-size:22.4px}
+.fhead time{font-size:22.4px;color:var(--dim2)}
 
 
 .legend,.zoom,.lodtip{border:0;border-radius:99px;background:rgba(250,250,250,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
@@ -641,8 +667,8 @@ b,h2,h3,h4,h5{font-weight:600}
 .frame.wrote .fbig>*:nth-child(2){transition-delay:.06s}
 .frame.wrote .fbig>*:nth-child(3){transition-delay:.12s}
 /* 카드에서 다음 카드로 내려가는 목과 방울 */
-.neck{position:absolute;width:6px;margin-left:-1.5px;border-radius:99px;background:#d7dfec;transform-origin:50% 0;transform:scaleY(0);transition:transform .3s cubic-bezier(.3,0,.2,1)}
-.neck.on{transform:scaleY(1)}
+.neck{position:absolute;height:calc(1px*var(--bz,7));border-radius:99px;background:#c0ceed;transform-origin:0 50%;transform:scaleX(0);transition:transform .3s cubic-bezier(.3,0,.2,1)}
+.neck.on{transform:scaleX(1)}
 .bud{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:#fff;
   box-shadow:0 0 0 3px rgba(40,39,51,.05),0 18px 40px rgba(40,39,51,.16);opacity:0}
 .bud.on{opacity:1;transition:transform .34s cubic-bezier(.3,0,.2,1),opacity .2s}
@@ -666,7 +692,7 @@ body.following .fbig{display:none!important}
 .think i:nth-child(2){animation-delay:.15s}
 .think i:nth-child(3){animation-delay:.3s}
 @keyframes bob{30%{transform:translateY(-5px);background:#9fb0c8}}
-/* ---------- 새 홈의 '관계 맵' 탭 안에 들어갈 때 (?embed) ---------- */
+/* ---------- 새 홈의 '플로우 맵' 탭 안에 들어갈 때 (?embed) ---------- */
 /* 겉의 제목·파일·설정은 새 홈이 맡는다. 재생 조절만 떠 있는 알약으로 남긴다 */
 body.embed{--top:0px;--player:0px}
 body.embed .player{display:none}
@@ -694,7 +720,7 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node .content{display:flex;flex-direction:column;gap:8px}
 .node h4{font-size:16px;font-weight:600;line-height:1.4;letter-spacing:-.16px;color:#2a2a2a;word-break:break-word}
 .node p{font-size:12px;font-weight:400;line-height:1.5;letter-spacing:-.12px;color:#525252;word-break:break-word;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 /* 주장 카드는 프로필을 글 위에 올린다 (세로 스택) */
 .node.position,.node.con,.node.concern,.node.condition,.node.pro,.node.open{width:320px;flex-direction:column;align-items:stretch}
 /* 쟁점 · 마무리 — 라벨 + 문장 */
@@ -708,22 +734,16 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node.res{width:300px;
   background:radial-gradient(149.6px 69.4px at 50% 40%, #87d1ff 0%, #aedeff 48.85%, #d6ebff 97.71%);
   box-shadow:inset 0 0 12px #eaf9ff}
-.node.res .k{color:#4cade7}
+.node.res .k{color:#1e6a98}
 .node.res h4{color:#1e6a98;font-weight:500;line-height:1.5}
 .node.live{filter:drop-shadow(0 6px 18px rgba(75,135,233,.35))}
 /* 보드가 좁아져 멀리서 볼 때 — 설명은 접고 한 줄 요지를 키운다 (정보 위계는 그대로) */
 .node{overflow:hidden}
-.far .node p{display:none}
-.far .node h4{font-size:var(--fz,22px);line-height:1.32;letter-spacing:-.3px}
-.far .node .k{font-size:22px} .far .node .k:before{width:9px;height:9px}
-.far .node .who{width:30px;height:30px;margin-bottom:10px}
-/* 보드 바닥 — 섹션 fill 과 같은 그라데이션 위에 점 격자 (카드 폭 279 대비 24px 간격) */
-.frame{border:0;border-radius:20px;background:linear-gradient(180deg,#e4eaf2 70.8%,#fdf8f8 100%);box-shadow:none}
-.frame:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-  background-image:radial-gradient(circle,rgba(90,110,140,.18) 1.1px,transparent 1.2px);background-size:24px 24px}
-#cv.lod .frame{border-radius:64px;background:#fff;box-shadow:0 0 0 2px rgba(40,39,51,.04),0 24px 60px rgba(40,39,51,.08)}
-#cv.lod .frame:after{display:none}
-.stage{background:#fcfcfe;background-image:none}
+/* 한국어 줄바꿈 — 낱말 가운데서 끊지 않고 띄어쓰기에서 넘긴다 */
+.node h4,.node p,.fbig .t,.fbig .s,.fhead b,.fbig .n{word-break:keep-all;overflow-wrap:break-word}
+/* 펼친 보드 바닥 — 피그마 379:7814 (#e4eaf2 · 모서리 41 · 가는 테두리) */
+.frame{border:0;border-radius:41px;background:#e4eaf2;box-shadow:inset 0 0 0 1px #f0f0f0}
+.stage{background:linear-gradient(180deg,#f2f5fa 78.07%,#f2f1fb 100%)}
 /* 보드가 불투명하니 선은 보드 위, 카드는 선 위로 */
 .frame{z-index:1} #edges{z-index:2} .neck,.hug{z-index:2} .node{z-index:3}
 /* 고른 카드 — 테두리 대신 카드가 눌린 것처럼 살짝 어두워진다 */
@@ -732,12 +752,134 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node.sel:hover{filter:drop-shadow(0 2px 6px rgba(0,0,0,.18)) brightness(.9) saturate(1.06)}
 /* 고른 카드는 접힌 설명을 끝까지 펼친다 — 자리를 밀지 않고 그 자리에서 아래로 자란다 */
 .node.sel{height:auto!important;z-index:9;overflow:visible}
-.node.sel p{-webkit-line-clamp:unset;overflow:visible}
-.far .node.sel p{display:block;font-size:calc(var(--fz,22px) * .62);line-height:1.5}
+.node.sel p,.node.wide p{-webkit-line-clamp:unset;overflow:visible}
+.node.wide .more{display:none}
 .node .more{display:none;margin-top:6px;font-size:11px;font-weight:600;color:#6b7a90;letter-spacing:-.1px}
 .node.cut .more{display:block}
-.far .node.cut .more{display:none}
 .node.sel .more{display:none}
+/* ===================================================================
+   보드 · 떠 있는 조작 — 피그마 218:5340
+   =================================================================== */
+.frame{background:#e4eaf2;box-shadow:inset 0 0 0 1px #f0f0f0}
+.frame:after{display:none}
+
+/* 줌 — 오른쪽 위 유리 알약 */
+.zoom{right:16px;bottom:auto;top:16px;gap:0;height:28.8px;padding:0 4px;border-radius:79.2px;
+  background:rgba(255,255,255,.4);backdrop-filter:blur(19px);-webkit-backdrop-filter:blur(19px);
+  box-shadow:inset 0 0 0 .8px #e2e2e2}
+.zoom button{width:22px;height:22px;border-radius:50%;font-size:9.6px;color:#2d3b48}
+.zoom button:hover{background:rgba(255,255,255,.7);color:#2d3b48}
+.zoom .lv{width:auto;min-width:34px;padding:0 4px;font-size:9.6px;color:#2d3b48;font-variant-numeric:tabular-nums}
+
+/* 실시간 확인하기 — 아래 가운데 */
+.followwrap{position:absolute;left:50%;bottom:20px;z-index:6;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.followwrap:before{content:"";position:absolute;left:50%;bottom:-40px;width:420px;height:180px;
+  transform:translateX(-50%);border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,rgba(255,255,255,.9),rgba(255,255,255,0));
+  z-index:-1}
+.follow{position:static;left:auto;bottom:auto;height:32px;padding:0 16px;border-radius:79.2px;
+  background:radial-gradient(70% 70% at 50% 30%,#fff,#f6f9ff);backdrop-filter:none;
+  box-shadow:0 8px 20.2px #c7c2c9;font-size:10px;font-weight:600;letter-spacing:-.1px;color:#5b9bd6;
+  pointer-events:auto}
+.follow:hover{background:#fff}
+.follow.on{background:var(--dark);color:#fff}
+.follow.rate{position:absolute;left:calc(100% + 8px);bottom:auto;top:0;padding:0 12px;pointer-events:auto}
+.followtip{max-width:320px;text-align:center;font-size:10px;line-height:1.6;letter-spacing:-.1px;color:rgba(0,0,0,.3)}
+body.following .followtip{display:none}
+
+/* ===================================================================
+   카드 · 보드 — 피그마 219:11120 그대로.
+   피그마는 49% 축척으로 그려졌다. 1/0.49 를 곱해 100% 치수로 옮긴다.
+   =================================================================== */
+.node{width:320px;padding:24.8px;border-radius:33px;gap:8.3px;
+  background:radial-gradient(43.2% 64.5% at 49.8% 56.5%, #eaf0fb 3%, #f5f8ff 100%);
+  filter:drop-shadow(0 1.6px 4px rgba(0,0,0,.12))}
+.node:hover{filter:drop-shadow(0 4px 11px rgba(0,0,0,.18))}
+.node .who{width:33px;height:33px;margin:0}
+.node .tx{gap:8.3px}
+.node h4{font-size:20.6px;font-weight:600;line-height:1.4;letter-spacing:-.62px;color:#2a2a2a}
+.node p{font-size:16.5px;font-weight:400;line-height:1.5;letter-spacing:-.1px;color:#525252}
+.node .k{gap:6.2px;font-size:16.5px;font-weight:600;line-height:1.2;letter-spacing:-.13px}
+.node .k:before{width:4.9px;height:4.9px}
+
+.node.issue{width:320px;padding:14.6px 32.4px 16.2px 16.2px;border-radius:16.2px;gap:3.2px;
+  background:#161919;filter:none}
+.node.issue .k{gap:4.9px}
+.node.issue h4{font-weight:500;line-height:1.4;letter-spacing:-.62px;color:#fff}
+
+.node.res{width:320px;padding:24.8px;border-radius:33px;gap:8.3px;box-shadow:none;
+  background:radial-gradient(60% 60% at 50% 40%, #87d1ff 0%, #aedeff 49%, #d6ebff 98%);
+  filter:drop-shadow(0 1.6px 4px rgba(0,0,0,.12))}
+.node.res .k{color:#1e6a98}
+.node.res h4{font-size:20.6px;font-weight:600;line-height:1.4;letter-spacing:-.62px;color:#1e6a98}
+
+
+/* 줌 알약 — 보드 오른쪽 위 */
+.zoom{right:calc(16px*var(--uiz,1));top:calc(16px*var(--uiz,1));bottom:auto;gap:calc(8px*var(--uiz,1));
+  height:calc(28.8px*var(--uiz,1));padding:0 calc(12px*var(--uiz,1));border-radius:79.2px;
+  background:rgba(255,255,255,.4);backdrop-filter:blur(19px);-webkit-backdrop-filter:blur(19px);
+  box-shadow:0 0 9.6px rgba(255,255,255,.1),inset 0 0 0 .8px #e2e2e2}
+.zoom button{width:auto;min-width:12px;height:calc(20px*var(--uiz,1));padding:0;border-radius:4px;background:none;
+  font-size:calc(9.6px*var(--uiz,1));font-weight:600;letter-spacing:-.08px;color:#2d3b48}
+.zoom button:hover{background:none;color:#0c1418}
+.zoom .lv{min-width:22px;font-variant-numeric:tabular-nums}
+
+/* 실시간 확인하기 — 보드 아래 가운데. 들어올 때 빛이 한 번 훑고 떠오른다 */
+.followwrap{position:absolute;left:50%;bottom:calc(16px*var(--uiz,1));z-index:6;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:calc(12px*var(--uiz,1));pointer-events:none}
+.followwrap:before{content:"";position:absolute;left:50%;bottom:calc(-59px*var(--uiz,1));z-index:-1;
+  width:calc(547px*var(--uiz,1));height:calc(130px*var(--uiz,1));margin-left:calc(-273.5px*var(--uiz,1));
+  background:radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.95), rgba(255,255,255,0) 72%);
+  opacity:0;animation:fglow .9s cubic-bezier(.3,0,.2,1) .1s both}
+.follow{position:static;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;
+  height:calc(32px*var(--uiz,1));padding:0 calc(14.4px*var(--uiz,1));border-radius:79.2px;overflow:hidden;
+  background:radial-gradient(133% 94% at 51% 95%, #d4dcee 0%, #edf2fc 12.9%, #fff 64.5%);
+  backdrop-filter:none;box-shadow:0 8px 20.2px #c7c2c9;
+  font-size:calc(10px*var(--uiz,1));font-weight:600;letter-spacing:-.08px;color:#5b9bd6;
+  pointer-events:auto;opacity:0;animation:frise .62s cubic-bezier(.22,1,.3,1) .18s both}
+.follow:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.95) 50%,transparent 62%);
+  transform:translateX(-120%);animation:fshine 1.1s cubic-bezier(.3,0,.2,1) .5s both}
+.follow:hover{background:#fff}
+.follow.on{background:var(--dark);color:#fff}
+.follow.on:after{display:none}
+.follow.rate{position:absolute;left:calc(100% + 8px);top:0;padding:0 12px;animation:none;opacity:1}
+.followtip{max-width:calc(430px*var(--uiz,1));text-align:center;font-size:calc(10px*var(--uiz,1));font-weight:400;line-height:1.5;
+  letter-spacing:-.1px;color:#5b9bd6;
+  opacity:0;animation:frise .62s cubic-bezier(.22,1,.3,1) .3s both}
+body.following .followtip,body.following .followwrap:before{display:none}
+.followwrap[hidden]{display:none}
+/* 첫 화면의 '확대하여 자세히 보기' — 피그마 379:11630. 떠올랐다가 3초 뒤 아래로 걷힌다 */
+.zoomtip .follow{pointer-events:none}
+.zoomtip.out{animation:tipdown .62s cubic-bezier(.4,0,.2,1) both}
+body.tipfirst .followwrap:not(.zoomtip),
+body:not(.showfollow) .followwrap:not(.zoomtip){display:none}
+@keyframes tipdown{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,28px)}}
+@keyframes fglow{from{opacity:0;transform:scaleX(.7)}to{opacity:.95;transform:none}}
+@keyframes frise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fshine{to{transform:translateX(120%)}}
+@media (prefers-reduced-motion:reduce){
+  .follow,.followtip,.followwrap:before{animation-duration:.01s}
+  .follow:after{display:none}
+}
+body.embed .lodtip{display:none}
+/* 플로우 맵 판 바탕 — 피그마 383:12997 */
+body.embed,body.embed .vp{background:linear-gradient(180deg,#f2f5fa 78.07%,#f2f1fb 100%)}
+
+/* 같은 열 아래로 내려가는 선 — 짧은 세로 점선 (발표 장표 19~21번 그리드) */
+#edges path.e-dash{stroke-dasharray:5 5}   /* 아래로 깊어지는 선만 점선 — 결론·전개는 실선 */
+/* 카드를 누르는 동안 — 바탕만 12% 어둡게, 떼면 0.3초에 걸쳐 돌아온다 */
+.node{transition:filter .3s cubic-bezier(.22,1,.36,1)}
+.node:active{filter:drop-shadow(0 1.6px 4px rgba(0,0,0,.12)) brightness(.88);transition:filter 0s}
+
+/* 카드의 사람 — 여럿이면 프로필을 겹쳐 놓고 이름을 옆에 쓴다 */
+.node .whos{display:flex;align-items:center;gap:9px;min-width:0}
+.node .whos .avs{display:flex;flex:none}
+.node .whos img{width:33px;height:33px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px #f3f7ff}
+.node .whos img+img{margin-left:-11px}
+.node .whos b{min-width:0;font-size:16.5px;font-weight:600;letter-spacing:-.1px;line-height:1.3;color:#3b3b3b;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 </style>
 </head>
 <body class="idle noaudio">
@@ -788,11 +930,13 @@ body.norail .rail,body.norail .rz-x{display:none}
     </div>
     <div class="lodtip"><b>＋</b>카드를 확대하면 그 논의의 내용이 열립니다</div>
     <div class="livebar" id="livebar"></div>
-    <button class="follow" id="follow">▶ 실시간 따라가기</button>
+    <div class="followwrap zoomtip" id="zoomtip" hidden><div class="follow">확대하여 자세히 보기</div>
+      <p class="followtip">화면을 확대하면, 해당 안건의 회의 흐름을 자세히 확인할 수 있어요.<br>트랙 패드나 화면 비율을 조정해서 확대해 보세요.</p></div>
+    <div class="followwrap"><button class="follow" id="follow">실시간 확인하기</button>
+      <p class="followtip">카드를 누르면 원문 음성을 함께 확인할 수 있어요.<br>회의의 가장 큰 흐름을 확인하고 싶다면, 화면을 축소해 보세요.</p></div>
     <button class="follow rate" id="frate" hidden>2×</button>
     <div class="zoom">
-      <button id="zout">−</button><span class="lv" id="zlv">100%</span><button id="zin">＋</button>
-      <button class="fit" id="zfit">폭 맞춤</button>
+      <button id="zin">＋</button><button class="lv" id="zlv" title="폭 맞춤">100%</button><button id="zout">−</button>
     </div>
   </section>
 
@@ -859,7 +1003,7 @@ const BUILD = '20260920-190641';                 /* 배포할 때 bump.sh 가 ve
   } catch {}
 })();
 
-const OX = 300, OY = 1000, LOD = .34;
+const OX = 300, OY = 1000, LOD = .24;   /* 이 배율을 넘으면 썸네일이 펼쳐진다 (낮을수록 일찍 열린다) */
 /* 정리 맵이 바뀌었는데 캐시된 옛 파일이 뜨는 일이 없게 매번 재검증한다 */
 const NOCACHE = { cache: 'no-cache' };
 const au = $('#au');
@@ -1343,8 +1487,40 @@ function build(map) {
        따로 서는 것은 맞선 의견(반론)뿐이다 (피그마 주장카드) */
     const MERGE = { pro: '', condition: '조건 · ', concern: '우려 · ' };
     mine.filter(n => n.p && n.kind in MERGE).forEach(n => {
-      n.p.why = (n.p.why ? n.p.why + ' · ' : '') + MERGE[n.kind] + n.title;
+      (n.p.whys = n.p.whys || []).push({ k: n.kind, t: MERGE[n.kind] + n.title });
+      n.p.wk = (n.p.wk || 0) + 1;                 /* 이 말에 얼마나 많은 말이 붙었는가 */
       n.merged = true;
+    });
+    /* ① 자기가 꺼낸 안을 스스로 접었으면 한 장이다 — 접은 이유가 그 카드의 설명이 된다.
+       (한 사람이 두 장으로 갈려 서로 맞서는 것처럼 보이던 자리) */
+    mine.filter(n => n.kind === 'con' && !n.merged).forEach(c => {
+      const p = c.p;
+      if (!p || p.kind !== 'position' || !c.who || p.who !== c.who || Math.abs(p.t - c.t) > 60) return;
+      p.whys = [...(p.whys || []), { k: 'con', t: c.title }];
+      p.wk = (p.wk || 0) + 1;
+      c.merged = true;
+      (c.kids || []).forEach(k => { k.p = p; });
+    });
+    /* ② 남의 안을 반박하면서 곧바로 자기 대안을 낸 경우도 한 장. 맞선 상대는 카드가 아니라 선으로 남긴다.
+       (시간이 멀면 다른 흐름이므로 묶지 않는다 — 45초) */
+    mine.filter(n => n.kind === 'con' && !n.merged).forEach(c => {
+      const alt = mine.find(n => n !== c && n.kind === 'position' && !n.merged
+        && n.who && n.who === c.who && n.t >= c.t && n.t - c.t <= 45 && n !== c.p);
+      if (!alt) return;
+      alt.whys = [{ k: 'con', t: c.title }, ...(alt.whys || [])];
+      alt.wk = (alt.wk || 0) + 1;
+      alt.against = c.p && !c.p.merged && c.p !== alt ? c.p : null;
+      c.merged = true;
+      (c.kids || []).forEach(k => { k.p = alt; });
+    });
+    /* 카드에 적는 설명은 두 마디까지 — 맨 앞의 근거 하나와, 결론을 가르는 조건·우려 하나.
+       나머지는 카드를 눌러 전부 보기로 둔다 (길게 늘어지면 흐름이 눈에 안 들어온다) */
+    mine.forEach(n => {
+      if (!n.whys || !n.whys.length) return;
+      const head = n.whys[0];
+      const key = n.whys.find(x => x !== head && x.k !== 'pro');
+      n.why = [head, key].filter(Boolean).map(x => x.t).join(' · ');
+      n.whyAll = n.whys.map(x => x.t).join(' · ');
     });
     const gone = {};
     for (let i = mine.length - 1; i >= 0; i--) if (mine[i].merged) {
@@ -1354,7 +1530,9 @@ function build(map) {
     mine.forEach(n => { n.kids = (n.kids || []).filter(k => !k.merged); });
     mine.forEach(n => { while (n.p && n.p.merged) n.p = n.p.p; });   /* 합쳐진 카드에 걸린 자식은 그 위로 붙인다 */
 
-    const r = sec.resolution;
+    /* 결론이 난 논의에만 결론 카드를 세운다. 미결이면 마지막 말이 맨 오른쪽에 서고,
+       다음 안건으로 넘어가는 선만 남는다 */
+    const r = sec.resolution && sec.resolution.kind !== 'open' ? sec.resolution : null;
     const res = r && push(Object.assign({}, r, { id: sec.no + '-res', res: true, t: secs(r.t), at: (r.at || []).map(secs) }));
 
     /* 근거·동의는 선으로 잇지 않는다 — 주장 바로 아래 같은 열에 놓아 한 덩어리로 읽힌다.
@@ -1365,6 +1543,7 @@ function build(map) {
       const back = n.t < n.p.t && n.kind !== 'con';      /* 시간이 앞선 쪽에서 나가게 */
       edges.push({ a: back ? n : n.p, b: back ? n.p : n, kind, label: EDGE_KO[kind], both: n.kind === 'con' });
     });
+    mine.forEach(n => { if (n.against && n.against !== n.p) edges.push({ a: n, b: n.against, kind: 'con', label: EDGE_KO.con, both: true }); });
     sec.conflictPairs = [];
     if (res) {
       /* 결론의 근거가 주장 안으로 합쳐졌으면 그 주장에서 잇는다. 하나도 안 남으면 그 논의의 주장 전부에서 잇는다 */
@@ -1375,20 +1554,64 @@ function build(map) {
       }).filter(n => n && n !== res))];
       if (!from.length) from = mine.filter(n => n !== res && n.kind !== 'issue');
       if (!from.length) from = mine.filter(n => n.kind === 'issue');
-      from.forEach(n => edges.push({ a: n, b: res, kind: 'resolve', label: '' }));
+      res.from = from;                            /* 자리를 잡은 뒤 가장 가까운 한 장만 잇는다 */
     }
 
-    /* 세로는 논의 시간(위→아래) — 한 카드가 한 줄을 온전히 차지해 위에서 아래로 읽힌다.
-       가로는 위계 — 오른쪽으로 갈수록 더 깊어진다. 0열 쟁점, 1열 주장, 2열 그 주장에서 깊어진 말(반론·근거),
-       3열 마무리. 같은 위계는 같은 열에 아래로 묶인다. */
+    /* 피그마 그리드(229:17611) — X 는 시간의 흐름, Y 는 논의의 깊이.
+       행(세로)은 깊이다. 0 쟁점 · 1 쟁점에 바로 답한 주장 · 2 그 주장에서 더 들어간 말 · 맨 아래 결론.
+       열(가로)은 시간이다. 같은 깊이에 여러 장이면 말이 나온 순서대로 왼쪽부터 놓고,
+       답한 카드가 답을 받은 카드보다 왼쪽에 서지 않게 한다. */
     const issue = mine.find(n => n.kind === 'issue');
     const all = mine.slice();          /* res 는 push() 가 이미 넣었다 */
-    all.forEach(n => { n.col = n === issue ? 0 : n.res ? 3 : n.p && n.p !== issue ? 2 : 1; });
-    const ord = all.slice().sort((a, b) => a.t - b.t || (a.res ? 1 : 0) - (b.res ? 1 : 0) || a.col - b.col);
-    if (issue) { ord.splice(ord.indexOf(issue), 1); ord.unshift(issue); }
-    ord.forEach((n, i) => { n.row = i; });
+    all.forEach(n => { n.row = n === issue ? 0 : n.res ? -1 : n.p && n.p !== issue ? 2 : 1; });
+    const deep = Math.max(1, ...all.filter(n => !n.res).map(n => n.row));
+    all.forEach(n => { if (n.res) n.row = deep + 1; });
+    /* 논의가 오래 머문 말 = 근거·조건·우려가 많이 붙은 말. 두 칸을 쓰고 설명을 자르지 않는다 */
+    all.forEach(n => {
+      n.span = !n.res && n.kind !== 'issue' && ((n.wk || 0) >= 3 || (n.why || '').length >= 100) ? 2 : 1;
+    });
+    const nextCol = {};
+    let far = 0;
+    all.slice().sort((a, b) => a.row - b.row || a.t - b.t).forEach(n => {
+      let c = (nextCol[n.row] ?? -1) + 1;
+      if (n.p && n.p.col != null) c = Math.max(c, n.p.col);
+      if (n.res) c = Math.max(c, far);          /* 결론은 늘 가장 오른쪽 — 마지막에 닿은 자리다 */
+      n.col = c; nextCol[n.row] = c + n.span - 1; far = Math.max(far, c + n.span - 1);
+    });
+    if (!res) {                                  /* 미결 — 마지막으로 오간 말이 맨 오른쪽에 선다 */
+      const last = all.filter(n => n.kind !== 'issue').sort((a, b) => a.t - b.t).pop();
+      if (last) { last.col = Math.max(last.col, far - (last.span - 1)); }
+    }
+    if (res) {                                     /* 논의 앞머리에서 바로 닫힌 결론만 제자리에 둔다 */
+      const ts = all.filter(n => !n.res).map(n => n.t);
+      const t0 = Math.min(...ts), t1 = Math.max(...ts);
+      res.early = t1 > t0 && (res.t - t0) / (t1 - t0) < .35;
+      /* 결론은 x 축으로 가장 가까운 한 장과만 잇는다 — 보통 바로 위 칸이다 */
+      const cand = all.filter(n => !n.res && n.kind !== 'issue');
+      const near = (cand.length ? cand : all.filter(n => n.kind === 'issue'))
+        .slice().sort((a, b) => Math.abs(a.col - res.col) - Math.abs(b.col - res.col)
+          || (b.row - a.row)          /* 같은 열이면 가장 아래(결론 바로 위) 카드에서 */
+          || (b.t - a.t))[0];
+      if (near) edges.push({ a: near, b: res, kind: 'resolve', label: '' });
+      delete res.from;
+    }
 
-    const frame = { sec, nodes: all, res, cols: 4 };   /* 0 쟁점 · 1 주장 · 2 그 주장에서 깊어진 말 · 3 마무리 */
+    /* 같은 줄에 나란히 선 카드들은 '시간이 흐른 것' 이다 — 왼쪽에서 오른쪽으로 실선 한 줄로 잇고,
+       같은 부모에서 갈라져 나오던 점선 가지는 맨 앞 한 줄만 남긴다 (아래로 깊어지는 선만 점선) */
+    [...new Set(all.filter(n => !n.res && n.kind !== 'issue').map(n => n.row))].forEach(r => {
+      const line = all.filter(n => n.row === r && !n.res).sort((a, b) => a.col - b.col || a.t - b.t);
+      for (let i = 1; i < line.length; i++) {
+        const prev = line[i - 1], cur = line[i];
+        if (prev.p && cur.p && prev.p === cur.p) {              /* 한 부모에서 갈라진 형제끼리만 */
+          const j = edges.findIndex(e => e.b === cur && e.a === cur.p);
+          if (j >= 0) edges.splice(j, 1);
+        }
+        if (!edges.some(e => (e.a === prev && e.b === cur) || (e.a === cur && e.b === prev)))
+          edges.push({ a: prev, b: cur, kind: 'flow', label: '' });
+      }
+    });
+
+    const frame = { sec, nodes: all, res, carry: !res, cols: Math.max(...all.map(n => n.col + n.span - 1)) + 1 };
     frames.push(frame);
     sec.frame = frame; sec.byId = byId;
 
@@ -1408,29 +1631,59 @@ function build(map) {
 }
 
 /* ================= 4. 섹션 배치 ================= */
-/* 열 폭은 피그마 카드 폭 그대로 — 같은 열 카드는 폭이 같다 (0열 쟁점·마무리 300, 1·2열 279) */
-const CW = [326, 320, 320, 300], PAD = 20, HEAD = 34, GAPX = 40, GAPY = 120, ROWH = 150;
-const colX = c => PAD + CW.slice(0, c).reduce((a, w) => a + w + GAPX, 0);
+/* 카드 폭은 피그마 그대로 한 가지. 열 개수는 논의마다 다르다 */
+/* 피그마 379:7814 의 카드 155px 기준을 320px 로 옮긴 값 (×2.065) —
+   카드 사이 29.4→61, 판 안쪽 19.5→40. 머리말 칩을 뺐으니 위 여백(HEAD)도 없다 */
+const CWv = 320, PAD = 40, HEAD = 0, GAPX = 61, GAPY = 120, ROWH = 150;
+const colX = c => PAD + c * (CWv + GAPX);
 function layout(g) {
   /* 카드 높이는 글 줄 수마다 달라 render() 뒤에 다시 잰다. 여기선 어림으로 자리만 잡는다 */
-  let y = 0;
   g.frames.forEach(f => {
-    f.x = 0; f.y = y;
-    f.nodes.forEach(n => { n.x = colX(n.col); n.y = y + PAD + HEAD + n.row * ROWH; });
-    f.w = colX(f.cols - 1) + CW[f.cols - 1] + GAPX;   /* 오른쪽에도 선이 지날 통로를 남긴다 */
-    f.h = PAD * 2 + HEAD + f.nodes.length * ROWH;
-    y += f.h + GAPY;
+    f.w = colX(f.cols - 1) + CWv + GAPX;              /* 오른쪽에도 선이 지날 통로를 남긴다 */
+    f.h = PAD * 2 + HEAD + (Math.max(...f.nodes.map(n => n.row)) + 1) * ROWH;
   });
-  const W = Math.max(...g.frames.map(f => f.w));
-  g.frames.forEach(f => { f.w = W; });
-  bounds = { x0: OX - 26, y0: OY - 26, w: W + 52, h: y - GAPY + 52 };
+  /* 보드마다 열 수가 달라도 결론은 같은 자리(맨 오른쪽 열)에서 만나게 한다.
+     논의 앞머리에서 이미 닫힌 결론은 그 시각이 뜻이 있으니 건드리지 않는다 */
+  g.frames.forEach(f => { f.w = colX(f.cols - 1) + CWv + GAPX; });
+  /* 썸네일(안건 카드)은 모두 같은 크기 — 가장 넓은 논의를 기준으로 삼는다.
+     펼쳤을 때는 보드마다 제 내용만큼만 차지한다 (짧게 끝난 논의에 빈 칸을 남기지 않는다) */
+  const W = Math.max(...g.frames.map(f => f.w)), FG = fgap(W);
+  let x = 0, lx = 0;
+  g.frames.forEach(f => {
+    f.x = x; f.lx = lx; f.y = 0;
+    f.nodes.forEach(n => { n.x = x + colX(n.col); n.y = PAD + HEAD + n.row * ROWH; });
+    x += f.w + FG;
+    lx += W + FG;
+  });
+  LODW = W;
+  cv.style.setProperty('--bz', (W / 207.407).toFixed(4));
+  const pad = edge(W);
+  bounds = { x0: OX - pad, y0: OY - 26, w: Math.max(x, lx) - FG + pad * 2,
+    h: Math.max(...g.frames.map(f => f.h), cardH(W)) + 52 };
 }
+/* 멀리서 보는 안건 카드 한 장 = 피그마 207.407 × 159.519, 카드 사이 틈 25.97,
+   판 가장자리에서 첫 카드까지 37 (383:13337 측정선) */
+let LODW = 1400;                 /* 썸네일 안건 카드의 폭 — 가장 넓은 논의 기준 */
+const cardH = W => W * (159.519 / 207.407);
+const fgap = W => Math.round(W * (25.97 / 207.407));
+const edge = W => Math.round(W * (37 / 207.407));
 
 /* ================= 5. 그리기 ================= */
 /* 선은 두 가지 뜻만 갖는다 — 시간순으로 이어지는 흐름, 그리고 맞선 의견(반론) */
 const ARROW = { raise: '#b7c3d6', pro: '#b7c3d6', con: '#e0443e', concern: '#b7c3d6',
   condition: '#b7c3d6', resolve: '#9fb4d6', conflict: '#e0443e', flow: '#d7dff1' };
 const RESDOT = { decision: '#4b87e9', conditional: '#d9892b', open: '#8d9299' };
+/* 안건 카드 오른쪽 위 파트 꼬리표. 이 회의는 모두·ID·UX·VD 네 갈래로만 나눈다
+   (나중에 마케팅·운영 같은 갈래가 생기면 여기에 더한다) */
+const PARTKO = { UX: 'UX', ID: 'ID', 제품: 'ID', 산업디자인: 'ID', VD: 'VD', BX: 'VD', 브랜드: 'VD', 비주얼: 'VD',
+  TEAM: '모두', ALL: '모두', 전체: '모두', 팀: '모두', 운영: '모두', 공통: '모두' };
+const PARTCLS = { 모두: 'all', ID: 'id', UX: 'ux', VD: 'vd' };
+function partsOf(sec) {
+  const raw = String(sec.part || '').split(/[×x✕,·/+&]+/).map(v => v.trim()).filter(Boolean);
+  const ps = [...new Set(raw.map(v => PARTKO[v.toUpperCase()] || PARTKO[v] || '모두'))];
+  if (!ps.length || ps.includes('모두')) return ['모두'];          /* 한 파트로 좁혀지지 않으면 모두 */
+  return ps;
+}
 const TAGC = ['#c7d3e4', '#d5e3d0', '#f1e1b8', '#b8d4f1', '#e7d3e6', '#dcd6ef'];   /* 새 홈의 쟁점 칩과 같은 색 */
 function defs() {
   const d = svgEl('defs');
@@ -1464,40 +1717,37 @@ function render(g) {
     const d = el('div', 'frame');
     d.style.cssText = `left:${f.x + OX}px;top:${f.y + OY}px;width:${f.w}px;height:${f.h}px;--c:${TAGC[(f.sec.no - 1) % TAGC.length]}`;
     const s = f.sec, rk = f.res ? f.res.kind : 'open';
-    d.append(el('div', 'fhead',
-      `<span class="no">논의 ${String(s.no).padStart(2, '0')}</span><b>${esc(s.title)}</b>`
-      + `<span class="pt">${esc(s.part)}</span><time>${esc(s.t)}–${esc(s.t1)}</time>`));
+    const pts = partsOf(s).map(x => `<b class="pt ${PARTCLS[x]}">${x}</b>`).join('');
+    /* 머리말 칩은 두지 않는다 — 검정 쟁점 카드의 제목과 같은 말이다 */
     d.append(el('div', 'fbig',
-      `<div class="n">논의 ${String(s.no).padStart(2, '0')} · ${esc(s.part)}</div>`
-      + `<div class="t">${esc(s.title)}</div>`
-      + `<div class="s"><span class="dot" style="background:${RESDOT[rk]}"></span>`
-      + `${KIND_KO[rk] || '미결'} · ${esc(s.t)}–${esc(s.t1)}</div>`));
+      `<div class="g"><div class="hg">`
+      + `<div class="hd"><span class="n"><i style="background:${RESDOT[rk]}"></i>안건 ${s.no}</span>`
+      + `<span class="pts">${pts}</span></div>`
+      + `<div class="t">${esc(s.title)}</div></div>`
+      + `<div class="s">${esc(f.res ? f.res.title : '미결 · ' + ((s.resolution && s.resolution.title) || '결론이 나지 않았다'))}</div></div>`
+      + `<time>${esc(s.t)} - ${esc(s.t1)}</time>`));
     f.dom = d; cv.append(d);
   });
 
   g.nodes.forEach(n => {
-    const d = el('div', 'node ' + n.kind + (n.res ? ' res' : ''));
+    const d = el('div', 'node ' + n.kind + (n.res ? ' res' : '') + (n.span > 1 ? ' wide' : ''));
     d.style.left = (n.x + OX) + 'px'; d.style.top = (n.y + OY) + 'px';
+    if (n.span > 1) d.style.width = (CWv * n.span + GAPX * (n.span - 1)) + 'px';
     /* 쟁점·마무리는 라벨 + 문장, 주장류는 발화자 원 + 문장 + 근거 (피그마 카드 3종) */
-    const head = n.kind === 'issue' ? '쟁점' : n.res ? '마무리' : '';   /* 피그마 라벨은 쟁점·마무리 둘뿐 */
+    const head = n.kind === 'issue' ? '쟁점' : n.res ? '결론' : '';   /* 피그마 라벨은 쟁점·마무리 둘뿐 */
     const why = n.why || n.note || '';
+    /* 쟁점 카드의 글은 안건 이름과 같아야 한다 — 썸네일·목록·요약이 모두 이 이름을 쓴다 */
+    const ttl = n.kind === 'issue' ? (n.sec.title || n.title) : n.title;
     d.innerHTML = head
-      ? `<div class="k">${head}</div><h4>${esc(n.title)}</h4>`
-      : `<img class="who" src="${AV[n.who] || 'assets/av-glasses.png'}" alt="" title="${esc(n.who || '')}">`
+      ? `<div class="k">${head}</div><h4>${esc(ttl)}</h4>`
+      : whoHTML(n)
         + `<div class="tx"><h4>${esc(n.title)}</h4>${why ? `<p>${esc(why)}</p><span class="more">눌러서 전부 보기</span>` : ''}</div>`;
     d.onclick = () => selectNode(n);
     n.dom = d; cv.append(d);
   });
 
   /* 카드 높이는 글 줄 수마다 다르다. 다 그린 뒤 실제 높이로 줄을 쌓아 겹침과 빈 바닥을 없앤다 */
-  const ROWGAP = 26;
-  /* 카드 높이는 가까이 볼 때와 멀리서 볼 때(글 접고 제목 키움) 중 큰 쪽으로 못박는다.
-     그래야 줌을 바꿔도 자리가 흔들리거나 글이 잘리지 않는다 */
-  const wasFar = cv.classList.contains('far');
-  cv.style.setProperty('--fz', '26px');        /* 가장 크게 키웠을 때로 재 둔다 */
-  cv.classList.add('far');
-  g.nodes.forEach(n => { n.hFar = n.dom.offsetHeight; });
-  cv.classList.remove('far');
+  const ROWGAP = 52;        /* 피그마 379:7814 의 줄 사이 25px ×2.065 */
   g.nodes.forEach(n => {
     const p = n.dom.querySelector('p');                 /* 설명이 세 줄에서 잘렸는가 — '눌러서 전부 보기' 줄까지 재려면 먼저 */
     if (p) {                                            /* 줄 수 제한을 잠깐 풀어 재 본다 (-webkit-box 는 scrollHeight 가 안 늘어난다) */
@@ -1507,62 +1757,134 @@ function render(g) {
       p.style.webkitLineClamp = '';
       n.dom.classList.toggle('cut', full > shown + 1);
     }
-    n.h = Math.max(n.dom.offsetHeight, n.hFar);
+    n.h = n.dom.offsetHeight;
   });
-  cv.style.removeProperty('--fz');
-  if (wasFar) cv.classList.add('far');
-  let ny = 0;
+  /* 아무도 쓰지 않는 빈 열은 접는다 — 카드 사이에 뜻 없는 공백을 남기지 않는다 */
   g.frames.forEach(f => {
-    f.y = ny;
-    let y = f.y + PAD + HEAD;
-    f.nodes.slice().sort((p, q) => p.row - q.row).forEach(n => {   /* 시간 순서대로 한 줄씩 내려간다 */
-      n.x = colX(n.col); n.y = y;
-      n.dom.style.left = (n.x + OX) + 'px'; n.dom.style.top = (n.y + OY) + 'px';
-      n.dom.style.height = n.h + 'px';
-      y += n.h + ROWGAP;
-    });
-    f.h = y - ROWGAP - f.y + PAD;
-    f.dom.style.top = (f.y + OY) + 'px'; f.dom.style.height = f.h + 'px'; f.dom.style.width = f.w + 'px';
-    ny = f.y + f.h + GAPY;
+    const used = new Set();
+    f.nodes.forEach(n => { for (let i = 0; i < (n.span || 1); i++) used.add(n.col + i); });
+    const m = {}; let c = 0;
+    [...used].sort((a, b) => a - b).forEach(u => { m[u] = c++; });
+    f.nodes.forEach(n => { n.col = m[n.col]; });
+    f.cols = c;
   });
-  bounds = { x0: OX - 26, y0: OY - 26, w: g.frames[0].w + 52, h: ny - GAPY + 52 };
+  g.frames.forEach(f => {
+    f.y = 0;
+    let y = PAD + HEAD;
+    [...new Set(f.nodes.map(n => n.row))].sort((a, b) => a - b).forEach(r => {   /* 깊이 한 단계가 한 줄 */
+      const line = f.nodes.filter(n => n.row === r);
+      const rh = Math.max(...line.map(n => n.h));
+      line.forEach(n => {
+        n.x = f.x + colX(n.col); n.y = y;
+        n.h = rh;                                              /* 같은 줄은 높이가 같다 (격자) */
+        n.dom.style.height = rh + 'px';
+      });
+      y += rh + ROWGAP;
+    });
+    f.h = y - ROWGAP + PAD;
+    f.w = colX(Math.max(...f.nodes.map(n => n.col + (n.span || 1) - 1))) + CWv + PAD;
+  });
+  /* 보드 높이를 모두 같게 맞추고, 그 안의 카드 덩어리는 가운데에 놓는다 */
+  const FH = Math.max(...g.frames.map(f => f.h));
+  g.frames.forEach(f => {
+    const dy = Math.round((FH - f.h) / 2);
+    f.nodes.forEach(n => {
+      n.y += dy;
+      n.dom.style.left = (n.x + OX) + 'px'; n.dom.style.top = (n.y + OY) + 'px';
+    });
+    f.h = FH;
+    f.dom.style.top = OY + 'px'; f.dom.style.height = FH + 'px';
+    f.dom.style.width = f.w + 'px'; f.dom.style.left = (f.x + OX) + 'px';
+    f.dom.style.setProperty('--lx', (f.lx + OX) + 'px');      /* 썸네일일 때의 자리 */
+  });
+  /* 보드 폭이 정해졌으니 썸네일 크기와 가로 자리를 다시 잡는다 */
+  LODW = Math.max(...g.frames.map(f => f.w));
+  cv.style.setProperty('--bz', (LODW / 207.407).toFixed(4));
+  const FG0 = fgap(LODW), pad0 = edge(LODW);
+  let ax = 0, al = 0;
+  g.frames.forEach(f => {
+    const dx = ax - f.x;
+    if (dx) f.nodes.forEach(n => { n.x += dx; });
+    f.x = ax; f.lx = al; ax += f.w + FG0; al += LODW + FG0;
+  });
+  bounds = { x0: OX - pad0, y0: OY - 26, w: Math.max(ax, al) - FG0 + pad0 * 2,
+    h: Math.max(...g.frames.map(f => f.h), cardH(LODW)) + 52 };
 
-  g.frames.forEach((f, i) => {                 /* 카드와 카드를 잇는 목 */
+  g.frames.forEach((f, i) => {                 /* 카드와 카드를 잇는 목 — 썸네일일 때만 보이므로 그 자리 기준 */
     if (i === 0) return;
     const prev = g.frames[i - 1];
-    const x = f.x + OX + f.w / 2, y0 = prev.y + OY + prev.h, y1 = f.y + OY;
+    const x0 = prev.lx + OX + LODW, y = OY + cardH(LODW) / 2;
     const nk = el('div', 'neck');
-    nk.style.cssText = `left:${x - 1.5}px;top:${y0}px;height:${y1 - y0}px`;
+    nk.style.cssText = `left:${x0}px;top:${y}px;width:${f.lx + OX - x0}px;margin-top:-1px`;
     f.neck = nk; cv.append(nk);
   });
 
-  /* 선은 카드 옆구리에서 나와 열 사이 빈 통로(gutter)를 타고 내려간다.
-     한 카드에서 갈라지는 선은 같은 통로를 써서 한 줄기가 두 갈래로 보이게 한다. */
-  const gutR = c => OX + colX(c) + CW[c] + GAPX / 2;      /* 그 열 오른쪽 빈 통로 */
-  const gutL = c => OX + colX(c) - GAPX / 2;               /* 그 열 왼쪽 빈 통로 */
+  /* 선 규칙 (하나뿐)
+     · 선은 두 카드와 정확히 맞닿는다 — 허공에서 시작하거나 끝나지 않는다
+     · 특별한 사정이 없으면 두 카드의 '중심'을 잇는다 (세로면 중심 x, 가로면 중심 y)
+     · 예외 ① 위아래 카드의 폭이 달라 중심이 어긋나면 더 오른쪽 카드의 중심에 맞춘다
+       예외 ② 곧게 그으면 다른 카드를 밟는 경우에만 칸 사이 빈 통로로 한 번 꺾는다
+     · 아래로 깊어지는 선은 점선, 시간이 흐르는 쪽(가로)·결론은 실선, 맞섬은 양쪽 화살표 */
+  const box = n => { const w = n.dom.offsetWidth, h = n.dom.offsetHeight;
+    return { x0: n.x + OX, x1: n.x + OX + w, y0: n.y + OY, y1: n.y + OY + h, cx: n.x + OX + w / 2, cy: n.y + OY + h / 2, n }; };
+  const BOXES = g.nodes.map(box);
+  const hitsV = (x, y0, y1, A, B) => BOXES.some(q => q.n !== A && q.n !== B
+    && x > q.x0 - 2 && x < q.x1 + 2 && Math.min(y0, y1) < q.y1 - 2 && Math.max(y0, y1) > q.y0 + 2);
+  const hitsH = (y, x0, x1, A, B) => BOXES.some(q => q.n !== A && q.n !== B
+    && y > q.y0 - 2 && y < q.y1 + 2 && Math.min(x0, x1) < q.x1 - 2 && Math.max(x0, x1) > q.x0 + 2);
+
   g.edges.forEach(e => {
-    const A = e.a, B = e.b, R = 12, gap = e.both ? 7 : 2;
-    const aw = A.dom.offsetWidth, ah = A.dom.offsetHeight, bw = B.dom.offsetWidth, bh = B.dom.offsetHeight;
-    /* 오른쪽 아래 열로 내려가면 A 오른쪽→B 왼쪽, 왼쪽 열로 돌아가면 A 왼쪽→B 오른쪽,
-       같은 열끼리는 둘 다 오른쪽 옆구리를 써서 카드를 밟고 지나가지 않는다 */
-    const out = B.col > A.col ? 1 : B.col < A.col ? -1 : 1;
-    const into = B.col > A.col ? -1 : 1;
-    const lane = (B.col > A.col ? gutR(A.col) : B.col < A.col ? gutL(A.col) : gutR(A.col))
-      + (A.row % 3 - 1) * 9;
-    const ax = A.x + OX + (out > 0 ? aw + gap : -gap), ay = A.y + OY + ah / 2;
-    const bx = B.x + OX + (into > 0 ? bw + gap : -gap), by = B.y + OY + bh / 2;
-    const sy = by > ay ? 1 : -1, s2 = bx > lane ? 1 : -1, s1 = lane > ax ? 1 : -1;
-    const r = Math.min(R, Math.max(2, Math.abs(by - ay) / 2), Math.max(2, Math.abs(lane - ax)), Math.max(2, Math.abs(bx - lane)));
-    const d = Math.abs(by - ay) < 3 && s1 === s2
-      ? `M ${ax} ${ay} H ${bx}`
-      : `M ${ax} ${ay} H ${lane - s1 * r} Q ${lane} ${ay} ${lane} ${ay + sy * r} `
-        + `V ${by - sy * r} Q ${lane} ${by} ${lane + s2 * r} ${by} H ${bx}`;
-    e.path = svgEl('path', { d, class: 'e-' + e.kind, 'marker-end': `url(#ar-${e.kind}-e)` });
+    const A = e.a, B = e.b, R = 16;
+    const a = box(A), b = box(B);
+    const dash = !e.both && e.kind !== 'resolve' && e.kind !== 'flow' && B.row > A.row;
+    const ox0 = Math.max(a.x0, b.x0), ox1 = Math.min(a.x1, b.x1);
+    const oy0 = Math.max(a.y0, b.y0), oy1 = Math.min(a.y1, b.y1);
+    let d, tipA = null, tipB = null;
+
+    if (!e.both && ox1 > ox0 + 20 && (b.y0 >= a.y1 - 1 || a.y0 >= b.y1 - 1)) {
+      /* 세로 — 두 중심이 같으면 중심, 어긋나면 더 오른쪽 카드의 중심 (겹치는 폭 안으로) */
+      /* 더 오른쪽 카드의 중심을 먼저 쓰고, 그 중심이 겹치는 폭 밖이면 다른 카드의 중심을 쓴다
+         (어느 쪽도 안 되면 겹치는 폭의 한가운데 — 그래야 선이 카드 중심에서 벗어나지 않는다) */
+      const order = b.cx >= a.cx ? [b.cx, a.cx] : [a.cx, b.cx];
+      let x = order.find(v => v > ox0 + 4 && v < ox1 - 4);
+      if (x == null) x = (ox0 + ox1) / 2;
+      const down = b.y0 >= a.y1 - 1;
+      const yA = down ? a.y1 : a.y0, yB = down ? b.y0 : b.y1;
+      if (hitsV(x, yA, yB, A, B)) {                  /* 가운데로 가면 다른 카드를 밟는다 → 옆 통로로 */
+        const lane = Math.max(a.x1, b.x1) + GAPX / 2;
+        const sa = lane > a.cx ? 1 : -1;
+        d = `M ${a.x1} ${a.cy} H ${lane - R * sa} Q ${lane} ${a.cy} ${lane} ${a.cy + (b.cy > a.cy ? R : -R)} `
+          + `V ${b.cy - (b.cy > a.cy ? R : -R)} Q ${lane} ${b.cy} ${lane - R} ${b.cy} H ${b.x1}`;
+      } else {
+        d = `M ${x} ${yA} V ${yB}`;
+      }
+    } else if (oy1 > oy0 + 16) {
+      /* 가로 — 두 중심이 같으면 중심, 아니면 겹치는 높이의 한가운데 */
+      const y = Math.abs(a.cy - b.cy) < 6 ? a.cy : (oy0 + oy1) / 2;
+      const left = b.x0 >= a.x1, xA = left ? a.x1 : a.x0, xB = left ? b.x0 : b.x1;
+      if (hitsH(y, xA, xB, A, B)) {
+        const lane = Math.min(a.y0, b.y0) - ROWGAP / 2;
+        d = `M ${a.cx} ${a.y0} V ${lane + R} Q ${a.cx} ${lane} ${a.cx + (b.cx > a.cx ? R : -R)} ${lane} `
+          + `H ${b.cx - (b.cx > a.cx ? R : -R)} Q ${b.cx} ${lane} ${b.cx} ${lane + R} V ${b.y0}`;
+      } else {
+        d = `M ${xA} ${y} H ${xB}`;
+        tipA = [xA, y, left ? -1 : 1]; tipB = [xB, y, left ? 1 : -1];
+      }
+    } else {
+      /* ㄱ자 — A 의 중심 x 로 내려가 B 의 중심 y 로 들어간다 */
+      const x = a.cx, y = b.cy;
+      const down = y > a.cy;
+      const start = down ? a.y1 : a.y0;
+      const toRight = b.cx > x, side = toRight ? b.x0 : b.x1, s2 = toRight ? 1 : -1, sy = down ? 1 : -1;
+      const r = Math.max(0, Math.min(R, Math.abs(y - start) / 2, Math.abs(side - x) / 2));
+      d = `M ${x} ${start} V ${y - sy * r} Q ${x} ${y} ${x + s2 * r} ${y} H ${side}`;
+    }
+    e.path = svgEl('path', { d, class: 'e-' + e.kind + (dash ? ' e-dash' : ''), 'marker-end': `url(#ar-${e.kind}-e)` });
     sv.append(e.path);
-    if (e.both) {                       /* 반론은 양쪽 화살촉을 직접 그린다 (마커가 작아 묻힌다) */
-      const c = ARROW[e.kind], tip = (x, y, dr) =>
-        svgEl('path', { d: `M ${x} ${y - 6} L ${x + dr * 11} ${y} L ${x} ${y + 6} Z`, class: 'tip', style: `fill:${c}` });
-      e.tips = [tip(ax - out * 11, ay, out), tip(bx - into * 11, by, into)];
+    if (e.both && tipA) {              /* 맞섬은 양쪽 화살촉을 직접 그린다 (마커가 작아 묻힌다) */
+      const c = ARROW[e.kind], tip = ([x, y, dr]) =>
+        svgEl('path', { d: `M ${x + dr * 11} ${y - 6} L ${x} ${y} L ${x + dr * 11} ${y + 6} Z`, class: 'tip', style: `fill:${c}` });
+      e.tips = [tip(tipA), tip(tipB)];
       e.tips.forEach(t => sv.append(t));
     }
   });
@@ -1708,11 +2030,13 @@ function applyEdits() {
   });
 }
 function paintNode(n) {
-  n.dom.className = 'node ' + n.kind + (n.res ? ' res' : '')
+  n.dom.className = 'node ' + n.kind + (n.res ? ' res' : '') + (n.span > 1 ? ' wide' : '')
     + (n.dom.classList.contains('in') ? ' in' : '') + (n.dom.classList.contains('cut') ? ' cut' : '');
+  const p0 = n.dom.querySelector('p');
+  if (p0 && n.whyAll && n.whyAll !== n.why) p0.textContent = n.dom.classList.contains('sel') ? n.whyAll : n.why;
   const k = n.dom.querySelector('.k');
-  if (k) k.textContent = n.kind === 'issue' ? '쟁점' : '마무리';
-  n.dom.querySelector('h4').textContent = n.title;
+  if (k) k.textContent = n.kind === 'issue' ? '쟁점' : '결론';
+  n.dom.querySelector('h4').textContent = n.kind === 'issue' ? (n.sec.title || n.title) : n.title;
 }
 const note = k => (LOCAL.notes[k] = LOCAL.notes[k] || { rx: {}, cs: [] });
 const RX = ['👍', '🙌', '🤔', '❗'];
@@ -2136,6 +2460,15 @@ function showEvidence(ev, who, near) {
   if (audioOK) au.play().catch(() => {});
   return true;
 }
+/* 한 카드에 사람이 여럿일 수 있다 — who 가 그 말을 처음 꺼낸 사람,
+   with 는 같은 말을 함께 밀거나 그 자리에서 같이 정한 사람들 */
+function whoList(n) { return [...new Set([n.who, ...(n.with || [])].filter(Boolean))]; }
+function whoHTML(n) {
+  const ws = whoList(n); if (!ws.length) return '';
+  const face = w => `<img src="${AV[w] || 'assets/av-glasses.png'}" alt="" title="${esc(w)}" data-who="${esc(w)}">`;
+  const name = ws.length <= 2 ? ws.join(' · ') : `${ws[0]} · ${ws[1]} 외 ${ws.length - 2}명`;
+  return `<div class="whos"><span class="avs">${ws.slice(0, 3).map(face).join('')}</span><b>${esc(name)}</b></div>`;
+}
 function selectNode(n) {
   selected = n;
   NODES.forEach(o => o.dom.classList.toggle('sel', o === n));
@@ -2199,7 +2532,12 @@ function proToggles() {
   });
 }
 
-let SEEN = 0;
+let SEEN = 0, FOLT = 0;
+/* 보드 아래 알약·설명·줌 알약은 피그마(보드 폭 694.2px)를 그 보드 폭에 맞춰 키운다 */
+function uiScale() {
+  const w = vp.getBoundingClientRect().width;
+  document.body.style.setProperty('--uiz', Math.max(1, Math.min(1.8, w / 694.2)).toFixed(3));
+}
 /* 지금 화면에 크게 들어온 논의를 부모에게 알린다 (사용성 테스트에서 '확대해 봤는가' 판정) */
 function tellView() {
   clearTimeout(SEEN);
@@ -2214,13 +2552,20 @@ function tellView() {
       if (vx > r.width * .35 && vy > r.height * .3) on.push(f.sec.no);
     });
     try { parent.postMessage({ mn: 'view', z: view.z, open: view.z >= LOD, frames: on }, '*'); } catch {}
+    /* 안건 카드를 확대해 3초 넘게 들여다보고 있으면 '실시간 확인하기'를 띄운다 */
+    const deep = view.z >= LOD && on.length > 0;
+    if (!deep) { clearTimeout(FOLT); FOLT = 0; document.body.classList.remove('showfollow'); }
+    else if (!FOLT && !document.body.classList.contains('showfollow')) {
+      FOLT = setTimeout(() => { FOLT = 0; document.body.classList.add('showfollow'); }, 3000);
+    }
   }, 250);
 }
 
 /* 보드 밖은 무한히 열려 있지 않다 — 줌은 썸네일 폭맞춤 ~ 1.1배, 화면은 보드를 벗어나지 않는다 */
 function zLimit() {
   const r = vp.getBoundingClientRect();
-  return [Math.max(.05, Math.min((r.width - 52) / bounds.w, LOD - .02)), 1.1];
+  const card = 207.407 / LODW;   /* 피그마 383:13004 — 가장 축소했을 때 안건 카드는 207.4px */
+  return [Math.max(.03, Math.min(card, LOD - .02)), 1.1];
 }
 function clampView() {
   const r = vp.getBoundingClientRect();
@@ -2232,14 +2577,29 @@ function clampView() {
 }
 function apply() {
   const [lo, hi] = zLimit();
+  const was = cv.classList.contains('lod');
   view.z = Math.min(hi, Math.max(lo, view.z));
+  const now = view.z < LOD;
+  /* 썸네일 자리와 펼친 자리가 다르다 — 넘어가는 순간 '보고 있던 보드'를 다시 화면 가운데로 */
+  if (was !== now && FRAMES.length) {
+    const r = vp.getBoundingClientRect(), cx = r.width / 2;
+    let best = FRAMES[0], bd = Infinity;
+    FRAMES.forEach(f => {
+      const w = was ? LODW : f.w, x = was ? f.lx : f.x;
+      const d = Math.abs((x + OX + w / 2) * view.z + view.x - cx);
+      if (d < bd) { bd = d; best = f; }
+    });
+    const bw = now ? LODW : best.w, bh = now ? cardH(LODW) : best.h;
+    view.x = cx - ((now ? best.lx : best.x) + OX + bw / 2) * view.z;
+    view.y = r.height / 2 - (OY + bh / 2) * view.z;        /* 세로도 가운데 — 들여다본 보드가 통째로 보이게 */
+  }
+  cv.classList.toggle('lod', now);
   clampView();
   cv.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
   $('#zlv').textContent = Math.round(view.z * 100) + '%';
-  cv.classList.toggle('far', view.z < .6 && view.z >= LOD);
   /* 멀어질수록 글자를 키워, 화면에 찍히는 크기가 13px 언저리로 남게 한다 */
   cv.style.setProperty('--fz', Math.max(16, Math.min(26, 13 / view.z)).toFixed(1) + 'px');
-  cv.classList.toggle('lod', view.z < LOD);
+  if (TIPZ && view.z > TIPZ * 1.08) { TIPZ = 0; tipGone(); }    /* 8% 넘게 키우면 안내를 걷는다 */
   tellView();
 }
 function zoomAt(cx, cy, nz) {
@@ -2255,13 +2615,23 @@ function fit(initial) {
   const r = vp.getBoundingClientRect(), padT = 92, padB = 62, padX = 26;
   const aw = r.width - padX * 2, ah = r.height - padT - padB;
   if (initial === 'all') {
-    view.z = Math.max(.04, Math.min(1, Math.min(aw / bounds.w, ah / bounds.h)));
-    view.x = padX - bounds.x0 * view.z + (aw - bounds.w * view.z) / 2;
-    view.y = padT - bounds.y0 * view.z + (ah - bounds.h * view.z) / 2;
+    view.z = zLimit()[0];
+    const ch = cardH(LODW) * view.z;
+    view.x = 37 - OX * view.z;                          /* 첫 카드까지 37 — 피그마 383:13337 */
+    view.y = Math.max(padT, (r.height - ch) / 2) - OY * view.z;
   } else {
-    view.z = Math.max(.12, Math.min(LOD - .02, aw / bounds.w));   /* 처음엔 썸네일 카드 — 확대하면 안쪽이 열린다 */
-    view.x = padX - bounds.x0 * view.z + (aw - bounds.w * view.z) / 2;
-    view.y = padT - bounds.y0 * view.z;
+    /* 처음 보이는 건 첫 논의 보드 — 카드 글이 읽히는 배율(피그마 49%)에 맞춘다.
+       더 넓게 보려면 줌을 내리면 썸네일로 접힌다 */
+    const f0 = FRAMES[0];
+    if (f0) {
+      view.z = Math.min(.8, Math.max(LOD + .1, r.width / f0.w));   /* 보드가 패널을 꽉 채운다 */
+      view.x = -(f0.x + OX) * view.z;
+      view.y = -(f0.y + OY - HEAD) * view.z;   /* 보드 머리말까지 보이게 */
+    } else {
+      view.z = Math.max(.12, Math.min(LOD - .02, aw / bounds.w));
+      view.x = padX - bounds.x0 * view.z + (aw - bounds.w * view.z) / 2;
+      view.y = padT - bounds.y0 * view.z;
+    }
   }
   apply();
 }
@@ -2285,7 +2655,7 @@ function centerOn(n) {
 }
 $('#zin').onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, view.z * 1.3); };
 $('#zout').onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, view.z / 1.3); };
-$('#zfit').onclick = () => fit(false);
+$('#zlv').onclick = () => fit(false);
 
 let drag = null;
 vp.addEventListener('pointerdown', e => {
@@ -2301,7 +2671,7 @@ vp.addEventListener('pointermove', e => {
 vp.addEventListener('wheel', e => {
   e.preventDefault();
   const r = vp.getBoundingClientRect(), cx = e.clientX - r.left, cy = e.clientY - r.top;
-  if (e.ctrlKey || e.metaKey) zoomAt(cx, cy, view.z * Math.exp(-e.deltaY / 220));
+  if (e.ctrlKey || e.metaKey) zoomAt(cx, cy, view.z * Math.exp(-e.deltaY / 150));
   else { view.x -= e.deltaX; view.y -= e.deltaY; apply(); }
 }, { passive: false });
 const pts = new Map();
@@ -2569,7 +2939,8 @@ let AV = {};
 (async () => { try {
   const ps = (await (await fetch('data/projects.json', NOCACHE)).json()).projects || [];
   ps.forEach(p => Object.assign(AV, p.avatars || {}));
-  if (MAP) NODES.forEach(n => { const im = n.dom && n.dom.querySelector('.who'); if (im && AV[n.who]) im.src = AV[n.who]; });
+  if (MAP) NODES.forEach(n => (n.dom ? [...n.dom.querySelectorAll('.whos img')] : [])
+    .forEach(im => { const a = AV[im.dataset.who]; if (a) im.src = a; }));
 } catch {} })();
 const alias = o => (ALIAS ? JSON.parse(applyAlias(JSON.stringify(o), ALIAS)) : o);
 async function load(url) {
@@ -2661,7 +3032,29 @@ function mount(map, segs, name, audioSrc) {
   NODES.forEach(n => n.dom.classList.add('in'));
   EDGES.forEach(e => { e.path.classList.add('on'); if (e.text) e.text.classList.add('on'); });
   FRAMES.forEach(f => { f.dom.classList.add('in', 'wrote'); if (f.neck) f.neck.classList.add('on'); });
-  fit(false);
+  uiScale();
+  fit('all');                                   /* 처음 들어오면 논의 전체가 보이는 가장 축소된 화면 */
+  cv.classList.remove('anim');
+  requestAnimationFrame(() => requestAnimationFrame(() => cv.classList.add('anim')));  /* 첫 그림은 튀지 않게 */
+  tipZoom();
+}
+
+/* 안건 카드만 보이는 첫 화면의 '확대하여 자세히 보기' —
+   시간이 아니라 **사용자가 실제로 확대할 때까지** 남는다 (트랙패드 · ＋ · 줌 알약) */
+let TIPT = 0, TIPZ = 0;
+function tipZoom() {
+  const z = $('#zoomtip'); if (!z) return;
+  clearTimeout(TIPT);
+  document.body.classList.add('tipfirst');
+  z.hidden = false; z.classList.remove('out');
+  void z.offsetWidth;                                 /* 다시 들어올 때도 처음부터 */
+  TIPZ = view.z;
+}
+function tipGone() {                                   /* 확대가 일어나면 아래로 걷는다 */
+  const z = $('#zoomtip');
+  if (!z || z.hidden || z.classList.contains('out')) return;
+  z.classList.add('out');
+  TIPT = setTimeout(() => { z.hidden = true; document.body.classList.remove('tipfirst'); }, 640);
 }
 
 /* ================= 13.5 맵 만들기 화면 ================= */
@@ -3112,11 +3505,11 @@ function offsets() {
    열고 접는 애니메이션이 끝난 뒤 재 본다 */
 let rzT;
 function refit() {
-  const r = vp.getBoundingClientRect(), bw = (FRAMES[0] ? FRAMES[0].w : bounds.w) + 36;
+  const r = vp.getBoundingClientRect(), bw = LODW + 36;
   if (bw * view.z > r.width) view.z = Math.max(zLimit()[0], Math.min(view.z, r.width / bw));
   apply();
 }
-addEventListener('resize', () => { apply(); clearTimeout(rzT); rzT = setTimeout(refit, 380); });
+addEventListener('resize', () => { uiScale(); apply(); clearTimeout(rzT); rzT = setTimeout(refit, 380); });
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'Space') { e.preventDefault(); audioOK ? (au.paused ? au.play() : au.pause()) : $('#pause').click(); }

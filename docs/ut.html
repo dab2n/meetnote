@@ -35,6 +35,8 @@ tbody tr.on{background:var(--card)}
 .v.success{background:#e3f3e6;color:#1f7a35} .v.fail{background:#fde8e8;color:#b42323}
 .v.pending{background:#f1ecdf;color:#8a6d1d} .v.running{background:#e4ecfb;color:#2f5fb8}
 .v.waiting,.v.never{background:#eef1f6;color:#757575}
+.csvtag{margin-left:4px;padding:1px 5px;border-radius:4px;background:#eef1f6;color:#8a8f98;
+  font-size:10px;font-weight:600;font-style:normal;letter-spacing:.04em;vertical-align:1px}
 .verrow td{padding:14px 12px 6px;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--ink);
   background:#fff;border-bottom:1px solid #e5e7eb}
 .verrow i{margin-left:8px;font-style:normal;font-weight:400;color:var(--dim2)}
@@ -101,7 +103,7 @@ section.task h2{font-size:17px;font-weight:600}
     <div><p class="lb">MEETNOTE / USABILITY TEST</p><h1>결과 보기</h1></div>
     <div class="tools">
       <button id="csv">CSV 내보내기</button><button id="json">JSON 내보내기</button>
-      <label>JSON 가져오기<input id="imp" type="file" accept=".json" hidden></label>
+      <label>기록 가져오기<input id="imp" type="file" accept=".json,.csv" hidden></label>
     </div>
   </div>
   <div class="box" id="sheet"></div>
@@ -117,10 +119,13 @@ const { TASKS, SCREEN_NAME, load, save } = UT;
 const sec = ms => (ms == null ? '—' : `${(ms / 1000).toFixed(1)}초`);
 const stamp = ms => `${String(Math.floor(ms / 60000)).padStart(2, '0')}:${((ms % 60000) / 1000).toFixed(1).padStart(4, '0')}`;
 const nameOf = s => SCREEN_NAME[s] || s || '';
+/* CSV 로 되살린 줄임을 작게 적어 둔다 */
 const V = { success: '성공', fail: '실패', pending: '판정 대기', running: '진행 중', waiting: '시작 대기', never: '시작 안 함' };
 const verdictOf = r => r.verdict ?? (!r.startedAt ? (r.endedAt ? 'never' : 'waiting') : r.endedAt ? 'pending' : 'running');
 const stats = r => {
   const nav = r.events.filter(e => e.type === 'nav');
+  /* CSV 로 되살린 회차는 클릭 하나하나가 없다 — 그때 적혀 있던 수를 그대로 쓴다 */
+  if (r.csv) return { off: r.csvOff || 0, dead: r.csvDead || 0, taps: 0, path: nav.map(e => e.screen), offSet: new Set() };
   return { off: nav.filter(e => e.off).length, dead: r.events.filter(e => e.type === 'tap' && e.dead).length,
     taps: r.events.filter(e => e.type === 'tap').length, path: nav.map(e => e.screen),
     offSet: new Set(nav.filter(e => e.off).map(e => e.screen)) };
@@ -158,7 +163,7 @@ function drawSheet() {
     ${rows().map(({ ver, list, first }) => (ver ? `<tr class="verrow"><td colspan="${6 + TASKS.length * 4}">${esc(ver)}<i>참여자 ${list.length}명</i></td></tr>` : '')
       + list.map((s, n) => `<tr class="${sel === s.id ? 'on' : ''}" data-s="${s.id}">
       <td style="color:var(--dim2)">${first + n}${DB.current === s.id ? ' ●' : ''}</td>
-      <td style="font-weight:600">${esc(s.name || '무기명')}</td><td>${esc(s.age)}</td><td>${esc(s.job)}</td><td style="color:var(--dim)">${esc(s.date)}</td>
+      <td style="font-weight:600">${esc(s.name || '무기명')}${s.csv ? ' <i class="csvtag">CSV</i>' : ''}</td><td>${esc(s.age)}</td><td>${esc(s.job)}</td><td style="color:var(--dim)">${esc(s.date)}</td>
       ${TASKS.map(t => { const r = latest(s, t.id), st = r && stats(r), tries = s.runs.filter(x => x.task === t.id).length;
         return `<td>${r ? `<span class="v ${verdictOf(r)}">${V[verdictOf(r)]}${tries > 1 ? ` · ${tries}회` : ''}</span>` : '<span style="color:#d1d5db">—</span>'}</td>
           <td class="tnum">${cellTime(r)}</td>
@@ -391,8 +396,17 @@ addEventListener('storage', () => { DB = load(); draw(); });
 setInterval(() => { DB = load(); if (!document.activeElement || !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) draw(); }, 1000);
 
 /* 내보내기 · 가져오기 */
-const download = (name, text, type) => { const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
+/* 사파리·파이어폭스는 문서에 붙지 않은 링크는 누르지 않는다 — 붙였다 떼고 주소도 거둔다 */
+const download = (name, text, type) => {
+  const a = document.createElement('a'), u = URL.createObjectURL(new Blob([text], { type }));
+  a.href = u; a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 1000);
+};
+/* 여러 사람 것이 섞이지 않게 이름·판을 파일 이름에 적는다 */
+const fileName = ext => {
+  const s = DB.sessions[DB.sessions.length - 1] || {};
+  return ['meetnote-ut', s.ver, s.name].filter(Boolean).join('-').replace(/[\\/:*?"<>|\s]+/g, '') + '.' + ext;
+};
 $('#csv').onclick = () => {
   const head = ['테스트 판', '이름', '나이', '직업', '일자', ...TASKS.flatMap(t => [`T${t.id} 결과`, `T${t.id} 시간(초)`, `T${t.id} 경로 이탈`, `T${t.id} 빈 곳 터치`, `T${t.id} 이동 경로`, `T${t.id} 메모`])];
   const lines = DB.sessions.map(s => [s.ver || '', s.name || '무기명', s.age, s.job, s.date, ...TASKS.flatMap(t => {
@@ -400,12 +414,68 @@ $('#csv').onclick = () => {
     const st = stats(r);
     return [V[verdictOf(r)], ((r.successMs ?? r.durationMs ?? 0) / 1000).toFixed(1), st.off, st.dead, st.path.map(nameOf).join(' → '), r.note];
   })]);
-  download('meetnote-ut.csv', '﻿' + [head, ...lines].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+  download(fileName('csv'), '﻿' + [head, ...lines].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
 };
-$('#json').onclick = () => download('meetnote-ut.json', JSON.stringify(DB, null, 2), 'application/json');
+$('#json').onclick = () => download(fileName('json'), JSON.stringify(DB, null, 2), 'application/json');
+/* 따옴표 안의 쉼표·줄바꿈까지 지키는 작은 CSV 읽개 */
+function csvRows(t) {
+  const out = []; let row = [], cell = '', q = false;
+  t = t.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c !== '"') cell += c; else if (t[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); out.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); out.push(row); }
+  return out;
+}
+
+/* CSV 로 되살리기 — 참여자 브라우저가 사라진 뒤 남은 CSV 가 마지막 길이다.
+   되살아나는 것: 판·사람·태스크별 결과·성공까지 걸린 시간·이동 경로·이탈/빈 터치 수·메모.
+   되살지 않는 것: 클릭 하나하나(타임라인)와 시선 기록 — CSV 에 애초에 없다. */
+const KEYOF = Object.fromEntries(Object.entries(SCREEN_NAME).map(([k, v]) => [v, k]));
+const VOF = Object.fromEntries(Object.entries(V).map(([k, v]) => [v, k]));
+const rid = () => Math.random().toString(36).slice(2, 9);
+function fromCSV(text) {
+  const rows = csvRows(text).filter(r => r.length > 5);
+  return rows.slice(1).filter(r => r.slice(1, 5).some(c => c)).map(r => {
+    const [ver, name, age, job, date] = r.map(c => (c || '').trim());
+    const t0 = Date.parse(date.replace(/\./g, '-')) || Date.now();
+    const runs = [];
+    TASKS.forEach((t, i) => {
+      const c = r.slice(5 + i * 6, 11 + i * 6).map(x => (x || '').trim());
+      if (!c[0]) return;
+      const verdict = VOF[c[0]] || null;
+      const ms = Math.round((parseFloat(c[1]) || 0) * 1000);
+      const path = c[4].split('→').map(x => x.trim()).filter(Boolean).map(x => KEYOF[x] || x);
+      runs.push({
+        id: rid(), task: t.id, csv: true, selectedAt: t0, startedAt: t0, endedAt: t0 + ms,
+        durationMs: ms, successMs: verdict === 'success' ? ms : null, verdict,
+        csvOff: +c[2] || 0, csvDead: +c[3] || 0, milestones: [], note: c[5] || '',
+        events: path.map((screen, k) => ({ ms: path.length > 1 ? Math.round(ms * k / (path.length - 1)) : 0,
+          type: 'nav', screen, ctx: '', first: !k, off: false })),
+      });
+    });
+    return { id: rid(), name: name || '무기명', age, job, ver, date, csv: true, startedAt: t0, runs };
+  }).filter(s => s.runs.length);
+}
+
 $('#imp').onchange = e => e.target.files[0] && e.target.files[0].text().then(t => {
-  const inc = JSON.parse(t);
-  commit(d => (inc.sessions || []).forEach(s => { if (!d.sessions.some(x => x.id === s.id)) d.sessions.push(s); }));
+  const json = t.trim().startsWith('{');
+  const inc = json ? (JSON.parse(t).sessions || []) : fromCSV(t);
+  let add = 0;
+  commit(d => inc.forEach(s => {
+    /* 같은 사람·같은 판·같은 날짜는 두 번 들이지 않는다 */
+    const dup = json ? d.sessions.some(x => x.id === s.id)
+      : d.sessions.some(x => x.name === s.name && (x.ver || '') === (s.ver || '') && x.date === s.date);
+    if (!dup) { d.sessions.push(s); add++; }
+  }));
+  e.target.value = '';
+  alert(add ? `${add}명의 기록을 들였습니다${json ? '' : ' (CSV — 타임라인·시선은 들어 있지 않습니다)'}`
+            : '새로 들일 기록이 없습니다 (이미 있는 기록입니다)');
 });
 document.querySelector('label').onclick = () => $('#imp').click();
 </script>

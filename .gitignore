@@ -8,4 +8,5 @@ pin
 samples/*.aiff
 samples/*.mp3
 docs/audio/
+docs/ut-insight.html
 .meetnote.json

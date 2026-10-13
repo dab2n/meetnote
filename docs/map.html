@@ -1808,6 +1808,7 @@ function render(g) {
     /* 자리를 옮겼으면 화면도 함께 옮긴다 — 좌표만 바꾸면 선은 새 자리에, 카드는 옛 자리에 남는다 */
     if (dx) f.nodes.forEach(n => { n.x += dx; n.dom.style.left = (n.x + OX) + 'px'; });
     f.x = ax; f.lx = al; ax += f.w + FG0; al += LODW + FG0;
+    f.dom.style.left = (f.x + OX) + 'px';                  /* 보드도 함께 옮긴다 — 안 그러면 카드만 옮겨져 한쪽으로 쏠린다 */
     f.dom.style.setProperty('--lx', (f.lx + OX) + 'px');   /* 썸네일 자리도 다시 잰 값으로 — 목이 닿을 자리다 */
   });
   bounds = { x0: OX - pad0, y0: OY - 26, w: Math.max(ax, al) - FG0 + pad0 * 2,

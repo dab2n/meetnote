@@ -2679,6 +2679,22 @@ function zoomAt(cx, cy, nz) {
 function fit(initial) {
   const r = vp.getBoundingClientRect(), padT = 92, padB = 62, padX = 26;
   const aw = r.width - padX * 2, ah = r.height - padT - padB;
+  if (initial === 'agenda') {
+    /* 안건별 — 확대하지 않아도 첫 판의 카드가 바로 읽히게 연다.
+       폭에 맞추되 글이 읽히는 선(50%)까지만 키운다. 옆 판이 조금 걸쳐 보여 '다음 회의'가 이어 읽힌다 */
+    const f0 = FRAMES[0];
+    if (f0) {
+      /* 세로로 판이 다 담기면 그만큼만, 담기지 않아도 글이 읽히는 선(38%)까지는 키운다 */
+      view.z = Math.min(.5, (r.width - 80) / f0.w, Math.max(.38, (r.height - 40) / f0.h));
+      const bh = f0.h * view.z;
+      view.x = 40 - (f0.x + OX) * view.z;
+      view.y = (bh <= r.height - 24 ? (r.height - bh) / 2 : 18) - (f0.y + OY) * view.z;
+      cv.classList.toggle('lod', view.z < LOD);
+      apply();
+      return;
+    }
+    initial = 'all';
+  }
   if (initial === 'all') {
     view.z = zLimit()[0];
     const ch = cardH(LODW) * view.z;
@@ -3018,7 +3034,9 @@ const alias = o => (ALIAS ? JSON.parse(applyAlias(JSON.stringify(o), ALIAS)) : o
    여러 회의에서 그 안건의 논의만 뽑아 시간 순으로 한 판에 세운다.
    보드 안의 카드 규칙은 회의 하나를 볼 때와 똑같다 — 바뀌는 것은 머리말(어느 회의였나)뿐이다. */
 const getj = async u => (await (await fetch(enc(u), NOCACHE)).json());
+let AGENDA = false;
 async function agenda(refs, title) {
+  AGENDA = true;
   const [idx, pj] = await Promise.all([getj('data/index.json'), getj('data/projects.json').catch(() => ({}))]);
   const nfc = x => String(x).normalize('NFC');          /* 맥 파일명은 NFD 로 온다 */
   const meetOf = id => (idx.meetings || []).find(m => nfc(m.id) === nfc(id));
@@ -3137,10 +3155,12 @@ function mount(map, segs, name, audioSrc) {
   EDGES.forEach(e => { e.path.classList.add('on'); if (e.text) e.text.classList.add('on'); });
   FRAMES.forEach(f => { f.dom.classList.add('in', 'wrote'); if (f.neck) f.neck.classList.add('on'); });
   uiScale();
-  fit('all');                                   /* 처음 들어오면 논의 전체가 보이는 가장 축소된 화면 */
+  /* 회의 하나는 안건 카드가 모두 보이는 가장 축소된 화면에서 시작하고,
+     안건별은 이미 '무엇이 바뀌었나'를 띠로 읽고 들어온 것이라 첫 판을 펼친 채로 연다 */
+  fit(AGENDA ? 'agenda' : 'all');
   cv.classList.remove('anim');
   requestAnimationFrame(() => requestAnimationFrame(() => cv.classList.add('anim')));  /* 첫 그림은 튀지 않게 */
-  tipZoom();
+  if (!AGENDA) tipZoom();
 }
 
 /* 안건 카드만 보이는 첫 화면의 '확대하여 자세히 보기' —

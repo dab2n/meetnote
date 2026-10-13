@@ -1165,9 +1165,9 @@ async function list(p) {
       body = ['open', 'conditional', 'decision'].map(k => {
         const g = ts.filter(t => t.state === k);
         return g.length ? `<div class="grp"><h4><span class="st ${k}">${KO[k]}</span><i>${g.length}</i></h4><div class="grid2">${g.map(t =>
-          `<a class="aiss tap" href="#/p/${esc(p.id)}/agenda/${esc(t.id)}"><span class="k">쟁점</span>
-            <h3>${esc(t.issue)}</h3>
-            <div class="foot">${esc(t.name)}<span>·</span>${t.span.map(m => esc(titleOf(m, p))).join(' → ')}<span>·</span>논의 ${t.secs.length}개</div></a>`).join('')}</div></div>` : '';
+          `<a class="row tap" href="#/p/${esc(p.id)}/agenda/${esc(t.id)}"><div class="tx">
+            <div class="meta">${esc(t.name)}<i>· ${t.span.map(m => esc(titleOf(m, p))).join(' → ')}</i><i>· 논의 ${t.secs.length}개</i></div>
+            <h3>${esc(t.issue)}</h3><p>${esc(t.tail)}</p></div></a>`).join('')}</div></div>` : '';
       }).join('') || '<div class="empty">아직 안건이 없어요</div>';
     }
     v.innerHTML = `${projHead(p, `<span>회의 ${ms.length}개</span><span>최근 ${esc(fdate(ms[0].date))}</span>`)}
@@ -1246,7 +1246,8 @@ async function agendaPage(p, page) {
         <div class="mt-title"><a class="mback tap" href="#/p/${esc(p.id)}/list" aria-label="회의록">${I.arrowL}</a>
           <h1>${esc(t.name)}</h1></div>
         <div class="mt-meta"><span>안건별</span><span>논의 ${t.secs.length}개</span>
-          <span>${t.span.map(m => esc(titleOf(m, p))).join(' → ')}</span></div>
+          <span>${t.span.map(m => esc(titleOf(m, p))).join(' → ')}</span>
+          <span>카드를 누르면 그 말이 오간 원문이 열려요</span></div>
       </div>
     </div>
     <div class="mcontent agenda" id="ac">
@@ -1262,7 +1263,6 @@ async function agendaPage(p, page) {
                   ${x.turn ? `<span class="turn"><i>계기 · ${esc(TURNKO[x.turn.kind] || '말')} </i>${esc(x.turn.title)}<i> ${esc(x.turn.who || '')}</i></span>` : ''}
                 </button>`).join('')}</div>
           </div>
-          <ul class="mguide"><li>카드를 누르면 그 말이 오간 원문이 왼쪽에 열려요.</li></ul>
           <div class="map mapwrap"><iframe src="${esc(src)}" title="안건 플로우 맵"></iframe></div>
         </div>
       </section>

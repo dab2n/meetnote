@@ -9,6 +9,7 @@
   --bg:#f2f2f3; --panel:#fff; --line:#e3e3e6; --line2:#eeeef0;
   --ink:#17181c; --ink2:#42444b; --dim:#8b8e96;
   --blue:#2f6bdd; --green:#1c7a4e; --red:#c53f2d; --amber:#c07d22; --gray:#9aa0a8; --gold:#e2562a;
+  --pink:#f2286b;                                   /* 맞선 의견 — 선명한 핑크 레드 */
   --rail:400px; --split:44%; --top:52px; --player:0px;
   --font:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",sans-serif;
 }
@@ -201,7 +202,7 @@ body.view-cards .stage{display:none}
 #edges .elab.hide{opacity:0!important}
 #edges .lbg{fill:#fff;stroke:rgba(40,39,51,.07)}
 #edges .elab text{opacity:1;fill:#5b6270}
-#edges .elab.e-lab-con text{fill:var(--red)}
+#edges .elab.e-lab-con text{fill:var(--pink)}
 #edges .elab.e-lab-resolve text{fill:var(--blue)}
 #edges text{font:600 11.5px var(--font)}
 #cv.lod #edges .elab{opacity:0!important}
@@ -209,11 +210,11 @@ body.view-cards .stage{display:none}
 #edges text.on{opacity:1}
 .e-raise{stroke:#c3cede}                            .l-raise{fill:#8b8e96}
 .e-pro{stroke:#c3cede}                              .l-pro{fill:var(--green)}
-#edges path.e-con{stroke:var(--red);stroke-width:2.4px}   .l-con{fill:var(--red)}
+#edges path.e-con{stroke:var(--pink);stroke-width:2.4px}  .l-con{fill:var(--pink)}      /* 맞섬 — 선명한 핑크 레드 */
 .e-concern{stroke:#c3cede}                          .l-concern{fill:#b8564a}
 .e-condition{stroke:#c3cede}                        .l-condition{fill:var(--amber)}
-.e-resolve{stroke:var(--gold);stroke-width:2px}     .l-resolve{fill:var(--gold)}
-.e-conflict{stroke:var(--red);stroke-width:2px;stroke-dasharray:7 5} .l-conflict{fill:var(--red)}
+#edges path.e-resolve{stroke:var(--blue);stroke-width:2.1px}  .l-resolve{fill:var(--blue)}   /* 결론으로 — 파란 실선 */
+#edges path.e-conflict{stroke:var(--pink);stroke-width:2.4px} .l-conflict{fill:var(--pink)}  /* 맞섬 — 선명한 핑크 레드 */
 .e-flow{stroke:#c3cede;stroke-width:1.7px}   /* 시간이 흐르는 쪽(가로) — 실선 */
 
 .frame{position:absolute;border:1.5px solid #dcdde1;border-radius:20px;background:rgba(255,255,255,.5);
@@ -1804,7 +1805,8 @@ function render(g) {
   let ax = 0, al = 0;
   g.frames.forEach(f => {
     const dx = ax - f.x;
-    if (dx) f.nodes.forEach(n => { n.x += dx; });
+    /* 자리를 옮겼으면 화면도 함께 옮긴다 — 좌표만 바꾸면 선은 새 자리에, 카드는 옛 자리에 남는다 */
+    if (dx) f.nodes.forEach(n => { n.x += dx; n.dom.style.left = (n.x + OX) + 'px'; });
     f.x = ax; f.lx = al; ax += f.w + FG0; al += LODW + FG0;
   });
   bounds = { x0: OX - pad0, y0: OY - 26, w: Math.max(ax, al) - FG0 + pad0 * 2,
@@ -1841,34 +1843,49 @@ function render(g) {
     const oy0 = Math.max(a.y0, b.y0), oy1 = Math.min(a.y1, b.y1);
     let d, tipA = null, tipB = null;
 
-    if (!e.both && ox1 > ox0 + 20 && (b.y0 >= a.y1 - 1 || a.y0 >= b.y1 - 1)) {
+    if (ox1 > ox0 + 20 && (b.y0 >= a.y1 - 1 || a.y0 >= b.y1 - 1)) {   /* 맞섬도 중심을 잇는다 — 화살촉만 양쪽에 */
       /* 세로 — 두 중심이 같으면 중심, 어긋나면 더 오른쪽 카드의 중심 (겹치는 폭 안으로) */
       /* 더 오른쪽 카드의 중심을 먼저 쓰고, 그 중심이 겹치는 폭 밖이면 다른 카드의 중심을 쓴다
          (어느 쪽도 안 되면 겹치는 폭의 한가운데 — 그래야 선이 카드 중심에서 벗어나지 않는다) */
-      const order = b.cx >= a.cx ? [b.cx, a.cx] : [a.cx, b.cx];
-      let x = order.find(v => v > ox0 + 4 && v < ox1 - 4);
-      if (x == null) x = (ox0 + ox1) / 2;
       const down = b.y0 >= a.y1 - 1;
       const yA = down ? a.y1 : a.y0, yB = down ? b.y0 : b.y1;
-      if (hitsV(x, yA, yB, A, B)) {                  /* 가운데로 가면 다른 카드를 밟는다 → 옆 통로로 */
+      const sy = yB > yA ? 1 : -1;
+      if (Math.abs(a.cx - b.cx) < 2 && !hitsV(a.cx, yA, yB, A, B)) {
+        d = `M ${a.cx} ${yA} V ${yB}`;               /* 두 중심이 같다 — 곧게 */
+        tipA = [a.cx, yA, 0, sy]; tipB = [a.cx, yB, 0, -sy];
+      } else if (!hitsV(a.cx, yA, (yA + yB) / 2, A, B) && !hitsV(b.cx, (yA + yB) / 2, yB, A, B)) {
+        /* 중심이 어긋나면 두 카드 사이 한가운데서 한 번 꺾어 각 카드의 중심에 그대로 닿게 한다 */
+        const my = (yA + yB) / 2, sx = b.cx > a.cx ? 1 : -1;
+        const r = Math.max(0, Math.min(R, Math.abs(b.cx - a.cx) / 2, Math.abs(yB - yA) / 2));
+        d = `M ${a.cx} ${yA} V ${my - sy * r} Q ${a.cx} ${my} ${a.cx + sx * r} ${my} `
+          + `H ${b.cx - sx * r} Q ${b.cx} ${my} ${b.cx} ${my + sy * r} V ${yB}`;
+        tipA = [a.cx, yA, 0, sy]; tipB = [b.cx, yB, 0, -sy];
+      } else {                                       /* 곧게 가면 다른 카드를 밟는다 → 옆 통로로 */
         const lane = Math.max(a.x1, b.x1) + GAPX / 2;
         const sa = lane > a.cx ? 1 : -1;
         d = `M ${a.x1} ${a.cy} H ${lane - R * sa} Q ${lane} ${a.cy} ${lane} ${a.cy + (b.cy > a.cy ? R : -R)} `
           + `V ${b.cy - (b.cy > a.cy ? R : -R)} Q ${lane} ${b.cy} ${lane - R} ${b.cy} H ${b.x1}`;
-      } else {
-        d = `M ${x} ${yA} V ${yB}`;
+        tipA = [a.x1, a.cy, 1, 0]; tipB = [b.x1, b.cy, 1, 0];
       }
     } else if (oy1 > oy0 + 16) {
       /* 가로 — 두 중심이 같으면 중심, 아니면 겹치는 높이의 한가운데 */
-      const y = Math.abs(a.cy - b.cy) < 6 ? a.cy : (oy0 + oy1) / 2;
       const left = b.x0 >= a.x1, xA = left ? a.x1 : a.x0, xB = left ? b.x0 : b.x1;
-      if (hitsH(y, xA, xB, A, B)) {
+      const sx = xB > xA ? 1 : -1;
+      if (Math.abs(a.cy - b.cy) < 2 && !hitsH(a.cy, xA, xB, A, B)) {
+        d = `M ${xA} ${a.cy} H ${xB}`;               /* 두 중심이 같다 — 곧게 */
+        tipA = [xA, a.cy, sx, 0]; tipB = [xB, a.cy, -sx, 0];
+      } else if (!hitsH(a.cy, xA, (xA + xB) / 2, A, B) && !hitsH(b.cy, (xA + xB) / 2, xB, A, B)) {
+        /* 중심 높이가 어긋나면 두 카드 사이 한가운데서 한 번 꺾는다 */
+        const mx = (xA + xB) / 2, sy = b.cy > a.cy ? 1 : -1;
+        const r = Math.max(0, Math.min(R, Math.abs(b.cy - a.cy) / 2, Math.abs(xB - xA) / 2));
+        d = `M ${xA} ${a.cy} H ${mx - sx * r} Q ${mx} ${a.cy} ${mx} ${a.cy + sy * r} `
+          + `V ${b.cy - sy * r} Q ${mx} ${b.cy} ${mx + sx * r} ${b.cy} H ${xB}`;
+        tipA = [xA, a.cy, sx, 0]; tipB = [xB, b.cy, -sx, 0];
+      } else {
         const lane = Math.min(a.y0, b.y0) - ROWGAP / 2;
         d = `M ${a.cx} ${a.y0} V ${lane + R} Q ${a.cx} ${lane} ${a.cx + (b.cx > a.cx ? R : -R)} ${lane} `
           + `H ${b.cx - (b.cx > a.cx ? R : -R)} Q ${b.cx} ${lane} ${b.cx} ${lane + R} V ${b.y0}`;
-      } else {
-        d = `M ${xA} ${y} H ${xB}`;
-        tipA = [xA, y, left ? -1 : 1]; tipB = [xB, y, left ? 1 : -1];
+        tipA = [a.cx, a.y0, 0, -1]; tipB = [b.cx, b.y0, 0, -1];
       }
     } else {
       /* ㄱ자 — A 의 중심 x 로 내려가 B 의 중심 y 로 들어간다 */
@@ -1878,12 +1895,17 @@ function render(g) {
       const toRight = b.cx > x, side = toRight ? b.x0 : b.x1, s2 = toRight ? 1 : -1, sy = down ? 1 : -1;
       const r = Math.max(0, Math.min(R, Math.abs(y - start) / 2, Math.abs(side - x) / 2));
       d = `M ${x} ${start} V ${y - sy * r} Q ${x} ${y} ${x + s2 * r} ${y} H ${side}`;
+      tipA = [x, start, 0, sy]; tipB = [side, y, -s2, 0];
     }
     e.path = svgEl('path', { d, class: 'e-' + e.kind + (dash ? ' e-dash' : ''), 'marker-end': `url(#ar-${e.kind}-e)` });
     sv.append(e.path);
     if (e.both && tipA) {              /* 맞섬은 양쪽 화살촉을 직접 그린다 (마커가 작아 묻힌다) */
-      const c = ARROW[e.kind], tip = ([x, y, dr]) =>
-        svgEl('path', { d: `M ${x + dr * 11} ${y - 6} L ${x} ${y} L ${x + dr * 11} ${y + 6} Z`, class: 'tip', style: `fill:${c}` });
+      const c = ARROW[e.kind], tip = ([x, y, dx, dy]) => {
+        const px = -dy, py = dx;       /* 선과 직각인 쪽으로 벌린다 — 세로선이면 가로로 */
+        return svgEl('path', { class: 'tip', style: `fill:${c}`,
+          d: `M ${x + dx * 11 + px * 6} ${y + dy * 11 + py * 6} L ${x} ${y} `
+           + `L ${x + dx * 11 - px * 6} ${y + dy * 11 - py * 6} Z` });
+      };
       e.tips = [tip(tipA), tip(tipB)];
       e.tips.forEach(t => sv.append(t));
     }

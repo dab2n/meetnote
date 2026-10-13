@@ -720,8 +720,7 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node .who{width:20px;height:20px;border-radius:50%;object-fit:cover;margin-bottom:8px;flex:none}
 .node .content{display:flex;flex-direction:column;gap:8px}
 .node h4{font-size:16px;font-weight:600;line-height:1.4;letter-spacing:-.16px;color:#2a2a2a;word-break:break-word}
-.node p{font-size:12px;font-weight:400;line-height:1.5;letter-spacing:-.12px;color:#525252;word-break:break-word;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.node p{font-size:12px;font-weight:400;line-height:1.5;letter-spacing:-.12px;color:#525252;word-break:break-word}
 /* 주장 카드는 프로필을 글 위에 올린다 (세로 스택) */
 .node.position,.node.con,.node.concern,.node.condition,.node.pro,.node.open{width:320px;flex-direction:column;align-items:stretch}
 /* 쟁점 · 마무리 — 라벨 + 문장 */
@@ -753,11 +752,7 @@ body.norail .rail,body.norail .rz-x{display:none}
 .node.sel:hover{filter:drop-shadow(0 2px 6px rgba(0,0,0,.18)) brightness(.9) saturate(1.06)}
 /* 고른 카드는 접힌 설명을 끝까지 펼친다 — 자리를 밀지 않고 그 자리에서 아래로 자란다 */
 .node.sel{height:auto!important;z-index:9;overflow:visible}
-.node.sel p,.node.wide p{-webkit-line-clamp:unset;overflow:visible}
-.node.wide .more{display:none}
-.node .more{display:none;margin-top:6px;font-size:11px;font-weight:600;color:#6b7a90;letter-spacing:-.1px}
-.node.cut .more{display:block}
-.node.sel .more{display:none}
+
 /* ===================================================================
    보드 · 떠 있는 조작 — 피그마 218:5340
    =================================================================== */
@@ -1612,6 +1607,25 @@ function build(map) {
       }
     });
 
+    /* 쟁점에서 내려가는 선은 '바로 아래 첫 카드' 하나뿐이다 — 오른쪽으로 갈수록 시간이 흐른 것이므로
+       나머지는 가로 실선으로 이어 간다. 홀로 남는 카드가 생기면 왼쪽 이웃과 먼저 이어 준다 */
+    const iss0 = all.find(n => n.kind === 'issue');
+    if (iss0) {
+      const other = e => (e.a === iss0 ? e.b : e.a);
+      const outs = edges.filter(e => e.a === iss0 || e.b === iss0)
+        .sort((p, q) => other(p).row - other(q).row || other(p).col - other(q).col || other(p).t - other(q).t);
+      outs.slice(1).forEach(e => {
+        const n = other(e);
+        let linked = edges.some(x => x !== e && (x.a === n || x.b === n));
+        if (!linked) {
+          const left = all.filter(m => m.row === n.row && !m.res && m !== n && m.col < n.col)
+            .sort((p, q) => p.col - q.col).pop();
+          if (left) { edges.push({ a: left, b: n, kind: 'flow', label: '' }); linked = true; }
+        }
+        if (linked) edges.splice(edges.indexOf(e), 1);
+      });
+    }
+
     const frame = { sec, nodes: all, res, carry: !res, cols: Math.max(...all.map(n => n.col + n.span - 1)) + 1 };
     frames.push(frame);
     sec.frame = frame; sec.byId = byId;
@@ -1742,24 +1756,14 @@ function render(g) {
     d.innerHTML = head
       ? `<div class="k">${head}</div><h4>${esc(ttl)}</h4>`
       : whoHTML(n)
-        + `<div class="tx"><h4>${esc(n.title)}</h4>${why ? `<p>${esc(why)}</p><span class="more">눌러서 전부 보기</span>` : ''}</div>`;
+        + `<div class="tx"><h4>${esc(n.title)}</h4>${why ? `<p>${esc(why)}</p>` : ''}</div>`;
     d.onclick = () => selectNode(n);
     n.dom = d; cv.append(d);
   });
 
   /* 카드 높이는 글 줄 수마다 다르다. 다 그린 뒤 실제 높이로 줄을 쌓아 겹침과 빈 바닥을 없앤다 */
   const ROWGAP = 52;        /* 피그마 379:7814 의 줄 사이 25px ×2.065 */
-  g.nodes.forEach(n => {
-    const p = n.dom.querySelector('p');                 /* 설명이 세 줄에서 잘렸는가 — '눌러서 전부 보기' 줄까지 재려면 먼저 */
-    if (p) {                                            /* 줄 수 제한을 잠깐 풀어 재 본다 (-webkit-box 는 scrollHeight 가 안 늘어난다) */
-      const shown = p.clientHeight;
-      p.style.webkitLineClamp = 'unset';
-      const full = p.clientHeight;
-      p.style.webkitLineClamp = '';
-      n.dom.classList.toggle('cut', full > shown + 1);
-    }
-    n.h = n.dom.offsetHeight;
-  });
+  g.nodes.forEach(n => { n.h = n.dom.offsetHeight; });   /* 설명을 접지 않으니 그대로 잰다 */
   /* 아무도 쓰지 않는 빈 열은 접는다 — 카드 사이에 뜻 없는 공백을 남기지 않는다 */
   g.frames.forEach(f => {
     const used = new Set();
@@ -2596,8 +2600,9 @@ function clampView() {
   const w = bounds.w * view.z, h = bounds.h * view.z, bx = bounds.x0 * view.z, by = bounds.y0 * view.z;
   view.x = w <= r.width ? (r.width - w) / 2 - bx
     : Math.min(-bx, Math.max(r.width - w - bx, view.x));
+  const slack = r.height * 0.3;        /* 판이 화면보다 커도 위아래로 같은 만큼 움직일 수 있게 */
   view.y = h <= r.height ? (r.height - h) / 2 - by
-    : Math.min(-by, Math.max(r.height - h - by, view.y));
+    : Math.min(-by + slack, Math.max(r.height - h - by - slack, view.y));
 }
 function apply() {
   const [lo, hi] = zLimit();

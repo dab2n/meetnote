@@ -1742,11 +1742,11 @@ function render(g) {
     /* 머리말 칩은 두지 않는다 — 검정 쟁점 카드의 제목과 같은 말이다 */
     d.append(el('div', 'fbig',
       `<div class="g"><div class="hg">`
-      + `<div class="hd"><span class="n"><i style="background:${RESDOT[rk]}"></i>안건 ${s.no}</span>`
+      + `<div class="hd"><span class="n"><i style="background:${RESDOT[rk]}"></i>${esc(s.when || '안건 ' + s.no)}</span>`
       + `<span class="pts">${pts}</span></div>`
       + `<div class="t">${esc(s.title)}</div></div>`
       + `<div class="s">${esc(f.res ? (f.res.kind === 'open' ? '미결 · ' : '') + f.res.title : '결론이 나지 않았다')}</div></div>`
-      + `<time>${esc(s.t)} - ${esc(s.t1)}</time>`));
+      + `<time>${esc(s.tx || s.t + ' - ' + s.t1)}</time>`));
     f.dom = d; cv.append(d);
   });
 
@@ -2508,7 +2508,8 @@ function selectNode(n) {
   NODES.forEach(o => o.dom.classList.toggle('sel', o === n));
   const [a, b] = n.at && n.at.length === 2 ? n.at : [n.t, n.t + 45];
   if (document.body.classList.contains('norail')) {      /* 원문은 바깥(새 홈) 왼쪽에 있다 */
-    try { parent.postMessage({ mn: 'ev', ev: n.ev || '', who: n.who || '', t: mmss(n.t), no: n.sec && n.sec.no }, '*'); } catch {}
+    try { parent.postMessage({ mn: 'ev', ev: n.ev || '', who: n.who || '', t: mmss(n.t),
+      no: n.sec && (n.sec.no0 || n.sec.no), mid: n.sec && n.sec.mid }, '*'); } catch {}
     if (!document.body.classList.contains('view-cards') && n.dom.classList.contains('in')) centerOn(n);
     return;
   }
@@ -2676,6 +2677,9 @@ function fit(initial) {
     const ch = cardH(LODW) * view.z;
     view.x = 37 - OX * view.z;                          /* 첫 카드까지 37 — 피그마 383:13337 */
     view.y = Math.max(padT, (r.height - ch) / 2) - OY * view.z;
+    /* 여기서 자리를 이미 정했으니 apply() 의 '보던 것을 되놓기'는 지나가게 둔다 —
+       그러지 않으면 가장 넓은 보드로 끌려가 첫 안건이 왼쪽으로 잘린다 */
+    cv.classList.toggle('lod', view.z < LOD);
   } else {
     /* 처음 보이는 건 첫 논의 보드 — 카드 글이 읽히는 배율(피그마 49%)에 맞춘다.
        더 넓게 보려면 줌을 내리면 썸네일로 접힌다 */
@@ -2955,8 +2959,10 @@ async function meetings() {
     };
     w.append(b);
   });
-  /* 새 홈에서 ?m=<회의 id>&view=map 으로 바로 연다 */
-  const q = new URLSearchParams(location.search), hit = list.find(x => x.id === q.get('m'));
+  /* 새 홈에서 ?secs=<회의#논의,…> 으로 안건별 맵을, ?m=<회의 id>&view=map 으로 회의 하나를 연다 */
+  const q = new URLSearchParams(location.search);
+  if (q.get('secs')) return agenda(q.get('secs').split(','), q.get('title') || '안건');
+  const hit = list.find(x => x.id === q.get('m'));
   if (hit) load(hit.map).then(() => {
     const v = document.querySelector(`.seg2 button[data-view="${q.get('view') || 'map'}"]`); if (v) v.click();
   });
@@ -3000,6 +3006,40 @@ let AV = {};
     .forEach(im => { const a = AV[im.dataset.who]; if (a) im.src = a; }));
 } catch {} })();
 const alias = o => (ALIAS ? JSON.parse(applyAlias(JSON.stringify(o), ALIAS)) : o);
+/* ---------- 안건별 ----------
+   한 안건이 주차에 상관없이 프로젝트 전체에서 어떻게 바뀌어 왔는가.
+   여러 회의에서 그 안건의 논의만 뽑아 시간 순으로 한 판에 세운다.
+   보드 안의 카드 규칙은 회의 하나를 볼 때와 똑같다 — 바뀌는 것은 머리말(어느 회의였나)뿐이다. */
+const getj = async u => (await (await fetch(enc(u), NOCACHE)).json());
+async function agenda(refs, title) {
+  const [idx, pj] = await Promise.all([getj('data/index.json'), getj('data/projects.json').catch(() => ({}))]);
+  const nfc = x => String(x).normalize('NFC');          /* 맥 파일명은 NFD 로 온다 */
+  const meetOf = id => (idx.meetings || []).find(m => nfc(m.id) === nfc(id));
+  const titles = {};                                    /* 프로젝트가 붙여 둔 회의 이름 (킥오프 · 2주차 중간 회의) */
+  (pj.projects || []).forEach(p => Object.entries(p.titles || {}).forEach(([k, v]) => titles[nfc(k)] = v));
+  const want = refs.map(r => { const i = r.lastIndexOf('#');
+    return { id: nfc(r.slice(0, i)), no: +r.slice(i + 1) }; }).filter(x => meetOf(x.id));
+  const ids = [...new Set(want.map(x => x.id))];
+  const got = {};
+  await Promise.all(ids.map(async id => {
+    const m = meetOf(id), map = alias(await getj(m.map));
+    got[id] = { m, map, segs: map.segments || alias((await getj(map.meeting.transcript)).segments) };
+  }));
+  const sections = [];
+  want.forEach(x => {
+    const g = got[x.id], sec = (g.map.sections || []).find(s => s.no === x.no);
+    if (!sec) return;
+    /* 논의 번호는 판 안에서 다시 매긴다 (회의가 달라도 결론 카드 id 가 겹치지 않게).
+       원래 번호는 no0 으로 남겨 바깥 원문에 그 논의를 짚어 줄 때 쓴다 */
+    sections.push(Object.assign({}, sec, { no: sections.length + 1, no0: sec.no, mid: g.m.id,
+      when: titles[nfc(x.id)] || g.m.title, tx: (g.m.date || '') + ' · ' + sec.t + ' - ' + sec.t1 }));
+  });
+  if (!sections.length) return fail('안건', new Error('논의를 찾지 못했습니다'));
+  /* 원문은 회의 순서대로 이어 붙인다. 회의마다 0:00 에서 다시 시작하므로 재생 눈금은 쓰지 않는다 */
+  start(ids.flatMap(id => got[id].segs),
+    { id: 'agenda:' + refs.join(','), meeting: { title, date: '', duration: '', audio: '' }, sections },
+    title, '');
+}
 async function load(url) {
   const r = await fetch(enc(url), NOCACHE);
   if (!r.ok) throw new Error(`${r.status} · ${url}`);

@@ -54,6 +54,7 @@
 
   UT.SCREEN_NAME = {
     home_my: '홈_나', home_team: '홈_팀', list_new: '회의록_최신순', list_agenda: '회의록_안건별',
+    agenda: '안건별 플로우 맵',
     meeting_sum: '회의 요약', meeting_src: '회의 원문', meeting_map: '플로우 맵', ask: 'AI 물어보기',
     '시나리오 화면': '시나리오 화면(시작 전)',
   };

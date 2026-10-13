@@ -514,12 +514,23 @@ body.mapview .mcontent #mbody{overflow:hidden;display:flex}
 .mcontent .map{height:100%;flex:1;border-radius:20px;border:1px solid #f0f0f0;overflow:hidden;box-shadow:none}
 .mcontent .sheet{box-shadow:none;border-radius:0;padding:0 4px 40px}
 
+/* ---------- 안건별 — 전체 과정 플로우 맵. 원문은 카드를 누를 때까지 열리지 않는다 ---------- */
+.mcontent.agenda{grid-template-columns:0 minmax(0,1fr);transition:grid-template-columns .35s var(--ease)}
+.mcontent.agenda>.tr{width:0;min-width:0;padding:0;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .3s}
+.mcontent.agenda.srcon{grid-template-columns:357px minmax(0,1fr)}
+.mcontent.agenda.srcon>.tr{width:auto;padding:12px 0 0 20px;opacity:1;pointer-events:auto}
+.srcx{width:20px;height:20px;border-radius:50%;color:var(--dim);font-size:15px;line-height:1}
+.srcx:hover{background:var(--card);color:var(--ink)}
+
 /* 좁은 화면 — 원문은 따로 한 탭 */
 @media (max-width:900px){
   .mcontent{grid-template-columns:minmax(0,1fr)}
   .mcontent .tr{display:none}
   body.tab-src .mcontent .tr{display:flex;padding:12px 12px 0}
   body.tab-src .mcontent .pane{display:none}
+  .mcontent.agenda.srcon{grid-template-columns:minmax(0,1fr)}
+  .mcontent.agenda.srcon>.tr{display:flex;padding:12px 12px 0}
+  .mcontent.agenda.srcon>.pane{display:none}
 }
 @media (min-width:901px){ .only-narrow{display:none} }
 
@@ -770,30 +781,34 @@ const screenName = () => ASK ? 'ask'
   : CUR.kind === 'home' ? (CUR.mode === 'team' ? 'home_team' : 'home_my')
   : CUR.kind === 'cal' ? 'calendar'
   : CUR.kind === 'list' ? (CUR.by === 'agenda' ? 'list_agenda' : 'list_new')
+  : CUR.kind === 'agenda' ? 'agenda'
   : CUR.kind === 'meeting' ? 'meeting_' + (['src', 'map'].includes(CUR.tab) ? CUR.tab : 'sum') : 'home_my';
 const utNav = () => window.UT && UT.nav(screenName(), CUR.kind === 'meeting' ? CUR.id : '');
 const utAct = (t, l) => window.UT && UT.act(t, l);
-/* #/p/<프로젝트>  ·  #/p/<프로젝트>/list  ·  #/m/<회의>/<요약|원문|맵> */
+/* #/p/<프로젝트>  ·  #/p/<프로젝트>/list  ·  #/p/<프로젝트>/agenda/<안건>  ·  #/m/<회의>/<요약|원문|맵> */
 let CUR = {};
 function route() {
-  const [, kind, a, b] = decodeURIComponent(location.hash).split('/');
+  const [, kind, a, b, c] = decodeURIComponent(location.hash).split('/');
   let p, page;
   if (kind === 'm' && meetingOf(a)) { p = projOf(a); page = { kind: 'meeting', id: meetingOf(a).id, tab: b || 'sum' }; }
   else {
     p = D.projects.find(x => x.id === a) || D.projects.find(x => x.id === store.get('mn.project')) || D.projects[0];
-    page = { kind: b === 'list' ? 'list' : b === 'cal' ? 'cal' : 'home', mode: b === 'team' ? 'team' : 'my' };
+    page = { kind: b === 'list' ? 'list' : b === 'cal' ? 'cal' : b === 'agenda' ? 'agenda' : 'home',
+      mode: b === 'team' ? 'team' : 'my', tid: c };
   }
   if (!p) { $('#view').innerHTML = '<div class="empty">아직 정리된 회의가 없어요. 왼쪽 아래 ＋ 새 회의 정리로 시작하세요.</div>'; return; }
   store.set('mn.project', p.id);
   const same = CUR.p === p && CUR.kind === page.kind && CUR.id === page.id && CUR.mode === page.mode;
   CUR = { p, ...page };
-  document.body.classList.toggle('meeting', page.kind === 'meeting');
-  if (page.kind !== 'meeting') document.body.classList.remove('mapview', 'tab-src');
+  const full = page.kind === 'meeting' || page.kind === 'agenda';   /* 머리말 + 원문/판 한 화면 */
+  document.body.classList.toggle('meeting', full);
+  if (!full) document.body.classList.remove('mapview', 'tab-src');
   side();
   if (same && page.kind === 'meeting') return meetingTab(page.tab);
   scrollTo(0, 0);
-  ({ home, list, cal: calendar, meeting: meetingPage })[page.kind](p, page);
-  if (page.kind !== 'meeting') { utNav(); lnbAuto(false); }   /* 회의는 탭이 정해진 뒤 meetingTab 에서 */
+  ({ home, list, cal: calendar, meeting: meetingPage, agenda: agendaPage })[page.kind](p, page);
+  if (page.kind === 'agenda') lnbAuto(true);                  /* 판이 넓게 서야 한다 — 맵 탭과 같게 */
+  else if (page.kind !== 'meeting') { utNav(); lnbAuto(false); }   /* 회의는 탭이 정해진 뒤 meetingTab 에서 */
 }
 const go = h => { location.hash = h; };
 
@@ -809,7 +824,7 @@ function side() {
   const { p } = CUR;
   const nav = [['home', '홈', `#/p/${p.id}`, I.home], ['list', '회의록', `#/p/${p.id}/list`, I.folder],
     ['cal', '캘린더', `#/p/${p.id}/cal`, I.cal]];
-  const on = k => CUR.kind === k || (k === 'list' && CUR.kind === 'meeting');
+  const on = k => CUR.kind === k || (k === 'list' && (CUR.kind === 'meeting' || CUR.kind === 'agenda'));
   $('#nav').innerHTML = nav.map(([k, t, h, ic]) => `<a href="${esc(h)}" class="tap ${on(k) ? 'on' : ''}" title="${t}">${ic}<span>${t}</span></a>`).join('');
   const noti = $('.topbar .noti'); if (noti) noti.innerHTML = I.bell;
   const me = $('.topbar .me'); if (me) me.innerHTML = av(p, p.me || '나', 28);
@@ -1116,14 +1131,14 @@ async function list(p) {
     CUR.by = by;
     if (by === 'new') body = `<div class="rows">${ms.map((m, i) => meetRow(m, maps[i], i === 0)).join('')}</div>`;
     else {
-      const all = ms.flatMap((m, i) => maps[i].sections.map(s => ({ s, m })));
+      const ts = tracksOf(p, ms, maps);
       body = ['open', 'conditional', 'decision'].map(k => {
-        const g = all.filter(x => (x.s.resolution || {}).kind === k);
-        return g.length ? `<div class="grp"><h4><span class="st ${k}">${KO[k]}</span><i>${g.length}</i></h4><div class="grid2">${g.map(({ s, m }) => {
-          const iss = s.nodes.find(n => n.kind === 'issue');
-          return `<a class="row tap" href="#/m/${esc(m.id)}/sum/${s.no}"><div class="tx"><div class="meta">${esc(titleOf(m))}<i>· 논의 ${s.no}</i></div>
-            <h3>${esc(s.title)}</h3><p>${esc(s.resolution.title)}</p></div></a>`; }).join('')}</div></div>` : '';
-      }).join('');
+        const g = ts.filter(t => t.state === k);
+        return g.length ? `<div class="grp"><h4><span class="st ${k}">${KO[k]}</span><i>${g.length}</i></h4><div class="grid2">${g.map(t =>
+          `<a class="row tap" href="#/p/${esc(p.id)}/agenda/${esc(t.id)}"><div class="tx">
+            <div class="meta">${t.span.map(m => esc(titleOf(m, p))).join(' → ')}<i>· 논의 ${t.secs.length}개</i></div>
+            <h3>${esc(t.name)}</h3><p>${esc(t.tail)}</p></div></a>`).join('')}</div></div>` : '';
+      }).join('') || '<div class="empty">아직 안건이 없어요</div>';
     }
     v.innerHTML = `${projHead(p, `<span>회의 ${ms.length}개</span><span>최근 ${esc(fdate(ms[0].date))}</span>`)}
       <div class="pills" style="margin-top:26px" id="by"><button class="${by === 'new' ? 'on' : ''}" data-b="new">최신순</button><button class="${by === 'agenda' ? 'on' : ''}" data-b="agenda">안건별</button></div>
@@ -1132,6 +1147,91 @@ async function list(p) {
     $('#by').onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; by = b.dataset.b; store.set('mn.by', by); draw(); utNav(); };
   };
   draw();
+}
+
+/* 안건 축 — 주차와 상관없이 한 안건이 프로젝트 전체에서 어떻게 바뀌어 왔는가.
+   projects.json 의 agenda 에 축을 적어 두었으면 그대로, 없으면 논의 묶음(group) 이름으로 모은다 */
+function tracksOf(p, ms, maps) {
+  const byId = {}; ms.forEach((m, i) => byId[nfc(m.id)] = { m, map: maps[i] });
+  const pick = (mid, no) => { const g = byId[nfc(mid)];
+    const sec = g && (g.map.sections || []).find(s => s.no === no);
+    return sec ? { m: g.m, sec } : null; };
+  const out = [];
+  if ((p.agenda || []).length) p.agenda.forEach(t => {
+    const secs = t.secs.map(r => { const i = r.lastIndexOf('#');
+      return pick(r.slice(0, i), +r.slice(i + 1)); }).filter(Boolean);
+    if (secs.length) out.push({ id: t.id, name: t.name, secs, refs: t.secs });
+  });
+  else [...ms].reverse().forEach(m => (byId[nfc(m.id)].map.sections || []).forEach(sec => {   /* 오래된 회의부터 */
+    const name = sec.group || sec.title;
+    let t = out.find(x => x.name === name);
+    if (!t) out.push(t = { id: 'g' + (out.length + 1), name, secs: [], refs: [] });
+    t.secs.push({ m, sec }); t.refs.push(m.id + '#' + sec.no);
+  }));
+  /* 축의 '지금'은 가장 나중 논의의 상태다 — 목록은 그 상태로 묶인다 */
+  out.forEach(t => {
+    const last = t.secs[t.secs.length - 1], r = last.sec.resolution || {};
+    t.state = r.kind || 'open';
+    t.tail = r.title || '결론 없이 넘어갔어요';
+    t.span = [...new Set(t.secs.map(x => x.m.id))].map(id => t.secs.find(x => x.m.id === id).m);
+  });
+  return out;
+}
+/* 안건 하나 — 회의 여럿의 논의가 한 판에 시간 순으로 선다. 원문은 카드를 누를 때만 왼쪽에 열린다 */
+async function agendaPage(p, page) {
+  const ms = inProj(p), maps = await Promise.all(ms.map(getMap));
+  if (CUR.p !== p || CUR.kind !== 'agenda') return;
+  const ts = tracksOf(p, ms, maps), t = ts.find(x => x.id === page.tid) || ts[0];
+  const v = $('#view');
+  if (!t) { v.innerHTML = '<div class="empty">아직 안건이 없어요</div>'; return; }
+  M = null;
+  const src = `map.html?secs=${encodeURIComponent(t.refs.join(','))}&title=${encodeURIComponent(t.name)}`
+    + '&view=map&embed=1&norail=1';
+  v.innerHTML = `
+    <div class="mtop">
+      <div class="mt-l">
+        <div class="mt-title"><a class="mback tap" href="#/p/${esc(p.id)}/list" aria-label="회의록">${I.arrowL}</a>
+          <h1>${esc(t.name)}</h1></div>
+        <div class="mt-meta"><span>안건별</span><span>논의 ${t.secs.length}개</span>
+          <span>${t.span.map(m => esc(titleOf(m, p))).join(' → ')}</span></div>
+      </div>
+    </div>
+    <div class="mcontent agenda" id="ac">
+      <section class="tr"></section>
+      <section class="pane">
+        <div id="mbody">
+          <ul class="mguide"><li>회의 주차와 상관없이, 이 안건이 전체 프로젝트에서 어떻게 바뀌어 왔는지 보여줘요. 오른쪽에 있는 판이 더 나중의 회의예요.</li>
+            <li>카드를 누르면 그 말이 오간 원문이 왼쪽에 열려요.</li></ul>
+          <div class="map mapwrap"><iframe src="${esc(src)}" title="안건 플로우 맵"></iframe></div>
+        </div>
+      </section>
+    </div>`;
+  document.body.classList.add('mapview');
+  document.body.classList.remove('tab-src');
+  utNav();
+}
+/* 안건별 맵의 카드를 눌렀다 — 그 말이 오간 회의의 원문을 왼쪽에 펼친다 */
+async function agendaEv(d) {
+  const m = d.mid && meetingOf(d.mid), grid = $('#ac');
+  if (!m || !grid) return;
+  if (!M || M.m.id !== m.id) {
+    const [map, segs] = await Promise.all([getMap(m), getTrans(m)]);
+    if (CUR.kind !== 'agenda' || !$('#ac')) return;
+    M = { m, map, segs };
+    const old = grid.querySelector(':scope > .tr');
+    old.insertAdjacentHTML('beforebegin', transHTML(segs));
+    old.remove();
+    const h = grid.querySelector('.trh');
+    h.querySelector('h5').textContent = '원문 · ' + titleOf(m, CUR.p);
+    const x = document.createElement('button');
+    x.className = 'srcx tap'; x.type = 'button'; x.textContent = '×';
+    x.setAttribute('aria-label', '원문 닫기');
+    x.onclick = () => grid.classList.remove('srcon');
+    h.append(x);
+    bindTrans(); audio(map);
+  }
+  grid.classList.add('srcon');
+  gotoEv(d, 60);
 }
 
 /* ================= 5. 회의 페이지 — 요약 · 원문 · 플로우 맵 ================= */
@@ -1316,7 +1416,7 @@ const narrow = () => matchMedia('(max-width:860px)').matches;
 /* 쟁점을 누르면 그 논의 구간이 원문에서 칠해진다 */
 function pickSection(s, scroll, at) {
   if (!s) return;
-  if (narrow() && scroll && !$('.mgrid.solo')) { go(`#/m/${M.m.id}/src`); setTimeout(() => pickSection(s, true, at), 80); return; }
+  if (narrow() && scroll && CUR.kind !== 'agenda' && !$('.mgrid.solo')) { go(`#/m/${M.m.id}/src`); setTimeout(() => pickSection(s, true, at), 80); return; }
   clearMarks();
   const a = secs(s.t), b = secs(s.t1), box = $('#segs');
   let first = null, want = null;
@@ -1330,7 +1430,7 @@ function pickSection(s, scroll, at) {
 }
 /* 노드·할 일을 누르면 그 사람이 한 말의 그 구절만 짚는다 */
 function showEv(ev, who, t) {
-  if (narrow() && !$('.mgrid.solo')) { PENDING = { ev, who, t }; go(`#/m/${M.m.id}/src`); return; }
+  if (narrow() && CUR.kind !== 'agenda' && !$('.mgrid.solo')) { PENDING = { ev, who, t }; go(`#/m/${M.m.id}/src`); return; }
   clearMarks();
   const re = ev && new RegExp(ev.trim().split(/\s+/).map(escRe).join('\\s+'));
   const near = secs(t);
@@ -1590,8 +1690,8 @@ function gotoEv(d, wait) {
 
 /* 플로우 맵(iframe)에서 카드를 누르면 왼쪽 원문을 짚는다 */
 addEventListener('message', e => {
-  const d = e.data; if (!d || !M) return;
-  if (d.mn === 'ev') gotoEv(d);
+  const d = e.data; if (!d || (!M && CUR.kind !== 'agenda')) return;
+  if (d.mn === 'ev') { if (CUR.kind === 'agenda') agendaEv(d); else gotoEv(d); }
   if (d.mn === 'follow') follow(d.on);
   if (d.mn === 'view' && d.open) (d.frames || []).forEach(no => utAct('zoom' + no, `플로우 맵에서 논의 ${no} 확대`));
   if (d.mn === 'rate') { FRATE = d.v; if (AU) AU.playbackRate = d.v; }
